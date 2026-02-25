@@ -54,21 +54,16 @@ td{padding:9px 13px;border-bottom:1px solid var(--border);font-size:13px;vertica
 .cloud-sync{background:#d97706;animation:blink .8s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* Mobile Menu Dropdown */
+/* Mobile Menu */
 .mobile-menu-wrapper{position:relative;display:none}
 .mobile-menu-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:14px}
 .mobile-dropdown{position:absolute;top:100%;right:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5);min-width:180px;z-index:200;display:none;flex-direction:column;padding:8px}
 .mobile-dropdown.show{display:flex}
 .mobile-dropdown .btn{width:100%;justify-content:flex-start;padding:10px 14px;border-radius:8px;margin:2px 0}
 
-/* Mobile Responsive */
-@media(max-width:1200px){
-  .board-grid{grid-template-columns:repeat(3,1fr)!important}
-}
-@media(max-width:900px){
-  .board-grid{grid-template-columns:repeat(2,1fr)!important}
-  .stats-grid{grid-template-columns:repeat(3,1fr)!important}
-}
+/* Responsive */
+@media(max-width:1200px){.board-grid{grid-template-columns:repeat(3,1fr)!important}}
+@media(max-width:900px){.board-grid{grid-template-columns:repeat(2,1fr)!important}.stats-grid{grid-template-columns:repeat(3,1fr)!important}}
 @media(max-width:700px){
   .mobile-menu-wrapper{display:block}
   .desktop-only{display:none!important}
@@ -79,16 +74,12 @@ td{padding:9px 13px;border-bottom:1px solid var(--border);font-size:13px;vertica
   .stats-grid{grid-template-columns:repeat(2,1fr)!important}
   .tab-wrap{width:100%;justify-content:center}
   .filters-row{flex-direction:column;align-items:stretch}
-  .filters-row>div{width:100%}
   #searchInput{width:100%!important}
   #filterSel{width:100%!important}
   .info-row{flex-direction:column;align-items:stretch}
-  .info-row>div{width:100%;justify-content:center}
   .eod-banner{flex-direction:column;text-align:center}
   .modal{padding:18px;max-height:90vh}
-  .eod-modal{max-height:90vh}
   th,td{padding:7px 9px;font-size:11px}
-  .tcard{padding:9px}
   .form-grid{grid-template-columns:1fr!important}
   .form-grid2{grid-template-columns:1fr!important}
   .form-grid4{grid-template-columns:1fr 1fr!important}
@@ -97,14 +88,8 @@ td{padding:9px 13px;border-bottom:1px solid var(--border);font-size:13px;vertica
   .stats-grid{grid-template-columns:1fr 1fr!important}
   .tab-btn{padding:6px 10px;font-size:11px}
   .btn{padding:6px 9px!important;font-size:11px!important}
-  .header-btns .btn{padding:5px 8px!important;font-size:10px!important}
-  .mood-btn{font-size:18px;padding:4px 8px}
-  .modal{padding:14px;border-radius:12px}
-  .wday{padding:8px;min-height:70px}
-  .weekly-grid{gap:6px!important}
 }
 
-/* Utility classes for responsive */
 .board-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
 .stats-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
 .form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
@@ -125,9 +110,7 @@ td{padding:9px 13px;border-bottom:1px solid var(--border);font-size:13px;vertica
   .report-grid{grid-template-columns:1fr!important}
   .charts-grid{grid-template-columns:1fr!important}
 }
-@media(max-width:480px){
-  .weekly-grid{grid-template-columns:repeat(2,1fr)!important}
-}
+@media(max-width:480px){.weekly-grid{grid-template-columns:repeat(2,1fr)!important}}
 </style>
 </head>
 <body>
@@ -150,15 +133,12 @@ td{padding:9px 13px;border-bottom:1px solid var(--border);font-size:13px;vertica
     
     <div class="header-btns">
       <input id="myNameInput" class="inp" style="width:115px;font-size:12px;padding:5px 9px" placeholder="Your name…" oninput="userData.name=this.value"/>
-      
-      <!-- Desktop buttons (hidden on mobile) -->
       <button class="btn desktop-only" onclick="openScrum()" style="background:#7c3aed;color:#fff;padding:7px 11px;font-size:12px">📋 Scrum</button>
       <button class="btn desktop-only" onclick="openBugModal()" style="background:#dc2626;color:#fff;padding:7px 11px;font-size:12px">🐛 Bugs</button>
       <button class="btn desktop-only" onclick="openScratch()" style="background:#0369a1;color:#fff;padding:7px 11px;font-size:12px">📝 Notes</button>
       <button class="btn desktop-only" onclick="syncSheet(true)" style="background:#059669;color:#fff;padding:7px 11px;font-size:12px" id="syncBtn">☁️ Sync</button>
       <button class="btn desktop-only" onclick="loadFromSheet()" style="background:#0e7490;color:#fff;padding:7px 11px;font-size:12px" id="loadBtn">⬇️ Load</button>
       
-      <!-- Mobile Menu -->
       <div class="mobile-menu-wrapper">
         <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰ Menu</button>
         <div id="mobileDropdown" class="mobile-dropdown">
@@ -409,7 +389,7 @@ const STATUS = {
 const PRI = {HIGH:{c:"#dc2626"},MEDIUM:{c:"#d97706"},LOW:{c:"#059669"}};
 const BSTC = {OPEN:"#dc2626",IN_FIX:"#d97706",FIXED:"#059669",CLOSED:"#6b7280",REOPEN:"#7c3aed"};
 
-// State - All data in memory, synced to cloud
+// State
 let tasks = [];
 let bugs = [];
 let scrum = {yesterday:"",today:"",blockers:"",mood:"😊",lastModified:0};
@@ -423,7 +403,7 @@ let rTab = "email";
 let isLight = false;
 let intervals = {tick:null,sync:null,load:null,reminder:null};
 
-// Utility functions
+// Utility
 const dk = () => new Date().toISOString().split("T")[0];
 const getToday = () => new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
 const getTime = () => new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
@@ -442,47 +422,21 @@ function scheduleAutoSync(){
   intervals.sync=setTimeout(()=>syncSheet(false),3000);
 }
 
-function markModified(){
-  tasks.forEach(t=>{if(!t.lastModified)t.lastModified=Date.now();});
-  bugs.forEach(b=>{if(!b.lastModified)b.lastModified=Date.now();});
-}
-
 // Mobile Menu
-function toggleMobileMenu(){
-  document.getElementById("mobileDropdown").classList.toggle("show");
-}
+function toggleMobileMenu(){ document.getElementById("mobileDropdown").classList.toggle("show"); }
+function closeMobileMenu(){ document.getElementById("mobileDropdown").classList.remove("show"); }
+document.addEventListener("click",e=>{ if(!e.target.closest(".mobile-menu-wrapper")) closeMobileMenu(); });
 
-function closeMobileMenu(){
-  document.getElementById("mobileDropdown").classList.remove("show");
-}
-
-// Close menu when clicking outside
-document.addEventListener("click",e=>{
-  if(!e.target.closest(".mobile-menu-wrapper")){
-    closeMobileMenu();
-  }
-});
-
-// Initialize
+// Init
 (function init(){
-  // Check theme preference via media query
   isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
   if(isLight){document.body.classList.add("light");document.getElementById("themeBtn").textContent="☀️ Light";}
-  
   document.getElementById("todayLabel").textContent=getToday();
   startGlobalTick();
   renderAll();
-  
-  // Load from cloud
   loadFromSheet();
-  
-  // Auto-load every 30 seconds
   intervals.load=setInterval(()=>loadFromSheet().catch(()=>{}),30000);
-  
-  // Request notification permission
   if(Notification?.permission==="default")Notification?.requestPermission();
-  
-  // Listen for theme changes
   window.matchMedia('(prefers-color-scheme: light)').addEventListener('change',e=>{
     isLight=e.matches;
     document.body.classList.toggle("light",isLight);
@@ -494,7 +448,6 @@ document.addEventListener("click",e=>{
 function startGlobalTick(){
   if(intervals.tick)clearInterval(intervals.tick);
   intervals.tick=setInterval(()=>{
-    // Update running timers
     Object.keys(timers).forEach(id=>{
       const tm=timers[id];
       if(tm.state!=="running")return;
@@ -502,8 +455,6 @@ function startGlobalTick(){
       const pill=document.getElementById("tpill_"+id);
       if(pill){pill.textContent="⏱ "+fmtT(total);pill.className="tpill tpill-run";}
     });
-    
-    // Update active timer badge
     const runId=Object.keys(timers).find(id=>timers[id].state==="running");
     const badge=document.getElementById("activeTimerBadge");
     const label=document.getElementById("activeTimerLabel");
@@ -517,7 +468,7 @@ function startGlobalTick(){
   },1000);
 }
 
-// Timer functions
+// Timer
 function getTimerElapsed(id){
   const tm=timers[id];
   if(!tm)return tasks.find(t=>t.id==id)?.timerTotal||0;
@@ -526,11 +477,7 @@ function getTimerElapsed(id){
 }
 
 function timerStart(id){
-  // Pause other running timers
-  Object.keys(timers).forEach(oid=>{
-    if(oid!=id&&timers[oid].state==="running")timerPause(oid);
-  });
-  
+  Object.keys(timers).forEach(oid=>{ if(oid!=id&&timers[oid].state==="running")timerPause(oid); });
   if(!timers[id])timers[id]={elapsed:tasks.find(t=>t.id==id)?.timerTotal||0,state:"idle",startedAt:null};
   timers[id].state="running";
   timers[id].startedAt=Date.now();
@@ -543,8 +490,6 @@ function timerPause(id){
   timers[id].elapsed+=Math.floor((Date.now()-timers[id].startedAt)/1000);
   timers[id].state="paused";
   timers[id].startedAt=null;
-  
-  // Save to task
   tasks=tasks.map(t=>t.id==id?{...t,timerTotal:timers[id].elapsed,lastModified:Date.now()}:t);
   refreshTimerBtn(id);
   scheduleAutoSync();
@@ -553,7 +498,6 @@ function timerPause(id){
 function timerReset(id){
   timers[id]={elapsed:0,state:"idle",startedAt:null};
   tasks=tasks.map(t=>t.id==id?{...t,timerTotal:0,lastModified:Date.now()}:t);
-  
   const pill=document.getElementById("tpill_"+id);
   if(pill){pill.textContent="⏱ 0:00";pill.className="tpill tpill-idle";}
   refreshTimerBtn(id);
@@ -573,7 +517,6 @@ function refreshTimerBtn(id){
   const tm=timers[id]||{state:"idle",elapsed:tasks.find(t=>t.id==id)?.timerTotal||0};
   const el=getTimerElapsed(id);
   const pill=document.getElementById("tpill_"+id);
-  
   if(pill){
     pill.textContent="⏱ "+fmtT(el);
     pill.className="tpill "+(tm.state==="running"?"tpill-run":tm.state==="paused"?"tpill-pause":"tpill-idle");
@@ -582,10 +525,8 @@ function refreshTimerBtn(id){
 }
 
 function timerBtnsHTML(id,state){
-  if(state==="running")
-    return`<button class="tbtn" onclick="timerPause(${id})" style="background:#d9770622;color:#d97706">⏸ Pause</button><button class="tbtn" onclick="timerReset(${id})" style="background:#dc262622;color:#f87171">↺</button>`;
-  if(state==="paused")
-    return`<button class="tbtn" onclick="timerStart(${id})" style="background:#05966922;color:#34d399">▶ Resume</button><button class="tbtn" onclick="timerStop(${id})" style="background:#64748b22;color:#94a3b8">⏹</button><button class="tbtn" onclick="timerReset(${id})" style="background:#dc262622;color:#f87171">↺</button>`;
+  if(state==="running") return`<button class="tbtn" onclick="timerPause(${id})" style="background:#d9770622;color:#d97706">⏸ Pause</button><button class="tbtn" onclick="timerReset(${id})" style="background:#dc262622;color:#f87171">↺</button>`;
+  if(state==="paused") return`<button class="tbtn" onclick="timerStart(${id})" style="background:#05966922;color:#34d399">▶ Resume</button><button class="tbtn" onclick="timerStop(${id})" style="background:#64748b22;color:#94a3b8">⏹</button><button class="tbtn" onclick="timerReset(${id})" style="background:#dc262622;color:#f87171">↺</button>`;
   return`<button class="tbtn" onclick="timerStart(${id})" style="background:#05966922;color:#34d399">▶ Start</button>`;
 }
 
@@ -620,18 +561,14 @@ function renderStats(){
 
 function getFiltered(){
   const q=(document.getElementById("searchInput")?.value||"").toLowerCase();
-  return tasks.filter(t=>
-    (currentFilter==="ALL"||t.status===currentFilter)&&
-    (t.title.toLowerCase().includes(q)||(t.notes||"").toLowerCase().includes(q))
-  );
+  return tasks.filter(t=> (currentFilter==="ALL"||t.status===currentFilter) && (t.title.toLowerCase().includes(q)||(t.notes||"").toLowerCase().includes(q)) );
 }
 
-// Card HTML
+// Card
 function cardHTML(t){
   const state=(timers[t.id]||{state:"idle"}).state;
   const elapsed=getTimerElapsed(t.id);
   const pillCls=state==="running"?"tpill-run":state==="paused"?"tpill-pause":"tpill-idle";
-  
   return`<div class="tcard" id="card_${t.id}">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
       <span style="font-size:12px;font-weight:600;color:var(--text);flex:1;line-height:1.4">${esc(t.title)}</span>
@@ -659,7 +596,7 @@ function cardHTML(t){
   </div>`;
 }
 
-// Render functions
+// Renderers
 function renderBoard(){
   const f=getFiltered();
   document.getElementById("view-board").innerHTML=`<div class="board-grid">
@@ -705,7 +642,6 @@ function renderWeekly(){
   mon.setDate(today.getDate()-(day===0?6:day-1));
   const days=[];for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(mon.getDate()+i);days.push(d);}
   const todayStr=dk();
-  
   document.getElementById("view-weekly").innerHTML=`
     <div class="weekly-grid" style="margin-bottom:14px">
       ${days.map(d=>{
@@ -832,7 +768,6 @@ function saveTask(){
   const title=document.getElementById("f_title").value.trim();
   if(!title){document.getElementById("f_title").style.borderColor="#dc2626";document.getElementById("f_title").focus();return;}
   document.getElementById("f_title").style.borderColor="";
-  
   const ex=editingId?tasks.find(t=>t.id===editingId):null;
   const task={
     id:editingId||Date.now(),
@@ -850,12 +785,11 @@ function saveTask(){
     notes:document.getElementById("f_notes").value.trim(),
     timerTotal:ex?.timerTotal||0,
     createdAt:ex?.createdAt||new Date().toLocaleTimeString(),
-    lastModified:Date.now()
+    lastModified:Date.now(),
+    _unsynced: true // Mark as unsynced until successfully sent
   };
-  
   tasks=editingId?tasks.map(t=>t.id===editingId?task:t):[...tasks,task];
   if(!timers[task.id])timers[task.id]={elapsed:task.timerTotal,state:"idle",startedAt:null};
-  
   scheduleAutoSync();
   closeModal("taskModal");
   renderAll();
@@ -871,7 +805,7 @@ function delTask(id){
 }
 
 function updateStatus(id,status){
-  tasks=tasks.map(t=>t.id==id?{...t,status,lastModified:Date.now()}:t);
+  tasks=tasks.map(t=>t.id==id?{...t,status,lastModified:Date.now(),_unsynced:true}:t);
   scheduleAutoSync();
   renderCurrent();
 }
@@ -895,7 +829,6 @@ function renderCurrent(){
   else if(activeTab==="charts")renderCharts();
   else if(activeTab==="report")renderReport();
 }
-
 function renderAll(){renderCurrent();}
 
 // Scrum
@@ -925,10 +858,7 @@ function setMood(m){
 }
 
 // Bugs
-function openBugModal(){
-  renderBugListModal();
-  document.getElementById("bugModal").classList.remove("hidden");
-}
+function openBugModal(){ renderBugListModal(); document.getElementById("bugModal").classList.remove("hidden"); }
 
 function renderBugListModal(){
   const el=document.getElementById("bugListInModal");if(!el)return;
@@ -948,7 +878,6 @@ function renderBugListModal(){
 function addBug(){
   const title=document.getElementById("b_title").value.trim();
   if(!title){document.getElementById("b_title").focus();return;}
-  
   bugs.push({
     id:Date.now(),
     title,
@@ -956,13 +885,11 @@ function addBug(){
     status:document.getElementById("b_status").value,
     steps:document.getElementById("b_steps").value.trim(),
     date:new Date().toLocaleDateString("en-IN"),
-    lastModified:Date.now()
+    lastModified:Date.now(),
+    _unsynced: true
   });
-  
   ["b_title","b_steps"].forEach(id=>{document.getElementById(id).value="";});
-  document.getElementById("b_severity").value="MEDIUM";
-  document.getElementById("b_status").value="OPEN";
-  
+  document.getElementById("b_severity").value="MEDIUM";document.getElementById("b_status").value="OPEN";
   scheduleAutoSync();
   renderBugListModal();
   renderCurrent();
@@ -978,44 +905,21 @@ function delBug(id){
 }
 
 function updBugSt(id,st){
-  bugs=bugs.map(b=>b.id==id?{...b,status:st,lastModified:Date.now()}:b);
+  bugs=bugs.map(b=>b.id==id?{...b,status:st,lastModified:Date.now(),_unsynced:true}:b);
   scheduleAutoSync();
   renderCurrent();
 }
 
-// Scratch pad
-function openScratch(){
-  document.getElementById("scratchText").value=scratch;
-  updScratchCnt();
-  document.getElementById("scratchModal").classList.remove("hidden");
-}
-
-function onScratchInput(){
-  scratch=document.getElementById("scratchText").value;
-  updScratchCnt();
-  scheduleAutoSync();
-}
-
-function updScratchCnt(){
-  const v=document.getElementById("scratchText")?.value||"";
-  const el=document.getElementById("scratchCount");
-  if(el)el.textContent=`${v.length} chars`;
-}
-
-function clearScratch(){
-  if(confirm("Clear notes?")){
-    scratch="";
-    document.getElementById("scratchText").value="";
-    updScratchCnt();
-    scheduleAutoSync();
-  }
-}
+// Scratch
+function openScratch(){ document.getElementById("scratchText").value=scratch; updScratchCnt(); document.getElementById("scratchModal").classList.remove("hidden"); }
+function onScratchInput(){ scratch=document.getElementById("scratchText").value; updScratchCnt(); scheduleAutoSync(); }
+function updScratchCnt(){ const v=document.getElementById("scratchText")?.value||""; const el=document.getElementById("scratchCount"); if(el)el.textContent=`${v.length} chars`; }
+function clearScratch(){ if(confirm("Clear notes?")){ scratch=""; document.getElementById("scratchText").value=""; updScratchCnt(); scheduleAutoSync(); } }
 
 // Reminder
 function scheduleReminder(){
   const val=document.getElementById("reminderTime")?.value||"18:00";
   userData.reminderTime=val;
-  
   if(intervals.reminder)clearInterval(intervals.reminder);
   intervals.reminder=setInterval(()=>{
     const now=new Date(),cur=now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0");
@@ -1058,11 +962,7 @@ function setRTab(t){
   updateEOD();
 }
 
-function updateEOD(){
-  const el=document.getElementById("rptPreview");
-  if(!el)return;
-  el.textContent=rTab==="email"?buildEmail():buildWA();
-}
+function updateEOD(){ const el=document.getElementById("rptPreview"); if(!el)return; el.textContent=rTab==="email"?buildEmail():buildWA(); }
 
 function buildEmail(){
   const name=userData.name||"QA Engineer",mgr=userData.manager||"Team",note=document.getElementById("eod_notes")?.value||"";
@@ -1160,52 +1060,31 @@ function copyReport(){
   const text=rTab==="email"?buildEmail():buildWA();
   const ok=()=>{
     ["copyBtn","copyBtn2"].forEach(id=>{
-      const b=document.getElementById(id);
-      if(!b)return;
-      b.textContent="✅ Copied!";
-      b.style.background="#059669";
-      setTimeout(()=>{
-        b.textContent=id==="copyBtn"?"📋 Copy":"📋 Copy & Send to Manager";
-        b.style.background=id==="copyBtn"?"#1e40af":"linear-gradient(135deg,#f59e0b,#ef4444)";
-      },3000);
+      const b=document.getElementById(id); if(!b)return;
+      b.textContent="✅ Copied!"; b.style.background="#059669";
+      setTimeout(()=>{ b.textContent=id==="copyBtn"?"📋 Copy":"📋 Copy & Send to Manager"; b.style.background=id==="copyBtn"?"#1e40af":"linear-gradient(135deg,#f59e0b,#ef4444)"; },3000);
     });
   };
-  if(navigator.clipboard?.writeText){
-    navigator.clipboard.writeText(text).then(ok).catch(()=>fbCopy(text,ok));
-  }else fbCopy(text,ok);
+  if(navigator.clipboard?.writeText){ navigator.clipboard.writeText(text).then(ok).catch(()=>fbCopy(text,ok)); } else fbCopy(text,ok);
 }
 
 function fbCopy(text,ok){
-  const ta=document.createElement("textarea");
-  ta.value=text;
-  ta.style.cssText="position:fixed;top:0;left:0;width:2px;height:2px;opacity:0";
-  document.body.appendChild(ta);
-  ta.focus();ta.select();
-  try{
-    const r=document.execCommand("copy");
-    document.body.removeChild(ta);
-    r?ok():showManual(text);
-  }catch(e){
-    document.body.removeChild(ta);
-    showManual(text);
-  }
+  const ta=document.createElement("textarea"); ta.value=text; ta.style.cssText="position:fixed;top:0;left:0;width:2px;height:2px;opacity:0";
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try{ const r=document.execCommand("copy"); document.body.removeChild(ta); r?ok():showManual(text); }catch(e){ document.body.removeChild(ta); showManual(text); }
 }
 
-function showManual(text){
-  document.getElementById("manualBox").classList.remove("hidden");
-  document.getElementById("manualText").value=text;
-  document.getElementById("manualText").select();
-}
+function showManual(text){ document.getElementById("manualBox").classList.remove("hidden"); document.getElementById("manualText").value=text; document.getElementById("manualText").select(); }
 
 function downloadRpt(){
   const text=rTab==="email"?buildEmail():buildWA();
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(new Blob([text],{type:"text/plain"}));
-  a.download=`QA_EOD_${dk()}.txt`;
-  a.click();
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([text],{type:"text/plain"})); a.download=`QA_EOD_${dk()}.txt`; a.click();
 }
 
-// Cloud Sync Functions
+// ==========================================
+// SYNC LOGIC (Fix for deletion sync)
+// ==========================================
+
 async function loadFromSheet(){
   const btn=document.getElementById("loadBtn");
   if(btn){btn.textContent="⏳ Loading…";btn.disabled=true;}
@@ -1214,65 +1093,75 @@ async function loadFromSheet(){
   try{
     const response = await fetch(`${SHEET_URL}?date=${dk()}&t=${Date.now()}`);
     if(!response.ok) throw new Error("Load failed");
-    
     const data = await response.json();
-    
-    // Merge tasks - cloud wins for modified items
+
+    // Smart Merge Logic
     if(data.tasks && Array.isArray(data.tasks)){
-      data.tasks.forEach(ct => {
-        const idx = tasks.findIndex(t => t.id == ct.id);
+      const serverIds = new Set(data.tasks.map(t => t.id));
+      
+      // 1. Update/Add tasks from server
+      data.tasks.forEach(st => {
+        const idx = tasks.findIndex(t => t.id === st.id);
         if(idx >= 0){
-          if((ct.lastModified||0) > (tasks[idx].lastModified||0)){
-            tasks[idx] = {...ct,id:Number(ct.id),timerTotal:Number(ct.timerTotal)||0};
+          // Server wins for updates
+          if((st.lastModified||0) >= (tasks[idx].lastModified||0)){
+             tasks[idx] = {...st, id: Number(st.id), timerTotal: Number(st.timerTotal)||0};
           }
-        }else{
-          tasks.push({...ct,id:Number(ct.id),timerTotal:Number(ct.timerTotal)||0});
+        } else {
+          tasks.push({...st, id: Number(st.id), timerTotal: Number(st.timerTotal)||0});
         }
       });
+
+      // 2. Handle Deletions: Remove local tasks that ARE synced but MISSING from server
+      tasks = tasks.filter(t => {
+        // If it's on server, keep it (handled above).
+        // If it's NOT on server:
+        if(!serverIds.has(t.id)){
+          // If it has _unsynced flag, it's a new local item -> KEEP
+          if(t._unsynced) return true;
+          // If it was previously synced (no _unsynced flag), it was deleted on server -> REMOVE
+          return false; 
+        }
+        return true;
+      });
     }
-    
-    // Merge bugs
+
+    // Smart Merge for Bugs
     if(data.bugs && Array.isArray(data.bugs)){
-      data.bugs.forEach(cb => {
-        const idx = bugs.findIndex(b => b.id == cb.id);
+      const serverIds = new Set(data.bugs.map(b => b.id));
+      data.bugs.forEach(sb => {
+        const idx = bugs.findIndex(b => b.id === sb.id);
         if(idx >= 0){
-          if((cb.lastModified||0) > (bugs[idx].lastModified||0)){
-            bugs[idx] = {...cb,id:Number(cb.id)};
-          }
-        }else{
-          bugs.push({...cb,id:Number(cb.id)});
+           if((sb.lastModified||0) >= (bugs[idx].lastModified||0)){
+             bugs[idx] = {...sb, id: Number(sb.id)};
+           }
+        } else {
+          bugs.push({...sb, id: Number(sb.id)});
         }
       });
+      bugs = bugs.filter(b => {
+        if(!serverIds.has(b.id)){
+          if(b._unsynced) return true;
+          return false;
+        }
+        return true;
+      });
     }
-    
-    // Update scrum if cloud is newer
+
+    // Update simple states
     if(data.scrum && (data.scrum.lastModified||0) > (scrum.lastModified||0)){
-      scrum = {
-        yesterday:data.scrum.yesterday||"",
-        today:data.scrum.today||"",
-        blockers:data.scrum.blockers||"",
-        mood:data.scrum.mood||"😊",
-        lastModified:data.scrum.lastModified||0
-      };
+      scrum = {...data.scrum, lastModified: data.scrum.lastModified||0};
     }
-    
-    // Update scratch
-    if(data.scratch){
-      scratch = data.scratch;
-    }
-    
-    // Update user data
+    if(data.scratch) scratch = data.scratch;
     if(data.userData){
-      userData = {...userData,...data.userData};
+      userData = {...userData, ...data.userData};
       document.getElementById("myNameInput").value=userData.name||"";
       document.getElementById("sprintInput").value=userData.sprint||"";
       document.getElementById("releaseInput").value=userData.release||"";
     }
-    
-    // Initialize timers for all tasks
-    tasks.forEach(t=>{
-      if(!timers[t.id])timers[t.id]={elapsed:t.timerTotal||0,state:"idle",startedAt:null};
-    });
+
+    // Restore timers
+    tasks.forEach(t=>{ if(!timers[t.id])timers[t.id]={elapsed:t.timerTotal||0,state:"idle",startedAt:null}; });
     
     const now=new Date().toLocaleTimeString();
     document.getElementById("lastSyncInfo").textContent="⬇️ Loaded: "+now;
@@ -1294,22 +1183,26 @@ async function syncSheet(manual=true){
   setCloud("sync","Syncing…");
   
   try{
-    markModified();
+    const payload = {
+      tasks: tasks,
+      bugs: bugs,
+      scrum: scrum,
+      scratch: scratch,
+      userData: userData,
+      date: dk()
+    };
     
     const response = await fetch(SHEET_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        tasks: tasks,
-        bugs: bugs,
-        scrum: scrum,
-        scratch: scratch,
-        userData: userData,
-        date: dk()
-      })
+      body: JSON.stringify(payload)
     });
     
     if(!response.ok) throw new Error("Sync failed");
+    
+    // SUCCESS: Mark all items as synced
+    tasks.forEach(t => delete t._unsynced);
+    bugs.forEach(b => delete b._unsynced);
     
     const now=new Date().toLocaleTimeString();
     document.getElementById("lastSyncInfo").textContent="☁️ Synced: "+now;
@@ -1328,28 +1221,15 @@ async function syncSheet(manual=true){
   }
 }
 
-function showSync(m){
-  const b=document.getElementById("syncBar");
-  b.textContent=m;
-  b.classList.remove("hidden");
-}
+function showSync(m){ const b=document.getElementById("syncBar"); b.textContent=m; b.classList.remove("hidden"); }
 
-// Modal handlers
-function closeModal(id){
-  document.getElementById(id)?.classList.add("hidden");
-}
-
+function closeModal(id){ document.getElementById(id)?.classList.add("hidden"); }
 ["taskModal","scrumModal","bugModal","scratchModal","eodModal"].forEach(id=>{
-  document.getElementById(id)?.addEventListener("click",function(e){
-    if(e.target===this)this.classList.add("hidden");
-  });
+  document.getElementById(id)?.addEventListener("click",function(e){ if(e.target===this)this.classList.add("hidden"); });
 });
 
 document.addEventListener("keydown",e=>{
-  if(e.key==="Escape"){
-    ["taskModal","scrumModal","bugModal","scratchModal","eodModal"].forEach(id=>closeModal(id));
-    closeMobileMenu();
-  }
+  if(e.key==="Escape"){ ["taskModal","scrumModal","bugModal","scratchModal","eodModal"].forEach(id=>closeModal(id)); closeMobileMenu(); }
   if(e.key==="Enter"&&document.activeElement?.id==="f_title")saveTask();
 });
 
