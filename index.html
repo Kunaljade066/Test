@@ -362,12 +362,44 @@ async function loadFromCloud() {
   setCloud("sync", "Loading...");
   
   try {
-    const response = await fetch(`${SHEET_URL}?action=getAll&t=${Date.now()}`);
-    if (!response.ok) throw new Error("Load failed");
-    const data = await response.json();
+    // Try new endpoint first
+    let response = await fetch(SHEET_URL + "?action=getAll&t=" + Date.now());
+    let data;
     
-    if (data.allData && typeof data.allData === 'object') {
-      allData = data.allData;
+    if (!response.ok) {
+      // If new endpoint fails, try old endpoint (backward compatibility)
+      console.log("New endpoint failed, trying old format...");
+      response = await fetch(SHEET_URL + "?date=" + currentDate + "&t=" + Date.now());
+      if (!response.ok) throw new Error("Both endpoints failed");
+      data = await response.json();
+      
+      // Convert old format to new
+      if (data.tasks || data.bugs) {
+        allData[currentDate] = {
+          tasks: Array.isArray(data.tasks) ? data.tasks : [],
+          bugs: Array.isArray(data.bugs) ? data.bugs : [],
+          userData: data.userData || { name: "", sprint: "", release: "" },
+          scrum: data.scrum || {},
+          scratch: data.scratch || ""
+        };
+      }
+    } else {
+      data = await response.json();
+      
+      // Handle new format (allData with multiple dates)
+      if (data.allData && typeof data.allData === 'object') {
+        allData = data.allData;
+      } 
+      // Handle old single-date format
+      else if (data.tasks || data.bugs) {
+        allData[currentDate] = {
+          tasks: Array.isArray(data.tasks) ? data.tasks : [],
+          bugs: Array.isArray(data.bugs) ? data.bugs : [],
+          userData: data.userData || { name: "", sprint: "", release: "" },
+          scrum: data.scrum || {},
+          scratch: data.scratch || ""
+        };
+      }
     }
     
     updateUIFromData();
@@ -375,10 +407,11 @@ async function loadFromCloud() {
     document.getElementById("lastSyncInfo").textContent = "⬇️ Loaded: " + now;
     setCloud("ok", "Cloud ✓");
     renderAll();
+    showSync("✅ Data loaded!");
   } catch (err) {
     console.log("Cloud unavailable:", err);
     setCloud("err", "Offline");
-    showSync("❌ Load failed - check URL and backend");
+    showSync("❌ Load failed");
   } finally {
     if (btn) { btn.textContent = "⬇️ Load"; btn.disabled = false; }
   }
