@@ -78,8 +78,11 @@ td{padding:9px 13px;border-bottom:1px solid var(--border);font-size:13px;vertica
       <input id="myNameInput" class="inp" style="width:120px;font-size:12px;padding:5px 9px" placeholder="Your name…" oninput="saveToCloud()"/>
       <button class="btn" id="themeBtn" onclick="toggleTheme()" style="background:var(--surface);color:var(--text);padding:7px 11px;font-size:12px;border:1px solid var(--border)">🌙 Dark</button>
       <button class="btn" onclick="openTaskForm(null)" style="background:#1e40af;color:#fff;padding:7px 12px;font-size:12px">+ Task</button>
+      <button class="btn" onclick="openScrum()" style="background:#7c3aed;color:#fff;padding:7px 11px;font-size:12px">📋 Scrum</button>
       <button class="btn" onclick="openBugModal()" style="background:#dc2626;color:#fff;padding:7px 11px;font-size:12px">🐛 Bugs</button>
+      <button class="btn" onclick="openScratch()" style="background:#0369a1;color:#fff;padding:7px 11px;font-size:12px">📝 Notes</button>
       <button class="btn" onclick="syncNow()" id="syncBtn" style="background:#059669;color:#fff;padding:7px 11px;font-size:12px">☁️ Sync</button>
+      <button class="btn" onclick="loadFromCloud()" id="loadBtn" style="background:#0e7490;color:#fff;padding:7px 11px;font-size:12px">⬇️ Load</button>
       <button class="btn" onclick="openEOD()" style="background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;padding:8px 15px;font-size:13px;border-radius:10px;font-weight:700">📤 EOD</button>
     </div>
   </div>
@@ -172,7 +175,45 @@ td{padding:9px 13px;border-bottom:1px solid var(--border);font-size:13px;vertica
   </div>
 </div>
 
-<!-- BUG MODAL -->
+<!-- SCRUM MODAL -->
+<div id="scrumModal" class="modal-bg hidden">
+  <div class="modal">
+    <div style="font-family:'Space Grotesk';font-weight:700;font-size:17px;color:var(--text);margin-bottom:3px">📋 Daily Scrum Notes</div>
+    <div id="scrumDate" style="font-size:11px;color:var(--dim);margin-bottom:16px"></div>
+    <div style="display:flex;flex-direction:column;gap:13px">
+      <div><label style="font-size:11px;color:#059669;font-weight:700;display:block;margin-bottom:5px">✅ What did you do YESTERDAY?</label>
+        <textarea id="s_yesterday" class="inp" rows="3" placeholder="e.g. Completed regression testing…"></textarea></div>
+      <div><label style="font-size:11px;color:#3b82f6;font-weight:700;display:block;margin-bottom:5px">🚀 What will you do TODAY?</label>
+        <textarea id="s_today" class="inp" rows="3" placeholder="e.g. Test payment gateway…"></textarea></div>
+      <div><label style="font-size:11px;color:#f59e0b;font-weight:700;display:block;margin-bottom:5px">🎯 Top PRIORITIES?</label>
+        <textarea id="s_priority" class="inp" rows="2" placeholder="e.g. 1. Fix login bug, 2. Review PR #42"></textarea></div>
+      <div><label style="font-size:11px;color:#dc2626;font-weight:700;display:block;margin-bottom:5px">🚧 Any BLOCKERS?</label>
+        <textarea id="s_blockers" class="inp" rows="2" placeholder="e.g. API not ready…"></textarea></div>
+      <div style="display:flex;gap:9px;justify-content:flex-end">
+        <button class="btn" onclick="closeModal('scrumModal')" style="background:#334155;color:#e2e8f0;padding:9px 18px">Cancel</button>
+        <button class="btn" onclick="saveScrumData()" style="background:#7c3aed;color:#fff;padding:9px 18px">Save Notes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCRATCH PAD -->
+<div id="scratchModal" class="modal-bg hidden">
+  <div class="modal" style="max-width:700px">
+    <div style="font-family:'Space Grotesk';font-weight:700;font-size:17px;color:var(--text);margin-bottom:3px">📝 Quick Notes</div>
+    <div style="font-size:11px;color:var(--dim);margin-bottom:12px">Auto-saved to cloud.</div>
+    <textarea id="scratchText" class="scratchpad" rows="14" oninput="onScratchInput()" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:14px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);resize:vertical;min-height:160px;width:100%;line-height:1.75"></textarea>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+      <span id="scratchCount" style="font-size:11px;color:var(--dim)"></span>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="clearScratch()" style="background:#334155;color:#e2e8f0;padding:7px 14px;font-size:12px">🗑 Clear</button>
+        <button class="btn" onclick="closeModal('scratchModal')" style="background:#0369a1;color:#fff;padding:7px 14px;font-size:12px">✓ Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <div id="bugModal" class="modal-bg hidden">
   <div class="modal" style="max-width:720px">
     <div style="font-family:'Space Grotesk';font-weight:700;font-size:17px;color:var(--text);margin-bottom:16px">🐛 Bug Log</div>
@@ -238,7 +279,7 @@ const STATUS = {
 };
 const PRI = {HIGH:{c:"#dc2626"},MEDIUM:{c:"#d97706"},LOW:{c:"#059669"}};
 
-let allData = {}; // { "2025-01-15": {tasks, bugs, userData}, ... }
+let allData = {}; // { "2025-01-15": {tasks, bugs, userData, scrum, scratch}, ... }
 let currentDate = new Date().toISOString().split("T")[0];
 let currentFilter = "ALL";
 let activeTab = "board";
@@ -251,7 +292,13 @@ const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replac
 
 function getDateData(date = currentDate) {
   if (!allData[date]) {
-    allData[date] = { tasks: [], bugs: [], userData: { name: "", sprint: "", release: "" } };
+    allData[date] = { 
+      tasks: [], 
+      bugs: [], 
+      userData: { name: "", sprint: "", release: "" },
+      scrum: { yesterday: "", today: "", priority: "", blockers: "", mood: "😊" },
+      scratch: ""
+    };
   }
   return allData[date];
 }
@@ -799,6 +846,58 @@ function copyEOD() {
   }
 }
 
+function openScrum() {
+  const data = getDateData();
+  document.getElementById("scrumDate").textContent = new Date(currentDate + "T00:00:00").toLocaleDateString("en-IN");
+  document.getElementById("s_yesterday").value = data.scrum?.yesterday || "";
+  document.getElementById("s_today").value = data.scrum?.today || "";
+  document.getElementById("s_priority").value = data.scrum?.priority || "";
+  document.getElementById("s_blockers").value = data.scrum?.blockers || "";
+  document.getElementById("scrumModal").classList.remove("hidden");
+}
+
+function saveScrumData() {
+  const data = getDateData();
+  data.scrum = {
+    yesterday: document.getElementById("s_yesterday").value,
+    today: document.getElementById("s_today").value,
+    priority: document.getElementById("s_priority").value,
+    blockers: document.getElementById("s_blockers").value,
+    mood: data.scrum?.mood || "😊"
+  };
+  saveToCloud();
+  closeModal("scrumModal");
+}
+
+function openScratch() {
+  const data = getDateData();
+  document.getElementById("scratchText").value = data.scratch || "";
+  updScratchCnt();
+  document.getElementById("scratchModal").classList.remove("hidden");
+}
+
+function onScratchInput() {
+  const data = getDateData();
+  data.scratch = document.getElementById("scratchText").value;
+  updScratchCnt();
+  scheduleSave();
+}
+
+function updScratchCnt() {
+  const v = document.getElementById("scratchText")?.value || "";
+  const el = document.getElementById("scratchCount");
+  if (el) el.textContent = `${v.length} chars`;
+}
+
+function clearScratch() {
+  if (!confirm("Clear notes?")) return;
+  const data = getDateData();
+  data.scratch = "";
+  document.getElementById("scratchText").value = "";
+  updScratchCnt();
+  saveToCloud();
+}
+
 function closeModal(id) {
   document.getElementById(id).classList.add("hidden");
 }
@@ -821,13 +920,13 @@ document.addEventListener("DOMContentLoaded", () => {
   updateDateDisplay();
   loadFromCloud();
   
-  ["taskModal","bugModal","eodModal"].forEach(id => {
+  ["taskModal","scrumModal","bugModal","scratchModal","eodModal"].forEach(id => {
     document.getElementById(id).addEventListener("click", (e) => {
       if (e.target.id === id) closeModal(id);
     });
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") ["taskModal","bugModal","eodModal"].forEach(id => closeModal(id));
+    if (e.key === "Escape") ["taskModal","scrumModal","bugModal","scratchModal","eodModal"].forEach(id => closeModal(id));
   });
 });
 
