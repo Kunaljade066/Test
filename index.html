@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>QA Tracker - Cloud Storage</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -39,8 +40,10 @@ td{padding:9px 13px;border-bottom:1px solid var(--border);font-size:13px;vertica
 .cloud-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
 .cloud-ok{background:#059669}.cloud-err{background:#dc2626}.cloud-sync{background:#d97706}
 .date-nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--surface);padding:12px;border-radius:10px;border:1px solid var(--border);margin-bottom:14px}
-
-@media(max-width:700px){.date-nav{flex-direction:column;align-items:stretch}}
+.chart-container{position:relative;height:280px;margin-bottom:20px;background:var(--surface2);border-radius:10px;padding:15px;border:1px solid var(--border)}
+.chart-container.small{height:220px}
+.chart-wrapper{position:relative;height:100%}
+@media(max-width:700px){.date-nav{flex-direction:column;align-items:stretch}.chart-container{height:240px}.chart-container.small{height:180px}}
 .board-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
 .stats-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
 .form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
@@ -213,7 +216,6 @@ td{padding:9px 13px;border-bottom:1px solid var(--border);font-size:13px;vertica
   </div>
 </div>
 
-
 <div id="bugModal" class="modal-bg hidden">
   <div class="modal" style="max-width:720px">
     <div style="font-family:'Space Grotesk';font-weight:700;font-size:17px;color:var(--text);margin-bottom:16px">🐛 Bug Log</div>
@@ -241,9 +243,9 @@ td{padding:9px 13px;border-bottom:1px solid var(--border);font-size:13px;vertica
 
 <!-- EOD MODAL -->
 <div id="eodModal" class="modal-bg hidden">
-  <div class="modal" style="max-width:700px">
+  <div class="modal" style="max-width:900px;max-height:95vh">
     <div style="font-family:'Space Grotesk';font-weight:700;font-size:17px;color:var(--text);margin-bottom:16px">📤 EOD Report</div>
-    <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;flex-direction:column;gap:12px;max-height:calc(95vh - 150px);overflow-y:auto">
       <div class="form-grid2">
         <div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:4px">Your Name</label>
           <input id="eod_name" class="inp" placeholder="Name" oninput="updateEOD()"/></div>
@@ -256,9 +258,23 @@ td{padding:9px 13px;border-bottom:1px solid var(--border);font-size:13px;vertica
         <button class="btn" id="btn-email" onclick="setEODFormat('email')" style="background:#1e40af;color:#fff;padding:6px 12px;font-size:11px">📧 Email</button>
         <button class="btn" id="btn-whatsapp" onclick="setEODFormat('whatsapp')" style="background:var(--surface2);color:var(--dim);padding:6px 12px;font-size:11px;border:1px solid var(--border)">💬 WhatsApp</button>
       </div>
-      <div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:6px">Report Preview:</label>
-        <pre id="eodPreview" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:10px;color:var(--muted);max-height:300px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;line-height:1.6"></pre>
+      
+      <!-- GRAPHS SECTION -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0">
+        <div class="chart-container small">
+          <div style="font-size:11px;color:var(--dim);font-weight:700;margin-bottom:8px">📊 Status Distribution</div>
+          <div class="chart-wrapper"><canvas id="eodStatusChart"></canvas></div>
+        </div>
+        <div class="chart-container small">
+          <div style="font-size:11px;color:var(--dim);font-weight:700;margin-bottom:8px">🎯 Priority Breakdown</div>
+          <div class="chart-wrapper"><canvas id="eodPriorityChart"></canvas></div>
+        </div>
       </div>
+      
+      <div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:6px">Report Preview:</label>
+        <pre id="eodPreview" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:10px;color:var(--muted);max-height:250px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;line-height:1.6"></pre>
+      </div>
+      
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn" onclick="copyEOD()" style="background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;padding:10px 20px;font-size:12px;font-weight:700">📋 Copy Report</button>
         <button class="btn" onclick="closeModal('eodModal')" style="background:#334155;color:#e2e8f0;padding:10px 18px">Close</button>
@@ -286,6 +302,7 @@ let activeTab = "board";
 let isLight = false;
 let eodFormat = "email";
 let syncTimeout = null;
+let chartInstances = { statusChart: null, priorityChart: null, statusChartEOD: null, priorityChartEOD: null };
 
 const dk = () => new Date().toISOString().split("T")[0];
 const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -324,7 +341,6 @@ function scheduleSave() {
 }
 
 async function saveToCloud() {
-  // Save user data first
   const data = getDateData();
   data.userData.name = document.getElementById("myNameInput")?.value || "";
   data.userData.sprint = document.getElementById("sprintInput")?.value || "";
@@ -362,18 +378,15 @@ async function loadFromCloud() {
   setCloud("sync", "Loading...");
   
   try {
-    // Try new endpoint first
     let response = await fetch(SHEET_URL + "?action=getAll&t=" + Date.now());
     let data;
     
     if (!response.ok) {
-      // If new endpoint fails, try old endpoint (backward compatibility)
       console.log("New endpoint failed, trying old format...");
       response = await fetch(SHEET_URL + "?date=" + currentDate + "&t=" + Date.now());
       if (!response.ok) throw new Error("Both endpoints failed");
       data = await response.json();
       
-      // Convert old format to new
       if (data.tasks || data.bugs) {
         allData[currentDate] = {
           tasks: Array.isArray(data.tasks) ? data.tasks : [],
@@ -386,11 +399,9 @@ async function loadFromCloud() {
     } else {
       data = await response.json();
       
-      // Handle new format (allData with multiple dates)
       if (data.allData && typeof data.allData === 'object') {
         allData = data.allData;
       } 
-      // Handle old single-date format
       else if (data.tasks || data.bugs) {
         allData[currentDate] = {
           tasks: Array.isArray(data.tasks) ? data.tasks : [],
@@ -595,6 +606,17 @@ function renderReport() {
   
   document.getElementById("view-report").innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="chart-container">
+        <div style="font-size:12px;color:var(--dim);font-weight:700;margin-bottom:10px">📊 Status Distribution</div>
+        <div class="chart-wrapper"><canvas id="statusChart"></canvas></div>
+      </div>
+      <div class="chart-container">
+        <div style="font-size:12px;color:var(--dim);font-weight:700;margin-bottom:10px">🎯 Priority Breakdown</div>
+        <div class="chart-wrapper"><canvas id="priorityChart"></canvas></div>
+      </div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
       <div style="background:var(--surface);border-radius:11px;padding:18px;border:1px solid var(--border)">
         <div style="font-family:'Space Grotesk';font-weight:700;font-size:13px;margin-bottom:14px;color:var(--text)">📊 Progress</div>
         ${Object.entries(STATUS).map(([k,sv]) => {
@@ -619,6 +641,82 @@ function renderReport() {
         <div><span style="color:var(--dim)">🐛 Bugs:</span> <span style="color:#f97316;font-weight:700">${s.openBugs}</span></div>
       </div>
     </div>`;
+  
+  // Render charts after DOM update
+  setTimeout(() => renderReportCharts(), 100);
+}
+
+function renderReportCharts() {
+  const tasks = getTasks();
+  
+  // Destroy existing charts
+  if (chartInstances.statusChart) chartInstances.statusChart.destroy();
+  if (chartInstances.priorityChart) chartInstances.priorityChart.destroy();
+  
+  const ctxStatus = document.getElementById("statusChart");
+  const ctxPriority = document.getElementById("priorityChart");
+  
+  if (!ctxStatus || !ctxPriority) return;
+  
+  const statusData = {
+    TODO: tasks.filter(t => t.status === "TODO").length,
+    IN_PROGRESS: tasks.filter(t => t.status === "IN_PROGRESS").length,
+    TESTING: tasks.filter(t => t.status === "TESTING").length,
+    BLOCKED: tasks.filter(t => t.status === "BLOCKED").length,
+    DONE: tasks.filter(t => t.status === "DONE").length
+  };
+  
+  const priorityData = {
+    HIGH: tasks.filter(t => t.priority === "HIGH").length,
+    MEDIUM: tasks.filter(t => t.priority === "MEDIUM").length,
+    LOW: tasks.filter(t => t.priority === "LOW").length
+  };
+  
+  chartInstances.statusChart = new Chart(ctxStatus, {
+    type: 'doughnut',
+    data: {
+      labels: ['To Do', 'In Progress', 'Testing', 'Blocked', 'Done'],
+      datasets: [{
+        data: [statusData.TODO, statusData.IN_PROGRESS, statusData.TESTING, statusData.BLOCKED, statusData.DONE],
+        backgroundColor: ['#6b7280', '#d97706', '#7c3aed', '#dc2626', '#059669'],
+        borderColor: getComputedStyle(document.body).getPropertyValue('--surface').trim(),
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { size: 11 }, color: getComputedStyle(document.body).getPropertyValue('--text').trim(), padding: 10 }
+        }
+      }
+    }
+  });
+  
+  chartInstances.priorityChart = new Chart(ctxPriority, {
+    type: 'doughnut',
+    data: {
+      labels: ['High', 'Medium', 'Low'],
+      datasets: [{
+        data: [priorityData.HIGH, priorityData.MEDIUM, priorityData.LOW],
+        backgroundColor: ['#dc2626', '#d97706', '#059669'],
+        borderColor: getComputedStyle(document.body).getPropertyValue('--surface').trim(),
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { size: 11 }, color: getComputedStyle(document.body).getPropertyValue('--text').trim(), padding: 10 }
+        }
+      }
+    }
+  });
 }
 
 function renderCurrent() {
@@ -851,6 +949,85 @@ ${openBugs.length ? `\n*🐛 Bugs*\n${openBugs.map(b => b.title).join(" | ")}` :
 ${note ? `\n*📝 Notes*\n${note}` : ""}`;
   }
   document.getElementById("eodPreview").textContent = report;
+  
+  // Render EOD charts
+  setTimeout(() => renderEODCharts(), 100);
+}
+
+function renderEODCharts() {
+  const tasks = getTasks();
+  
+  // Destroy existing charts
+  if (chartInstances.statusChartEOD) chartInstances.statusChartEOD.destroy();
+  if (chartInstances.priorityChartEOD) chartInstances.priorityChartEOD.destroy();
+  
+  const ctxStatus = document.getElementById("eodStatusChart");
+  const ctxPriority = document.getElementById("eodPriorityChart");
+  
+  if (!ctxStatus || !ctxPriority) return;
+  
+  const statusData = {
+    TODO: tasks.filter(t => t.status === "TODO").length,
+    IN_PROGRESS: tasks.filter(t => t.status === "IN_PROGRESS").length,
+    TESTING: tasks.filter(t => t.status === "TESTING").length,
+    BLOCKED: tasks.filter(t => t.status === "BLOCKED").length,
+    DONE: tasks.filter(t => t.status === "DONE").length
+  };
+  
+  const priorityData = {
+    HIGH: tasks.filter(t => t.priority === "HIGH").length,
+    MEDIUM: tasks.filter(t => t.priority === "MEDIUM").length,
+    LOW: tasks.filter(t => t.priority === "LOW").length
+  };
+  
+  const textColor = getComputedStyle(document.body).getPropertyValue('--text').trim();
+  const borderColor = getComputedStyle(document.body).getPropertyValue('--surface').trim();
+  
+  chartInstances.statusChartEOD = new Chart(ctxStatus, {
+    type: 'doughnut',
+    data: {
+      labels: ['To Do', 'In Progress', 'Testing', 'Blocked', 'Done'],
+      datasets: [{
+        data: [statusData.TODO, statusData.IN_PROGRESS, statusData.TESTING, statusData.BLOCKED, statusData.DONE],
+        backgroundColor: ['#6b7280', '#d97706', '#7c3aed', '#dc2626', '#059669'],
+        borderColor: borderColor,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { size: 10 }, color: textColor, padding: 8 }
+        }
+      }
+    }
+  });
+  
+  chartInstances.priorityChartEOD = new Chart(ctxPriority, {
+    type: 'doughnut',
+    data: {
+      labels: ['High', 'Medium', 'Low'],
+      datasets: [{
+        data: [priorityData.HIGH, priorityData.MEDIUM, priorityData.LOW],
+        backgroundColor: ['#dc2626', '#d97706', '#059669'],
+        borderColor: borderColor,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { size: 10 }, color: textColor, padding: 8 }
+        }
+      }
+    }
+  });
 }
 
 function openEOD() {
