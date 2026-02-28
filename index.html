@@ -357,12 +357,12 @@ async function saveToCloud() {
 }
 
 async function loadFromCloud() {
-  const btn = document.getElementById("syncBtn");
+  const btn = document.getElementById("loadBtn");
   if (btn) { btn.textContent = "⏳ Loading…"; btn.disabled = true; }
   setCloud("sync", "Loading...");
   
   try {
-    const response = await fetch(SHEET_URL + "?action=getAll&t=" + Date.now());
+    const response = await fetch(`${SHEET_URL}?action=getAll&t=${Date.now()}`);
     if (!response.ok) throw new Error("Load failed");
     const data = await response.json();
     
@@ -378,8 +378,9 @@ async function loadFromCloud() {
   } catch (err) {
     console.log("Cloud unavailable:", err);
     setCloud("err", "Offline");
+    showSync("❌ Load failed - check URL and backend");
   } finally {
-    if (btn) { btn.textContent = "☁️ Sync"; btn.disabled = false; }
+    if (btn) { btn.textContent = "⬇️ Load"; btn.disabled = false; }
   }
 }
 
