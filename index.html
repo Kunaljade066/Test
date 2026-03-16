@@ -1718,10 +1718,6 @@ function toast(msg,type='ok'){
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ══════════════════════════════════════════════
-// INIT — session restore only (Google init NOT needed here — popup handles it)
-// ══════════════════════════════════════════════
-window.addEventListener('
-// ══════════════════════════════════════════════
 // INIT — attach button + session restore
 // ══════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
