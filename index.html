@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Tell Cloudflare NOT to inject email-decode script on this page -->
+<meta name="cf-2fa-verify" content="false">
 <title>HW Tracker · Hitwicket</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -455,7 +457,7 @@ select.fi2 option { background: var(--sf2); }
     </button>
     <div class="login-note">
       Restricted to <b>@hitwicket.com</b> accounts.<br>
-      Contact <b><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="86edf3e8e7eac6eeeff2f1efe5ede3f2a8e5e9eb">[email&#160;protected]</a></b> for access.
+      Contact <b>kunal<!---->@<!---->hitwicket.com</b> for access.
     </div>
     <div class="login-err" id="loginErr"></div>
   </div>
@@ -639,7 +641,7 @@ select.fi2 option { background: var(--sf2); }
   </div>
 </div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script>
 // ══════════════════════════════════════════════
 // CONFIG — all secrets live in the Worker
 // ══════════════════════════════════════════════
@@ -1325,36 +1327,71 @@ function openNewBug(){
 
 function openEdit(id){
   const bug=G.bugs.find(b=>b.id===id); if(!bug) return;
-  if(G.user?.role!=='admin' && bug.reporter_email!==G.user?.email){ toast('Only the reporter or admin can edit this bug','err'); return; }
   G.editing=id;
-  // If panel is open (e.g. came from detail view), close it first then reopen with form
+  const isFullEdit = G.user?.role==='admin' || bug.reporter_email===G.user?.email;
   const isOpen = document.getElementById('slidePanel').classList.contains('on');
   if(isOpen){
-    // Close without the delayed body-wipe so we can write form immediately after
     document.getElementById('overlay').classList.remove('on');
     document.getElementById('slidePanel').classList.remove('on');
     setTimeout(()=>{
       document.getElementById('spBody').innerHTML='';
       document.getElementById('spBugId').textContent='';
-      buildForm(bug);
+      buildForm(bug, isFullEdit);
       openPanel();
-    }, 280); // wait for close animation to finish, THEN build + open
+    }, 280);
   } else {
     document.getElementById('spBody').innerHTML='';
     document.getElementById('spBugId').textContent='';
-    buildForm(bug);
+    buildForm(bug, isFullEdit);
     openPanel();
   }
 }
 
-function buildForm(bug){
+function buildForm(bug, isFullEdit=true){
   const sprintOpts=G.sprints.map(s=>`<option value="${esc(s.name)}"${bug?.sprint===s.name?' selected':''}>${esc(s.name)}</option>`).join('');
   const statOpts=['Open','Bugged','In Progress','In Review','QA Pass','Done','Non-Recreatable','Not a bug','Closed'].map(v=>`<option value="${v}"${(bug?.status||'Open')===v?' selected':''}>${v}</option>`).join('');
 
-  document.getElementById('spTitle').textContent = bug ? 'Edit '+bug.id : 'New Bug';
+  document.getElementById('spTitle').textContent = bug ? (isFullEdit ? 'Edit '+bug.id : 'Update '+bug.id) : 'New Bug';
   document.getElementById('spBugId').textContent = bug?.id||'';
-  document.getElementById('spFooter').innerHTML = `<button class="btn btn-ghost" onclick="closePanel()">Cancel</button><button class="btn btn-v" id="spSave" onclick="saveBug()">💾 Save Bug</button>`;
+  document.getElementById('spFooter').innerHTML = `<button class="btn btn-ghost" onclick="closePanel()">Cancel</button><button class="btn btn-v" id="spSave" onclick="saveBug()">💾 Save</button>`;
 
+  // ── RESTRICTED VIEW: members who aren't the reporter can only change status + assignee ──
+  if(bug && !isFullEdit){
+    document.getElementById('spBody').innerHTML=`
+      <div style="background:var(--vbg);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:11px 14px;margin-bottom:18px;font-size:12px;color:var(--v3);font-family:var(--mono);">
+        ℹ You can update Status and Assignee. Only the reporter or admin can edit other fields.
+      </div>
+      <div style="margin-bottom:14px;padding:12px 14px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px;">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px;">Current Bug</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;">${esc(bug.title||'')}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">${pChip(bug.priority)}${stChip(bug.status)}</div>
+      </div>
+      <div class="fg">
+        <label class="fl">Status</label>
+        <select class="fi2" id="f-status-form">${statOpts}</select>
+      </div>
+      <div class="fg">
+        <label class="fl">Assignee (Dev)</label>
+        <div class="assignee-wrap">
+          <input class="fi2" id="f-assignee" autocomplete="off"
+            value="${esc(bug?.assignee||'')}"
+            placeholder="Search team member…"
+            oninput="filterAssigneeDropdown(this.value)"
+            onfocus="showAssigneeDropdown()"
+            onkeydown="assigneeKeyNav(event)">
+          <input type="hidden" id="f-assignee-email"   value="${esc(bug?.assignee_email||'')}">
+          <input type="hidden" id="f-assignee-picture" value="${esc(bug?.assignee_picture||'')}">
+          <div class="assignee-dropdown" id="assigneeDropdown"></div>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Comment (optional)</label>
+        <textarea class="fi2" id="f-quickcomment" rows="2" placeholder="Add a note about this update…"></textarea>
+      </div>`;
+    return;
+  }
+
+  // ── FULL EDIT FORM (reporter / admin) ──
   document.getElementById('spBody').innerHTML=`
     <div class="dup-box" id="dupBox"><div class="dup-title">⚠️ Similar bugs found</div><div id="dupList"></div></div>
     <div class="form-grid2">
@@ -1387,7 +1424,7 @@ function buildForm(bug){
             oninput="filterAssigneeDropdown(this.value)"
             onfocus="showAssigneeDropdown()"
             onkeydown="assigneeKeyNav(event)">
-          <input type="hidden" id="f-assignee-email" value="${esc(bug?.assignee_email||'')}">
+          <input type="hidden" id="f-assignee-email"   value="${esc(bug?.assignee_email||'')}">
           <input type="hidden" id="f-assignee-picture" value="${esc(bug?.assignee_picture||'')}">
           <div class="assignee-dropdown" id="assigneeDropdown"></div>
         </div>
@@ -1471,53 +1508,94 @@ function closePanel(){
 // SAVE BUG
 // ══════════════════════════════════════════════
 async function saveBug(){
-  const title=document.getElementById('f-title')?.value?.trim();
-  if(!title){ toast('Title is required!','err'); return; }
   const btn=document.getElementById('spSave'); btn.disabled=true; btn.innerHTML='<span class="spin"></span> Saving…';
 
-  const data={
-    title,
-    priority:         document.getElementById('f-priority')?.value||'Medium',
-    severity:         document.getElementById('f-severity')?.value||'',
-    status:           document.getElementById('f-status-form')?.value||'Open',
-    assignee:         document.getElementById('f-assignee')?.value||'',
-    assignee_email:   document.getElementById('f-assignee-email')?.value||'',
-    assignee_picture: document.getElementById('f-assignee-picture')?.value||'',
-    reporter:         document.getElementById('f-reporter')?.value||G.user?.name||'',
-    reporter_email:   G.user?.email||'',
-    reporter_picture: G.user?.picture||'',
-    feature:    document.getElementById('f-feature')?.value||'',
-    sprint:     document.getElementById('f-sprint-form')?.value||'',
-    build:      document.getElementById('f-build')?.value||'',
-    device:     document.getElementById('f-device')?.value||'',
-    steps:      document.getElementById('f-steps')?.value||'',
-    actual:     document.getElementById('f-actual')?.value||'',
-    attachment: document.getElementById('f-attachment')?.value||'',
-  };
-
   try{
-    let res;
     const prevBug = G.editing ? G.bugs.find(b=>b.id===G.editing) : null;
-    if(G.editing){
-      res=await api(`/bugs/${G.editing}`,'PUT',data);
-      toast('Bug updated ✓','ok');
-      // Notify if assignee changed
-      if(prevBug && data.assignee && data.assignee!==prevBug.assignee){
-        addNotif(`Assigned to you: ${data.assignee}`,'You have been assigned bug: '+data.title, G.editing);
+    const isFullEdit = !G.editing || G.user?.role==='admin' || prevBug?.reporter_email===G.user?.email;
+
+    if(G.editing && !isFullEdit){
+      // ── RESTRICTED: status + assignee + optional comment only ──
+      const newStatus   = document.getElementById('f-status-form')?.value || prevBug.status;
+      const newAssignee = document.getElementById('f-assignee')?.value || '';
+      const newAEmail   = document.getElementById('f-assignee-email')?.value || '';
+      const newAPic     = document.getElementById('f-assignee-picture')?.value || '';
+      const comment     = document.getElementById('f-quickcomment')?.value?.trim() || '';
+
+      const data = {
+        status:           newStatus,
+        assignee:         newAssignee,
+        assignee_email:   newAEmail,
+        assignee_picture: newAPic,
+        _restricted:      true,   // tells Worker this is a restricted update
+      };
+
+      const res = await api(`/bugs/${G.editing}`, 'PUT', data);
+
+      // Post comment if provided
+      if(comment){
+        await api(`/bugs/${G.editing}/comment`, 'POST', { text: comment });
       }
-      // Notify if status changed
+
+      // Notifications
+      if(newAssignee && newAssignee !== prevBug.assignee){
+        addNotif(`Assigned to you: ${newAssignee}`, prevBug.title, G.editing);
+      }
+      if(newStatus !== prevBug.status){
+        addNotif(`Status updated: ${res.bug?.id||G.editing}`, `${prevBug.title} → ${newStatus}`, G.editing);
+      }
+
+      toast('Updated ✓', 'ok');
+      closePanel();
+      await refreshAll();
+      btn.disabled=false; btn.innerHTML='💾 Save';
+      return;
+    }
+
+    // ── FULL EDIT ──
+    const title = document.getElementById('f-title')?.value?.trim();
+    if(!title){ toast('Title is required!','err'); btn.disabled=false; btn.innerHTML='💾 Save'; return; }
+
+    const data={
+      title,
+      priority:         document.getElementById('f-priority')?.value||'Medium',
+      severity:         document.getElementById('f-severity')?.value||'',
+      status:           document.getElementById('f-status-form')?.value||'Open',
+      assignee:         document.getElementById('f-assignee')?.value||'',
+      assignee_email:   document.getElementById('f-assignee-email')?.value||'',
+      assignee_picture: document.getElementById('f-assignee-picture')?.value||'',
+      reporter:         document.getElementById('f-reporter')?.value||G.user?.name||'',
+      reporter_email:   G.user?.email||'',
+      reporter_picture: G.user?.picture||'',
+      feature:    document.getElementById('f-feature')?.value||'',
+      sprint:     document.getElementById('f-sprint-form')?.value||'',
+      build:      document.getElementById('f-build')?.value||'',
+      device:     document.getElementById('f-device')?.value||'',
+      steps:      document.getElementById('f-steps')?.value||'',
+      actual:     document.getElementById('f-actual')?.value||'',
+      attachment: document.getElementById('f-attachment')?.value||'',
+    };
+
+    let res;
+    if(G.editing){
+      res = await api(`/bugs/${G.editing}`, 'PUT', data);
+      toast('Bug updated ✓', 'ok');
+      if(prevBug && data.assignee && data.assignee!==prevBug.assignee){
+        addNotif(`Assigned: ${data.assignee}`, 'You have been assigned: '+data.title, G.editing);
+      }
       if(prevBug && data.status!==prevBug.status){
-        addNotif(`Status changed: ${res.bug?.id||G.editing}`,`${data.title} → ${data.status}`, G.editing);
+        addNotif(`Status: ${res.bug?.id||G.editing}`, `${data.title} → ${data.status}`, G.editing);
       }
     } else {
-      res=await api('/bugs','POST',data);
-      toast(`Bug created: ${res.bug?.id} ✓`,'ok');
-      if(data.assignee) addNotif(`New bug assigned: ${data.assignee}`, data.title, res.bug?.id);
+      res = await api('/bugs', 'POST', data);
+      toast(`Created: ${res.bug?.id} ✓`, 'ok');
+      if(data.assignee) addNotif(`New bug assigned`, data.title, res.bug?.id);
     }
+
     closePanel();
     await refreshAll();
   }catch(e){ toast('❌ '+e.message,'err'); }
-  btn.disabled=false; btn.innerHTML='💾 Save Bug';
+  btn.disabled=false; btn.innerHTML='💾 Save';
 }
 
 // ══════════════════════════════════════════════
