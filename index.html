@@ -26,184 +26,120 @@
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
-
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--mono);
-  min-height: 100vh;
-  overflow-x: hidden;
+  background: var(--bg); color: var(--text);
+  font-family: var(--mono); min-height: 100vh; overflow-x: hidden;
 }
-
-/* GRID BG */
 body::before {
-  content: '';
-  position: fixed; inset: 0;
+  content: ''; position: fixed; inset: 0;
   background-image:
     linear-gradient(rgba(59,139,255,0.025) 1px, transparent 1px),
     linear-gradient(90deg, rgba(59,139,255,0.025) 1px, transparent 1px);
-  background-size: 32px 32px;
-  pointer-events: none; z-index: 0;
+  background-size: 32px 32px; pointer-events: none; z-index: 0;
 }
 
-/* LOCK SCREEN */
+/* LOCK */
 #lockScreen {
   position: fixed; inset: 0; z-index: 9999;
   background: var(--bg);
   display: flex; align-items: center; justify-content: center;
 }
 #lockScreen::before {
-  content: '';
-  position: absolute; inset: 0;
+  content: ''; position: absolute; inset: 0;
   background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(59,139,255,0.06) 0%, transparent 70%);
 }
 .lock-box {
-  position: relative;
-  background: var(--s1);
-  border: 1px solid var(--border2);
-  border-radius: 3px;
-  padding: 52px 44px 44px;
-  width: 100%; max-width: 400px;
-  text-align: center;
+  position: relative; background: var(--s1);
+  border: 1px solid var(--border2); border-radius: 3px;
+  padding: 52px 44px 44px; width: 100%; max-width: 400px; text-align: center;
 }
 .lock-icon { font-size: 40px; margin-bottom: 20px; display: block; }
-.lock-title {
-  font-family: var(--display);
-  font-size: 36px; letter-spacing: 4px;
-  color: var(--text); margin-bottom: 4px;
-}
-.lock-sub {
-  font-size: 10px; letter-spacing: 3px;
-  color: var(--muted); text-transform: uppercase; margin-bottom: 32px;
-}
+.lock-title { font-family: var(--display); font-size: 36px; letter-spacing: 4px; color: var(--text); margin-bottom: 4px; }
+.lock-sub { font-size: 10px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 32px; }
 .lock-row { display: flex; gap: 8px; margin-bottom: 10px; }
 .lock-row input {
-  flex: 1; background: var(--bg);
-  border: 1px solid var(--border2); color: var(--text);
-  font-family: var(--mono); font-size: 14px;
-  padding: 12px 14px; border-radius: 2px; outline: none;
-  letter-spacing: 4px; transition: border-color 0.2s;
+  flex: 1; background: var(--bg); border: 1px solid var(--border2); color: var(--text);
+  font-family: var(--mono); font-size: 14px; padding: 12px 14px;
+  border-radius: 2px; outline: none; letter-spacing: 4px; transition: border-color 0.2s;
 }
 .lock-row input:focus { border-color: var(--b); }
 .lock-btn {
   background: var(--r); color: white; border: none;
-  padding: 12px 18px; font-family: var(--display);
-  font-size: 16px; letter-spacing: 2px;
-  cursor: pointer; border-radius: 2px; transition: opacity 0.2s;
+  padding: 12px 18px; font-family: var(--display); font-size: 16px;
+  letter-spacing: 2px; cursor: pointer; border-radius: 2px; transition: opacity 0.2s;
 }
 .lock-btn:hover { opacity: 0.85; }
 .lock-err { font-size: 11px; color: var(--r); min-height: 16px; }
 
-/* TOP NAV */
+/* NAV */
 .nav {
   position: relative; z-index: 10;
-  background: rgba(8,8,16,0.95);
-  border-bottom: 1px solid var(--border);
-  padding: 0 32px;
-  display: flex; align-items: center; gap: 0;
+  background: rgba(8,8,16,0.95); border-bottom: 1px solid var(--border);
+  padding: 0 32px; display: flex; align-items: center; gap: 0;
   backdrop-filter: blur(8px);
 }
-.nav-brand {
-  font-family: var(--display);
-  font-size: 22px; letter-spacing: 4px;
-  color: var(--text); padding: 16px 0;
-  margin-right: 32px;
-}
+.nav-brand { font-family: var(--display); font-size: 22px; letter-spacing: 4px; color: var(--text); padding: 16px 0; margin-right: 32px; }
 .nav-brand span { color: var(--r); }
 .nav-tabs { display: flex; gap: 0; flex: 1; }
 .nav-tab {
-  padding: 18px 22px;
-  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
-  color: var(--muted); cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s; user-select: none;
-  white-space: nowrap;
+  padding: 18px 22px; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent;
+  transition: all 0.2s; user-select: none; white-space: nowrap;
 }
 .nav-tab:hover { color: var(--text); }
 .nav-tab.active { color: var(--b); border-bottom-color: var(--b); }
 .nav-badge {
   display: inline-flex; align-items: center; justify-content: center;
-  background: var(--r); color: white;
-  font-size: 9px; font-weight: 700;
-  width: 16px; height: 16px; border-radius: 50%;
-  margin-left: 6px; vertical-align: middle;
+  background: var(--r); color: white; font-size: 9px; font-weight: 700;
+  width: 16px; height: 16px; border-radius: 50%; margin-left: 6px; vertical-align: middle;
 }
+.cloud-status {
+  margin-left: auto; display: flex; align-items: center; gap: 8px;
+  font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+}
+.cloud-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--muted);
+  transition: background 0.3s;
+}
+.cloud-dot.ok { background: var(--g); animation: pulse 2.5s ease-in-out infinite; }
+.cloud-dot.err { background: var(--r); }
+.cloud-dot.syncing { background: var(--y); animation: spin-dot 1s linear infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+@keyframes spin-dot { to { transform: rotate(360deg); } }
 
 /* LAYOUT */
-.wrap {
-  position: relative; z-index: 1;
-  max-width: 1280px; margin: 0 auto;
-  padding: 32px 24px 80px;
-}
-
-/* TABS */
+.wrap { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 32px 24px 80px; }
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
-
-/* SECTION HEADER */
-.sec-head {
-  margin-bottom: 28px;
-}
-.sec-head h2 {
-  font-family: var(--display);
-  font-size: 32px; letter-spacing: 4px; color: var(--text);
-}
+.sec-head { margin-bottom: 28px; }
+.sec-head h2 { font-family: var(--display); font-size: 32px; letter-spacing: 4px; color: var(--text); }
 .sec-head h2 span { color: var(--r); }
-.sec-head p {
-  font-size: 12px; color: var(--muted); margin-top: 6px;
-  letter-spacing: 0.5px; line-height: 1.6;
-}
-
-/* GRID */
+.sec-head p { font-size: 12px; color: var(--muted); margin-top: 6px; letter-spacing: 0.5px; line-height: 1.6; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
 .col-span2 { grid-column: 1 / -1; }
-@media(max-width:900px) { .grid2,.grid3 { grid-template-columns:1fr; } }
+@media(max-width:900px) { .grid2 { grid-template-columns: 1fr; } }
 
 /* PANELS */
-.panel {
-  background: var(--s1);
-  border: 1px solid var(--border);
-  border-radius: 3px; overflow: hidden;
-}
+.panel { background: var(--s1); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
 .panel-head {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
-  background: var(--s2);
+  padding: 14px 18px; border-bottom: 1px solid var(--border); background: var(--s2);
   display: flex; align-items: center; gap: 10px;
 }
-.ph-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--b);
-}
+.ph-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--b); }
 .ph-dot.r { background: var(--r); }
 .ph-dot.g { background: var(--g); }
 .ph-dot.y { background: var(--y); }
-.panel-title {
-  font-size: 11px; letter-spacing: 2px;
-  text-transform: uppercase; color: var(--text);
-  font-weight: 700;
-}
+.panel-title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--text); font-weight: 700; }
 .panel-body { padding: 18px; }
 
 /* FORMS */
 .field { margin-bottom: 16px; }
 .field:last-child { margin-bottom: 0; }
-label, .field-label {
-  display: block; font-size: 10px;
-  letter-spacing: 2px; text-transform: uppercase;
-  color: var(--muted); margin-bottom: 7px;
-}
+label, .field-label { display: block; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; }
 textarea, input[type=text], input[type=password], select {
-  width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 13px;
-  padding: 11px 13px;
-  border-radius: 2px; outline: none;
-  transition: border-color 0.2s;
+  width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  font-family: var(--mono); font-size: 13px; padding: 11px 13px;
+  border-radius: 2px; outline: none; transition: border-color 0.2s;
 }
 textarea { min-height: 110px; resize: vertical; line-height: 1.6; }
 textarea:focus, input:focus, select:focus { border-color: var(--b); }
@@ -211,24 +147,12 @@ select option { background: var(--s2); }
 
 /* TAGS */
 .tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.tag {
-  padding: 4px 10px;
-  background: var(--s3); border: 1px solid var(--border2);
-  border-radius: 2px; font-size: 10px;
-  cursor: pointer; transition: all 0.15s;
-  color: var(--muted); user-select: none;
-}
+.tag { padding: 4px 10px; background: var(--s3); border: 1px solid var(--border2); border-radius: 2px; font-size: 10px; cursor: pointer; transition: all 0.15s; color: var(--muted); user-select: none; }
 .tag:hover { border-color: var(--b); color: var(--b); }
 .tag.on { background: rgba(59,139,255,0.12); border-color: var(--b); color: var(--b); font-weight: 700; }
 
 /* BUTTONS */
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 12px 20px;
-  font-family: var(--display); letter-spacing: 3px; font-size: 15px;
-  border: none; border-radius: 2px; cursor: pointer;
-  transition: all 0.2s; text-transform: uppercase;
-}
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; font-family: var(--display); letter-spacing: 3px; font-size: 15px; border: none; border-radius: 2px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
 .btn-primary { background: var(--r); color: white; width: 100%; margin-top: 6px; }
 .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
 .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
@@ -238,98 +162,43 @@ select option { background: var(--s2); }
 .btn-green:hover { opacity: 0.88; }
 .btn-sm { padding: 7px 14px; font-size: 12px; letter-spacing: 2px; }
 
-/* UPLOAD ZONE */
-.upload-zone {
-  border: 2px dashed var(--border2);
-  border-radius: 3px; padding: 32px 20px;
-  text-align: center; cursor: pointer;
-  transition: all 0.2s;
-}
+/* UPLOAD */
+.upload-zone { border: 2px dashed var(--border2); border-radius: 3px; padding: 32px 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
 .upload-zone:hover, .upload-zone.drag { border-color: var(--b); background: rgba(59,139,255,0.04); }
 .upload-icon { font-size: 32px; margin-bottom: 10px; display: block; }
 .upload-text { font-size: 12px; color: var(--muted); line-height: 1.7; }
 .upload-text strong { color: var(--text); }
 #prdFileInput { display: none; }
-.file-badge {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(0,229,160,0.1);
-  border: 1px solid rgba(0,229,160,0.3);
-  border-radius: 2px; padding: 6px 12px;
-  font-size: 11px; color: var(--g); margin-top: 10px;
-}
-
-/* RESULTS */
-.result-box {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 2px; padding: 0;
-  margin-top: 16px; overflow: hidden;
-}
-.result-box pre {
-  padding: 16px; font-size: 12px; line-height: 1.8;
-  white-space: pre-wrap; word-break: break-word;
-  color: #c8c8e0; max-height: 500px; overflow-y: auto;
-}
+.file-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(0,229,160,0.1); border: 1px solid rgba(0,229,160,0.3); border-radius: 2px; padding: 6px 12px; font-size: 11px; color: var(--g); margin-top: 10px; }
 
 /* IMPACT CARDS */
 .impact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
-.icard {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 3px; padding: 16px;
-}
-.icard-head {
-  display: flex; align-items: center; gap: 8px;
-  margin-bottom: 12px; padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
-}
-.sev {
-  font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
-  padding: 2px 7px; border-radius: 2px; font-weight: 700;
-}
+.icard { background: var(--bg); border: 1px solid var(--border); border-radius: 3px; padding: 16px; }
+.icard-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.sev { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; font-weight: 700; }
 .sev-critical { background: rgba(255,59,92,0.15); color: var(--r); border: 1px solid rgba(255,59,92,0.3); }
 .sev-high { background: rgba(255,179,71,0.15); color: #ffb347; border: 1px solid rgba(255,179,71,0.3); }
 .sev-medium { background: rgba(59,139,255,0.12); color: var(--b); border: 1px solid rgba(59,139,255,0.25); }
 .sev-low { background: rgba(0,229,160,0.1); color: var(--g); border: 1px solid rgba(0,229,160,0.2); }
 .icard-title { font-size: 13px; font-weight: 700; flex: 1; color: var(--text); }
 .icard ul { list-style: none; display: flex; flex-direction: column; gap: 7px; }
-.icard li {
-  font-size: 12px; line-height: 1.6; color: #b8b8d0;
-  padding-left: 14px; position: relative;
-}
+.icard li { font-size: 12px; line-height: 1.6; color: #b8b8d0; padding-left: 14px; position: relative; }
 .icard li::before { content: '→'; position: absolute; left: 0; color: var(--b); }
 
 /* STATS BAR */
-.stats-bar {
-  display: flex; gap: 20px; flex-wrap: wrap;
-  padding: 14px 18px;
-  background: var(--s2);
-  border-top: 1px solid var(--border);
-}
+.stats-bar { display: flex; gap: 20px; flex-wrap: wrap; padding: 14px 18px; background: var(--s2); border-top: 1px solid var(--border); }
 .stat-item { display: flex; flex-direction: column; gap: 2px; }
 .stat-n { font-family: var(--display); font-size: 26px; }
 .stat-l { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
 .n-r { color: var(--r); } .n-o { color: #ffb347; } .n-b { color: var(--b); } .n-g { color: var(--g); }
 
-/* TEST CASE TABLE */
+/* TC TABLE */
 .tc-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.tc-table th {
-  background: var(--s3);
-  padding: 8px 10px; text-align: left;
-  font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
-  color: var(--muted); border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-.tc-table td {
-  padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.04);
-  color: #c8c8e0; vertical-align: top; line-height: 1.5;
-}
+.tc-table th { background: var(--s3); padding: 8px 10px; text-align: left; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+.tc-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #c8c8e0; vertical-align: top; line-height: 1.5; }
 .tc-table tr:hover td { background: rgba(59,139,255,0.04); }
 .tc-id { color: var(--b); font-size: 10px; white-space: nowrap; }
-.prio-badge {
-  font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
-  padding: 2px 6px; border-radius: 2px; white-space: nowrap;
-}
+.prio-badge { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; padding: 2px 6px; border-radius: 2px; white-space: nowrap; }
 .p-p0 { background: rgba(255,59,92,0.15); color: var(--r); }
 .p-p1 { background: rgba(255,179,71,0.12); color: #ffb347; }
 .p-p2 { background: rgba(59,139,255,0.1); color: var(--b); }
@@ -337,17 +206,8 @@ select option { background: var(--s2); }
 
 /* KB ENTRIES */
 .kb-list { display: flex; flex-direction: column; gap: 10px; }
-.kb-entry {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 3px; padding: 14px 16px;
-  display: flex; align-items: flex-start; gap: 14px;
-}
-.kb-type-badge {
-  font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
-  padding: 3px 8px; border-radius: 2px; white-space: nowrap;
-  font-weight: 700; margin-top: 2px;
-}
+.kb-entry { background: var(--bg); border: 1px solid var(--border); border-radius: 3px; padding: 14px 16px; display: flex; align-items: flex-start; gap: 14px; }
+.kb-type-badge { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; padding: 3px 8px; border-radius: 2px; white-space: nowrap; font-weight: 700; margin-top: 2px; }
 .kb-tc { background: rgba(59,139,255,0.12); color: var(--b); border: 1px solid rgba(59,139,255,0.2); }
 .kb-code { background: rgba(184,127,255,0.1); color: var(--p); border: 1px solid rgba(184,127,255,0.2); }
 .kb-prd { background: rgba(0,229,160,0.08); color: var(--g); border: 1px solid rgba(0,229,160,0.2); }
@@ -357,71 +217,24 @@ select option { background: var(--s2); }
 .kb-meta { font-size: 10px; color: var(--muted); margin-bottom: 6px; }
 .kb-snippet { font-size: 11px; color: #909090; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
 .kb-actions { display: flex; gap: 8px; margin-top: 8px; }
-.kb-del-btn {
-  background: none; border: 1px solid rgba(255,59,92,0.3); color: var(--r);
-  font-family: var(--mono); font-size: 9px; letter-spacing: 1px;
-  padding: 3px 8px; border-radius: 2px; cursor: pointer; transition: all 0.2s;
-}
+.kb-del-btn { background: none; border: 1px solid rgba(255,59,92,0.3); color: var(--r); font-family: var(--mono); font-size: 9px; letter-spacing: 1px; padding: 3px 8px; border-radius: 2px; cursor: pointer; transition: all 0.2s; }
 .kb-del-btn:hover { background: rgba(255,59,92,0.1); }
 
 /* LOADING */
-.spinner {
-  width: 36px; height: 36px;
-  border: 2px solid var(--border);
-  border-top-color: var(--r);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-  margin: 0 auto;
-}
+.spinner { width: 36px; height: 36px; border: 2px solid var(--border); border-top-color: var(--r); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.loading-wrap {
-  display: none; flex-direction: column;
-  align-items: center; gap: 14px; padding: 48px 20px; text-align: center;
-}
+.loading-wrap { display: none; flex-direction: column; align-items: center; gap: 14px; padding: 48px 20px; text-align: center; }
 .loading-wrap.show { display: flex; }
 .loading-label { font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
 
-/* STREAMING */
-.stream-box {
-  background: var(--bg);
-  border: 1px solid var(--border2);
-  border-radius: 2px;
-  padding: 16px; font-size: 12px;
-  line-height: 1.9; color: #c8d0e8;
-  white-space: pre-wrap; word-break: break-word;
-  max-height: 600px; overflow-y: auto;
-  min-height: 80px;
-}
-.cursor-blink::after {
-  content: '▊';
-  animation: blink 1s step-end infinite;
-  color: var(--b);
-}
-@keyframes blink { 50% { opacity: 0; } }
-
-/* EMPTY STATE */
-.empty {
-  padding: 40px 20px; text-align: center;
-  font-size: 12px; color: var(--muted); line-height: 1.7;
-}
-
 /* TOAST */
-.toast {
-  position: fixed; bottom: 24px; right: 24px; z-index: 999;
-  background: var(--s2); border: 1px solid var(--border2);
-  border-radius: 3px; padding: 12px 18px;
-  font-size: 12px; color: var(--text);
-  transform: translateY(80px); opacity: 0;
-  transition: all 0.3s; pointer-events: none;
-}
+.toast { position: fixed; bottom: 24px; right: 24px; z-index: 999; background: var(--s2); border: 1px solid var(--border2); border-radius: 3px; padding: 12px 18px; font-size: 12px; color: var(--text); transform: translateY(80px); opacity: 0; transition: all 0.3s; pointer-events: none; max-width: 320px; }
 .toast.show { transform: translateY(0); opacity: 1; }
 .toast.ok { border-left: 3px solid var(--g); }
 .toast.err { border-left: 3px solid var(--r); }
+.toast.info { border-left: 3px solid var(--b); }
 
-/* DIVIDER */
-.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
-
-/* scrollbar */
+.empty { padding: 40px 20px; text-align: center; font-size: 12px; color: var(--muted); line-height: 1.7; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
@@ -429,12 +242,12 @@ select option { background: var(--s2); }
 </head>
 <body>
 
-<!-- LOCK SCREEN -->
+<!-- LOCK -->
 <div id="lockScreen">
   <div class="lock-box">
     <span class="lock-icon">🔐</span>
     <div class="lock-title">QA BLUEPRINT</div>
-    <div class="lock-sub">Intelligence Suite v4 · Private</div>
+    <div class="lock-sub">Intelligence Suite v4 · Cloud</div>
     <div class="lock-row">
       <input type="password" id="pwdInput" placeholder="Password..." onkeydown="if(event.key==='Enter')unlock()">
       <button class="lock-btn" onclick="unlock()">GO</button>
@@ -452,32 +265,35 @@ select option { background: var(--s2); }
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchTab('impact')" id="tab-impact">⚡ Impact Analyzer</div>
     <div class="nav-tab" onclick="switchTab('prd')" id="tab-prd">📄 PRD → Test Cases</div>
-    <div class="nav-tab" onclick="switchTab('kb')" id="tab-kb">🗄 Knowledge Base <span class="nav-badge" id="kbCount">0</span></div>
+    <div class="nav-tab" onclick="switchTab('kb')" id="tab-kb">
+      ☁️ Knowledge Base
+      <span class="nav-badge" id="kbCount">0</span>
+    </div>
+  </div>
+  <div class="cloud-status">
+    <div class="cloud-dot" id="cloudDot"></div>
+    <span id="cloudLabel" style="color:var(--muted);">connecting...</span>
   </div>
 </nav>
 
-<!-- ═══════════════════════════════════════════════════════
-     TAB 1 — IMPACT ANALYZER
-═══════════════════════════════════════════════════════ -->
 <div class="wrap">
 
+<!-- ═══ TAB 1: IMPACT ANALYZER ═══ -->
 <div class="tab-pane active" id="pane-impact">
   <div class="sec-head">
     <h2>Impact <span>Analyzer</span></h2>
-    <p>Describe a code/feature change → AI cross-references against your KB + 1200+ checklist items → Generates deep impact report + regression test cases</p>
+    <p>Describe a change → AI cross-references 1,200+ checklist items + your cloud KB → Deep impact report + regression test cases</p>
   </div>
-
   <div class="grid2">
-    <!-- INPUT -->
     <div class="panel">
       <div class="panel-head"><div class="ph-dot r"></div><span class="panel-title">Change Description</span></div>
       <div class="panel-body">
         <div class="field">
           <label>Describe the change (be specific)</label>
-          <textarea id="changeDesc" placeholder="e.g. Dev refactored SA (Super Ability) activation flow. The mana calculation logic was moved from GameplayController.cs to a new SAManager.cs. The original trigger condition checked mana >= 100, now checks mana >= threshold where threshold is configurable per player. Also changed animation trigger from direct call to event-based..."></textarea>
+          <textarea id="changeDesc" placeholder="e.g. Dev refactored SA (Super Ability) activation flow. The mana calculation logic was moved from GameplayController.cs to SAManager.cs. Original trigger checked mana >= 100, now checks mana >= threshold where threshold is configurable per player. Animation trigger changed from direct call to event-based..."></textarea>
         </div>
         <div class="field">
-          <label>Feature area tags (click to add context)</label>
+          <label>Feature area tags</label>
           <div class="tags-wrap" id="featureTags"></div>
         </div>
         <div class="field">
@@ -504,76 +320,58 @@ select option { background: var(--s2); }
       </div>
     </div>
 
-    <!-- INFO -->
     <div style="display:flex;flex-direction:column;gap:16px;">
       <div class="panel">
-        <div class="panel-head"><div class="ph-dot g"></div><span class="panel-title">What This Does</span></div>
-        <div class="panel-body" style="font-size:12px;color:#b0b0c8;line-height:1.8;">
-          <div style="margin-bottom:12px;">
-            <div style="color:var(--g);font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">AI-Powered Analysis</div>
-            ✓ Cross-references change against 1,200+ checklist items<br>
-            ✓ Identifies critical, high, medium, low risk areas<br>
-            ✓ Generates 15–25 specific test cases to re-run<br>
-            ✓ Suggests edge cases and downstream risks
-          </div>
-          <div>
-            <div style="color:var(--b);font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Knowledge Base Integration</div>
-            ✓ Pulls context from your saved test cases & code<br>
-            ✓ Matches against past regression patterns<br>
-            ✓ Uses your KB entries as additional context
+        <div class="panel-head"><div class="ph-dot g"></div><span class="panel-title">Cloud KB Context</span></div>
+        <div class="panel-body">
+          <div id="kbContextSummary" style="font-size:12px;color:var(--muted);line-height:1.8;">
+            Loading cloud KB...
           </div>
         </div>
       </div>
       <div class="panel">
-        <div class="panel-head"><div class="ph-dot y"></div><span class="panel-title">KB Context</span></div>
-        <div class="panel-body">
-          <div id="kbContextSummary" style="font-size:12px;color:var(--muted);line-height:1.7;">
-            No KB entries yet. Add test cases &amp; code in the Knowledge Base tab to enrich analysis.
-          </div>
+        <div class="panel-head"><div class="ph-dot b"></div><span class="panel-title">Analysis Info</span></div>
+        <div class="panel-body" style="font-size:12px;color:#b0b0c8;line-height:1.9;">
+          ✓ 20+ specific test cases per analysis<br>
+          ✓ P0/P1/P2/P3 priority classification<br>
+          ✓ Platform-specific checks (iOS/Android)<br>
+          ✓ Edge cases + downstream risk mapping<br>
+          ✓ Cloud KB entries injected as context<br>
+          ✓ Results saveable back to cloud KB
         </div>
       </div>
     </div>
 
-    <!-- RESULTS -->
     <div class="panel col-span2" id="impactResultPanel" style="display:none;">
       <div class="panel-head">
-        <div class="ph-dot r" style="animation: pulse 2s ease-in-out infinite;"></div>
+        <div class="ph-dot r"></div>
         <span class="panel-title">Impact Analysis Report</span>
         <span id="analysisTime" style="margin-left:auto;font-size:10px;color:var(--muted);"></span>
       </div>
-
       <div class="loading-wrap" id="impactLoading">
         <div class="spinner"></div>
-        <div class="loading-label" id="impactLoadingLabel">Analyzing impact...</div>
+        <div class="loading-label" id="impactLoadingLabel">Analyzing...</div>
       </div>
-
-      <div id="impactOutput" style="display:none; padding: 18px;">
-        <!-- Stats bar -->
-        <div class="stats-bar" id="impactStats" style="margin: -18px -18px 18px;"></div>
-        <!-- Impact cards -->
+      <div id="impactOutput" style="display:none;padding:18px;">
+        <div class="stats-bar" id="impactStats" style="margin:-18px -18px 18px;"></div>
         <div class="impact-grid" id="impactCards"></div>
-        <!-- Test cases table -->
         <div id="impactTCSection" style="margin-top:20px;"></div>
-        <!-- Save to KB -->
-        <div style="margin-top:16px;">
-          <button class="btn btn-secondary btn-sm" onclick="saveAnalysisToKB()">🗄 Save This Analysis to Knowledge Base</button>
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm" onclick="saveAnalysisToKB()">☁️ Save to Cloud KB</button>
+          <button class="btn btn-secondary btn-sm" onclick="copyImpactCSV()">📋 Copy Test Cases CSV</button>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════
-     TAB 2 — PRD → TEST CASES
-═══════════════════════════════════════════════════════ -->
+<!-- ═══ TAB 2: PRD → TEST CASES ═══ -->
 <div class="tab-pane" id="pane-prd">
   <div class="sec-head">
     <h2>PRD <span>→ Test Cases</span></h2>
-    <p>Upload or paste a Product Requirements Document → AI generates a structured test suite with priority, preconditions, steps, and expected results</p>
+    <p>Upload or paste a Product Requirements Document → AI generates a full structured test suite</p>
   </div>
-
   <div class="grid2">
-    <!-- INPUT -->
     <div style="display:flex;flex-direction:column;gap:16px;">
       <div class="panel">
         <div class="panel-head"><div class="ph-dot b"></div><span class="panel-title">PRD Input</span></div>
@@ -582,10 +380,7 @@ select option { background: var(--s2); }
             <label>Upload PDF or text file</label>
             <div class="upload-zone" id="uploadZone" onclick="document.getElementById('prdFileInput').click()" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
               <span class="upload-icon">📂</span>
-              <div class="upload-text">
-                <strong>Click to upload</strong> or drag & drop<br>
-                PDF, TXT, MD files supported
-              </div>
+              <div class="upload-text"><strong>Click to upload</strong> or drag & drop<br>PDF, TXT, MD supported</div>
             </div>
             <input type="file" id="prdFileInput" accept=".pdf,.txt,.md" onchange="fileSelected(event)">
             <div id="fileBadge" style="display:none;" class="file-badge">
@@ -596,18 +391,17 @@ select option { background: var(--s2); }
           <div style="text-align:center;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin:4px 0;">— or paste —</div>
           <div class="field">
             <label>Paste PRD text directly</label>
-            <textarea id="prdText" style="min-height:160px;" placeholder="Paste your PRD, feature spec, or design doc here...&#10;&#10;Include: feature overview, user flows, acceptance criteria, edge cases..."></textarea>
+            <textarea id="prdText" style="min-height:160px;" placeholder="Paste your PRD, feature spec, or design doc here..."></textarea>
           </div>
         </div>
       </div>
-
       <div class="panel">
-        <div class="panel-head"><div class="ph-dot y"></div><span class="panel-title">Generation Options</span></div>
+        <div class="panel-head"><div class="ph-dot y"></div><span class="panel-title">Options</span></div>
         <div class="panel-body">
           <div class="field">
-            <label>Test case format</label>
+            <label>Format</label>
             <select id="tcFormat">
-              <option value="detailed">Detailed (with preconditions, steps, expected)</option>
+              <option value="detailed">Detailed (preconditions + steps + expected)</option>
               <option value="concise">Concise (title + expected only)</option>
               <option value="gherkin">Gherkin (Given/When/Then)</option>
             </select>
@@ -620,64 +414,50 @@ select option { background: var(--s2); }
             </select>
           </div>
           <div class="field">
-            <label>Focus areas (optional)</label>
-            <textarea id="prdFocus" style="min-height:70px;" placeholder="e.g. Focus on edge cases, focus on Android-specific behavior, include negative test cases..."></textarea>
+            <label>Special focus (optional)</label>
+            <textarea id="prdFocus" style="min-height:70px;" placeholder="e.g. Focus on edge cases, Android-specific behavior, negative test cases..."></textarea>
           </div>
           <button class="btn btn-primary" id="prdBtn" onclick="runPRDAnalysis()">📋 Generate Test Cases</button>
         </div>
       </div>
     </div>
 
-    <!-- OUTPUT -->
     <div class="panel">
       <div class="panel-head"><div class="ph-dot g"></div><span class="panel-title">Generated Test Cases</span></div>
-
       <div class="loading-wrap" id="prdLoading">
         <div class="spinner"></div>
         <div class="loading-label" id="prdLoadingLabel">Reading PRD...</div>
       </div>
-
       <div id="prdOutput" style="padding:18px;display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
           <div id="prdStats" style="font-size:12px;color:var(--muted);"></div>
           <div style="display:flex;gap:8px;">
             <button class="btn btn-secondary btn-sm" onclick="copyTCAsCSV()">📋 Copy CSV</button>
-            <button class="btn btn-secondary btn-sm" onclick="savePRDToKB()">🗄 Save to KB</button>
+            <button class="btn btn-secondary btn-sm" onclick="savePRDToKB()">☁️ Save to KB</button>
           </div>
         </div>
         <div style="overflow-x:auto;">
-          <table class="tc-table" id="prdTable">
-            <thead>
-              <tr>
-                <th>ID</th><th>Feature</th><th>Title</th>
-                <th>Category</th><th>Preconditions</th>
-                <th>Steps</th><th>Expected Result</th>
-                <th>Priority</th>
-              </tr>
-            </thead>
+          <table class="tc-table">
+            <thead><tr>
+              <th>ID</th><th>Feature</th><th>Title</th><th>Category</th>
+              <th>Preconditions</th><th>Steps</th><th>Expected Result</th><th>Priority</th>
+            </tr></thead>
             <tbody id="prdTableBody"></tbody>
           </table>
         </div>
       </div>
-
-      <div class="empty" id="prdEmpty">
-        Upload or paste a PRD on the left, then click "Generate Test Cases"
-      </div>
+      <div class="empty" id="prdEmpty">Upload or paste a PRD on the left, then click Generate</div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════
-     TAB 3 — KNOWLEDGE BASE
-═══════════════════════════════════════════════════════ -->
+<!-- ═══ TAB 3: KNOWLEDGE BASE ═══ -->
 <div class="tab-pane" id="pane-kb">
   <div class="sec-head">
-    <h2>Knowledge <span>Base</span></h2>
-    <p>Store test cases, code snippets, PRDs, and notes. This data persists across sessions and enriches your impact analysis.</p>
+    <h2>Cloud <span>Knowledge Base</span></h2>
+    <p>All entries stored in Cloudflare KV — persists across devices, browsers, and sessions · <strong style="color:var(--g);">orange-waterfall-030e.kunal-249.workers.dev</strong></p>
   </div>
-
   <div class="grid2">
-    <!-- ADD ENTRY -->
     <div class="panel">
       <div class="panel-head"><div class="ph-dot g"></div><span class="panel-title">Add Entry</span></div>
       <div class="panel-body">
@@ -691,26 +471,25 @@ select option { background: var(--s2); }
           </select>
         </div>
         <div class="field">
-          <label>Title / Label</label>
+          <label>Title</label>
           <input type="text" id="kbTitle" placeholder="e.g. SA Activation Flow — Test Suite v2">
         </div>
         <div class="field">
-          <label>Feature / Area tag</label>
+          <label>Feature / Area</label>
           <input type="text" id="kbArea" placeholder="e.g. Super Ability, FTUE, Store, Match Engine">
         </div>
         <div class="field">
-          <label>Content (paste test cases, code, spec, notes)</label>
-          <textarea id="kbContent" style="min-height:200px;" placeholder="Paste your test cases, code snippets, PRD text, or QA notes here...&#10;&#10;For test cases: use any format — Excel rows, numbered lists, table format&#10;For code: paste the relevant functions or classes&#10;For PRD: paste the spec section&#10;For notes: describe the bug pattern or QA insight"></textarea>
+          <label>Content</label>
+          <textarea id="kbContent" style="min-height:200px;" placeholder="Paste test cases, code snippets, PRD sections, or QA notes..."></textarea>
         </div>
-        <button class="btn btn-green btn-sm" onclick="saveKBEntry()" style="width:100%;">💾 Save to Knowledge Base</button>
+        <button class="btn btn-green btn-sm" onclick="saveKBEntry()" style="width:100%;" id="kbSaveBtn">☁️ Save to Cloud KB</button>
       </div>
     </div>
 
-    <!-- KB LIST -->
     <div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
         <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);">
-          Stored Entries: <strong style="color:var(--text);" id="kbTotal">0</strong>
+          Cloud Entries: <strong style="color:var(--text);" id="kbTotal">—</strong>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <select id="kbFilter" onchange="renderKB()" style="padding:6px 10px;font-size:11px;width:auto;">
@@ -720,11 +499,12 @@ select option { background: var(--s2); }
             <option value="prd">PRD</option>
             <option value="note">Notes</option>
           </select>
+          <button class="btn btn-secondary btn-sm" onclick="refreshKB()">🔄 Refresh</button>
           <button class="btn btn-secondary btn-sm" onclick="clearAllKB()" style="color:var(--r);border-color:rgba(255,59,92,0.3);">🗑 Clear All</button>
         </div>
       </div>
       <div class="kb-list" id="kbList">
-        <div class="empty">No entries yet. Add test cases, code, or PRDs above.</div>
+        <div class="empty">Connecting to cloud...</div>
       </div>
     </div>
   </div>
@@ -732,51 +512,50 @@ select option { background: var(--s2); }
 
 </div><!-- /wrap -->
 
-<style>
-@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.7)} }
-</style>
-
 <script>
 // ═══════════════════════════════════════════════════════
-// CONSTANTS & STATE
+// CONFIG
 // ═══════════════════════════════════════════════════════
-const PASSWORD = "qa123";
-const KB_STORAGE_KEY = "hw_qa_kb";
-
-let sessionOk = false;
-let kbEntries = [];
-let prdFileData = null;
-let lastAnalysisResult = null;
-let lastPRDResult = null;
+const PASSWORD    = "qa123";
+const WORKER_URL  = "https://orange-waterfall-030e.kunal-249.workers.dev";
+const AUTH_TOKEN  = "qabp_hw2024"; // Must match AUTH_TOKEN env var in your Worker
 
 const FEATURES = [
   "FTUE","Login/Auth","Super Ability","Match Engine","Store",
   "Squad/Lineup","Player Detail","Training","League Mode","PvP",
   "Auction","Alliance","HW TV","Trophy Road","Season Pass",
-  "Player Scout","Dashboard","Notifications","Settings","iOS-specific",
-  "Android-specific","Game Center","Network/Offline"
+  "Player Scout","Dashboard","Notifications","Settings",
+  "iOS/Game Center","Android","Network/Offline"
 ];
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let sessionOk      = false;
+let failCount      = 0;
+let kbEntries      = [];
+let prdFileData    = null;
+let lastAnalysis   = null;
+let lastPRDResult  = null;
 
 // ═══════════════════════════════════════════════════════
 // LOCK
 // ═══════════════════════════════════════════════════════
-let failCount = 0;
 function unlock() {
   const pwd = document.getElementById('pwdInput').value;
   const err = document.getElementById('lockErr');
   if (failCount >= 5) { err.textContent = 'Too many attempts.'; return; }
   if (pwd === PASSWORD) {
     sessionOk = true;
-    loadKB();
     const lock = document.getElementById('lockScreen');
     lock.style.transition = 'opacity 0.4s';
     lock.style.opacity = '0';
     setTimeout(() => lock.style.display = 'none', 400);
     document.getElementById('pwdInput').value = '';
+    loadKB();
   } else {
     failCount++;
-    const left = 5 - failCount;
-    err.textContent = `Wrong password. ${left} attempt${left!==1?'s':''} left.`;
+    err.textContent = `Wrong password. ${5 - failCount} attempts left.`;
     document.getElementById('pwdInput').value = '';
   }
 }
@@ -793,41 +572,49 @@ function switchTab(id) {
 }
 
 // ═══════════════════════════════════════════════════════
-// INIT
+// CLOUD KV API
 // ═══════════════════════════════════════════════════════
-function init() {
-  // Feature tags
-  const wrap = document.getElementById('featureTags');
-  FEATURES.forEach(f => {
-    const span = document.createElement('span');
-    span.className = 'tag'; span.textContent = f; span.dataset.val = f;
-    span.onclick = () => span.classList.toggle('on');
-    wrap.appendChild(span);
-  });
+async function cfFetch(path, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json', 'X-Auth-Token': AUTH_TOKEN }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(WORKER_URL + path, opts);
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Worker ${res.status}: ${txt}`);
+  }
+  return res.json();
 }
 
-// ═══════════════════════════════════════════════════════
-// KNOWLEDGE BASE (Artifact persistent storage)
-// ═══════════════════════════════════════════════════════
+function setCloudStatus(state, label) {
+  const dot = document.getElementById('cloudDot');
+  const lbl = document.getElementById('cloudLabel');
+  dot.className = 'cloud-dot ' + (state || '');
+  lbl.textContent = label;
+  lbl.style.color = state === 'ok' ? 'var(--g)' : state === 'err' ? 'var(--r)' : state === 'syncing' ? 'var(--y)' : 'var(--muted)';
+}
+
 async function loadKB() {
+  setCloudStatus('syncing', 'syncing...');
   try {
-    const res = await window.storage.get(KB_STORAGE_KEY);
-    if (res && res.value) {
-      kbEntries = JSON.parse(res.value);
-    }
+    const data = await cfFetch('/kb');
+    kbEntries = data.entries || [];
+    updateKBCount();
+    updateKBContextPanel();
+    renderKB();
+    setCloudStatus('ok', `☁️ connected · ${kbEntries.length} entries`);
   } catch(e) {
-    kbEntries = [];
+    setCloudStatus('err', 'cloud error');
+    document.getElementById('kbList').innerHTML = `<div class="empty" style="color:var(--r);">Could not reach Worker.<br><small>${e.message}</small><br><br>Make sure:<br>1. Worker is deployed<br>2. KV namespace "QA_KB" is bound<br>3. AUTH_TOKEN env var is set to "qabp_hw2024"</div>`;
+    toast('Cloud KB unreachable: ' + e.message, 'err');
   }
-  updateKBCount();
-  updateKBContextPanel();
 }
 
-async function persistKB() {
-  try {
-    await window.storage.set(KB_STORAGE_KEY, JSON.stringify(kbEntries));
-  } catch(e) {
-    console.error('Storage error', e);
-  }
+async function refreshKB() {
+  toast('Refreshing from cloud...', 'info');
+  await loadKB();
 }
 
 function updateKBCount() {
@@ -839,88 +626,107 @@ function updateKBCount() {
 function updateKBContextPanel() {
   const el = document.getElementById('kbContextSummary');
   if (!kbEntries.length) {
-    el.innerHTML = 'No KB entries yet. Add test cases & code in the <strong>Knowledge Base</strong> tab to enrich analysis.';
+    el.innerHTML = 'Cloud KB is empty. Add entries in the <strong>Knowledge Base</strong> tab.';
     return;
   }
-  const tc = kbEntries.filter(e=>e.type==='test_cases').length;
+  const tc   = kbEntries.filter(e=>e.type==='test_cases').length;
   const code = kbEntries.filter(e=>e.type==='code').length;
-  const prd = kbEntries.filter(e=>e.type==='prd').length;
+  const prd  = kbEntries.filter(e=>e.type==='prd').length;
   const note = kbEntries.filter(e=>e.type==='note').length;
   el.innerHTML = `
-    <div style="color:var(--g);margin-bottom:8px;">✓ ${kbEntries.length} entries will enrich the analysis</div>
-    ${tc?`<div>📋 ${tc} test case set${tc>1?'s':''}</div>`:''}
-    ${code?`<div>💻 ${code} code snippet${code>1?'s':''}</div>`:''}
-    ${prd?`<div>📄 ${prd} PRD/spec</div>`:''}
-    ${note?`<div>📝 ${note} QA note${note>1?'s':''}</div>`:''}
+    <div style="color:var(--g);margin-bottom:8px;">☁️ ${kbEntries.length} cloud entries enriching analysis</div>
+    ${tc   ? `<div>📋 ${tc} test case set${tc>1?'s':''}</div>` : ''}
+    ${code ? `<div>💻 ${code} code snippet${code>1?'s':''}</div>` : ''}
+    ${prd  ? `<div>📄 ${prd} PRD/spec</div>` : ''}
+    ${note ? `<div>📝 ${note} QA note${note>1?'s':''}</div>` : ''}
   `;
 }
 
 function getKBContext() {
   if (!kbEntries.length) return '';
-  let ctx = '\n\n=== KNOWLEDGE BASE CONTEXT ===\n';
-  kbEntries.slice(-10).forEach((e, i) => { // last 10 entries
-    ctx += `\n[KB Entry ${i+1}: ${e.type.toUpperCase()} | ${e.title} | Area: ${e.area}]\n`;
-    ctx += e.content.substring(0, 800) + (e.content.length > 800 ? '...' : '') + '\n';
+  let ctx = '\n\n=== CLOUD KNOWLEDGE BASE CONTEXT ===\n';
+  kbEntries.slice(0, 10).forEach((e, i) => {
+    ctx += `\n[KB#${i+1} | ${e.type.toUpperCase()} | ${e.title} | Area: ${e.area}]\n`;
+    ctx += e.content.substring(0, 600) + (e.content.length > 600 ? '...' : '') + '\n';
   });
   return ctx;
 }
 
-function saveKBEntry() {
-  const title = document.getElementById('kbTitle').value.trim();
-  const area = document.getElementById('kbArea').value.trim();
+async function saveKBEntry() {
+  const title   = document.getElementById('kbTitle').value.trim();
+  const area    = document.getElementById('kbArea').value.trim();
   const content = document.getElementById('kbContent').value.trim();
-  const type = document.getElementById('kbType').value;
-  if (!title || !content) { toast('Please fill in Title and Content', 'err'); return; }
-  const entry = { id: Date.now(), type, title, area, content, addedAt: new Date().toLocaleString() };
-  kbEntries.unshift(entry);
-  persistKB();
-  updateKBCount();
-  updateKBContextPanel();
-  renderKB();
-  document.getElementById('kbTitle').value = '';
-  document.getElementById('kbArea').value = '';
-  document.getElementById('kbContent').value = '';
-  toast('Saved to Knowledge Base ✓', 'ok');
+  const type    = document.getElementById('kbType').value;
+  if (!title || !content) { toast('Fill in Title and Content', 'err'); return; }
+
+  const btn = document.getElementById('kbSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  setCloudStatus('syncing', 'saving...');
+
+  try {
+    const data = await cfFetch('/kb', 'POST', { type, title, area, content });
+    kbEntries.unshift(data.entry);
+    updateKBCount(); updateKBContextPanel(); renderKB();
+    setCloudStatus('ok', `☁️ connected · ${kbEntries.length} entries`);
+    document.getElementById('kbTitle').value = '';
+    document.getElementById('kbArea').value = '';
+    document.getElementById('kbContent').value = '';
+    toast('Saved to cloud KB ✓', 'ok');
+  } catch(e) {
+    setCloudStatus('err', 'save failed');
+    toast('Save failed: ' + e.message, 'err');
+  }
+  btn.disabled = false; btn.textContent = '☁️ Save to Cloud KB';
 }
 
-function deleteKBEntry(id) {
-  kbEntries = kbEntries.filter(e => e.id !== id);
-  persistKB();
-  updateKBCount();
-  updateKBContextPanel();
-  renderKB();
-  toast('Entry deleted', 'ok');
+async function deleteKBEntry(id) {
+  setCloudStatus('syncing', 'deleting...');
+  try {
+    await cfFetch(`/kb/${id}`, 'DELETE');
+    kbEntries = kbEntries.filter(e => e.id !== id);
+    updateKBCount(); updateKBContextPanel(); renderKB();
+    setCloudStatus('ok', `☁️ connected · ${kbEntries.length} entries`);
+    toast('Entry deleted ✓', 'ok');
+  } catch(e) {
+    setCloudStatus('err', 'delete failed');
+    toast('Delete failed: ' + e.message, 'err');
+  }
 }
 
-function clearAllKB() {
-  if (!confirm('Delete all Knowledge Base entries?')) return;
-  kbEntries = [];
-  persistKB();
-  updateKBCount();
-  updateKBContextPanel();
-  renderKB();
-  toast('Knowledge Base cleared', 'ok');
+async function clearAllKB() {
+  if (!confirm('Delete ALL cloud KB entries? This cannot be undone.')) return;
+  setCloudStatus('syncing', 'clearing...');
+  try {
+    await cfFetch('/kb', 'DELETE');
+    kbEntries = [];
+    updateKBCount(); updateKBContextPanel(); renderKB();
+    setCloudStatus('ok', '☁️ connected · 0 entries');
+    toast('Cloud KB cleared ✓', 'ok');
+  } catch(e) {
+    setCloudStatus('err', 'clear failed');
+    toast('Clear failed: ' + e.message, 'err');
+  }
 }
 
 function renderKB() {
   const filter = document.getElementById('kbFilter').value;
-  const list = document.getElementById('kbList');
-  let entries = filter === 'all' ? kbEntries : kbEntries.filter(e => e.type === filter);
+  const list   = document.getElementById('kbList');
+  const entries = filter === 'all' ? kbEntries : kbEntries.filter(e => e.type === filter);
   if (!entries.length) {
-    list.innerHTML = '<div class="empty">No entries' + (filter!=='all'?' for this type':'') + '.</div>';
+    list.innerHTML = '<div class="empty">No entries' + (filter !== 'all' ? ' for this type' : '') + '.</div>';
     return;
   }
   const typeLabel = { test_cases:'Test Cases', code:'Code', prd:'PRD', note:'Note' };
-  const typeCls = { test_cases:'kb-tc', code:'kb-code', prd:'kb-prd', note:'kb-note' };
+  const typeCls   = { test_cases:'kb-tc', code:'kb-code', prd:'kb-prd', note:'kb-note' };
   list.innerHTML = entries.map(e => `
     <div class="kb-entry">
       <span class="kb-type-badge ${typeCls[e.type]||''}">${typeLabel[e.type]||e.type}</span>
       <div class="kb-content">
         <div class="kb-title">${e.title}</div>
         <div class="kb-meta">${e.area ? '📍 '+e.area+' · ' : ''}🕐 ${e.addedAt}</div>
-        <div class="kb-snippet">${e.content.substring(0, 300)}${e.content.length > 300 ? '...' : ''}</div>
+        <div class="kb-snippet">${e.content.substring(0, 280)}${e.content.length > 280 ? '...' : ''}</div>
         <div class="kb-actions">
-          <button class="kb-del-btn" onclick="deleteKBEntry(${e.id})">Delete</button>
+          <button class="kb-del-btn" onclick="deleteKBEntry(${e.id})">🗑 Delete</button>
         </div>
       </div>
     </div>
@@ -928,78 +734,72 @@ function renderKB() {
 }
 
 // ═══════════════════════════════════════════════════════
-// IMPACT ANALYZER (Anthropic API)
+// IMPACT ANALYZER
 // ═══════════════════════════════════════════════════════
 async function runImpactAnalysis() {
   const changeDesc = document.getElementById('changeDesc').value.trim();
   const changeType = document.getElementById('changeType').value;
-  const platform = document.getElementById('platform').value;
+  const platform   = document.getElementById('platform').value;
   if (!changeDesc) { toast('Describe the change first', 'err'); return; }
 
-  const selectedTags = Array.from(document.querySelectorAll('#featureTags .tag.on')).map(t=>t.dataset.val);
+  const selectedTags = Array.from(document.querySelectorAll('#featureTags .tag.on')).map(t => t.dataset.val);
   const kbCtx = getKBContext();
 
-  const btn = document.getElementById('analyzeBtn');
-  btn.disabled = true;
-
+  document.getElementById('analyzeBtn').disabled = true;
   const panel = document.getElementById('impactResultPanel');
   panel.style.display = 'block';
   document.getElementById('impactLoading').classList.add('show');
   document.getElementById('impactOutput').style.display = 'none';
   panel.scrollIntoView({ behavior: 'smooth' });
 
-  const labels = ['Scanning checklist items...', 'Mapping risk areas...', 'Generating test cases...', 'Finalizing report...'];
+  const labels = ['Scanning checklist items...','Mapping risk areas...','Generating test cases...','Finalizing report...'];
   let li = 0;
   const lbl = document.getElementById('impactLoadingLabel');
-  const labelInterval = setInterval(() => { li = (li+1)%labels.length; lbl.textContent = labels[li]; }, 1800);
+  const intv = setInterval(() => { li=(li+1)%labels.length; lbl.textContent=labels[li]; }, 2000);
 
-  const prompt = `You are a senior QA engineer for Hitwicket, a mobile cricket game (Android + iOS). You have deep knowledge of the game's systems: FTUE, Super Abilities (SA), Match Engine, Store, Squad, Training, League, PvP, Auction, Alliance, Trophy Road, Season Pass, Player Scout, Dashboard, Notifications, Game Center (iOS), and all related flows.
+  const prompt = `You are a senior QA engineer for Hitwicket, a mobile cricket game (Android + iOS). You have deep knowledge of all game systems: FTUE, Super Abilities (SA/mana/threshold), Match Engine, Store (chests/offers/get player), Squad/Lineup, Player Detail/Training, League, PvP/Trophy Road, Auction, Alliance, HW TV, Season Pass, Player Scout, Dashboard, Notifications, Game Center (iOS), EPB/SPB scouting, WhatsApp/Facebook/Google Play/Apple ID login flows.
 
 A developer made the following change:
 
 CHANGE TYPE: ${changeType}
 PLATFORM: ${platform}
 FEATURE TAGS: ${selectedTags.length ? selectedTags.join(', ') : 'Not specified'}
-DESCRIPTION:
+CHANGE DESCRIPTION:
 ${changeDesc}
 ${kbCtx}
 
-Perform a thorough QA impact analysis. Return your response in this EXACT JSON format (no markdown, no extra text, just valid JSON):
+Perform a thorough QA impact analysis. Respond ONLY with valid JSON, no markdown, no extra text:
 
 {
-  "summary": "2-3 sentence executive summary of the risk and what needs testing",
-  "risk_score": "CRITICAL | HIGH | MEDIUM | LOW",
+  "summary": "2-3 sentence executive summary of risks and what needs testing",
+  "risk_score": "CRITICAL|HIGH|MEDIUM|LOW",
   "impact_areas": [
-    {
-      "title": "Area name",
-      "severity": "critical | high | medium | low",
-      "items": ["specific risk or check point", "..."]
-    }
+    { "title": "area name", "severity": "critical|high|medium|low", "items": ["specific check 1", "specific check 2"] }
   ],
   "test_cases": [
     {
       "id": "TC-001",
       "feature": "Feature area",
-      "title": "Test case title",
-      "category": "Functional | Regression | Edge Case | Performance | UI",
-      "preconditions": "What must be set up before",
-      "steps": "Step 1: ..., Step 2: ...",
-      "expected": "What should happen",
-      "priority": "P0 | P1 | P2 | P3"
+      "title": "Descriptive test case title",
+      "category": "Functional|Regression|Edge Case|Performance|UI",
+      "preconditions": "Setup required before test",
+      "steps": "1. Do X  2. Tap Y  3. Observe Z",
+      "expected": "Clear expected outcome",
+      "priority": "P0|P1|P2|P3"
     }
   ],
-  "edge_cases": ["edge case 1", "edge case 2"],
-  "downstream_risks": ["risk 1", "risk 2"],
-  "regression_scope": ["area1", "area2"]
+  "edge_cases": ["edge case 1", "..."],
+  "downstream_risks": ["risk 1", "..."],
+  "regression_scope": ["area1", "..."]
 }
 
-Requirements:
-- At least 20 test cases (mix of P0, P1, P2, P3)
-- At least 6 impact areas
-- At least 8 edge cases
-- Be specific to Hitwicket game flows, not generic
-- P0 = must pass before release, P1 = critical regression, P2 = important, P3 = nice to have
-- Include platform-specific checks if relevant (iOS Game Center, Android back button etc)`;
+Rules:
+- Minimum 20 test cases (good mix of P0/P1/P2/P3)
+- Minimum 6 impact areas with specific, actionable items
+- Minimum 8 edge cases
+- Be specific to Hitwicket — reference actual screens, flows, and mechanics
+- Include platform-specific cases where relevant
+- P0 = blocker (must pass before release), P1 = critical regression, P2 = important, P3 = low priority`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1012,120 +812,93 @@ Requirements:
       })
     });
 
-    clearInterval(labelInterval);
-    if (!response.ok) throw new Error('API error: ' + response.status);
+    clearInterval(intv);
+    if (!response.ok) throw new Error('API error ' + response.status);
 
     const data = await response.json();
     let raw = data.content.map(b => b.text || '').join('');
-    // Strip any markdown fences
-    raw = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+    raw = raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
 
     let result;
     try { result = JSON.parse(raw); }
-    catch(e) {
-      // Try to extract JSON from text
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (match) result = JSON.parse(match[0]);
-      else throw new Error('Could not parse AI response as JSON');
+    catch {
+      const m = raw.match(/\{[\s\S]*\}/);
+      if (m) result = JSON.parse(m[0]);
+      else throw new Error('Could not parse AI response');
     }
 
-    lastAnalysisResult = result;
+    lastAnalysis = result;
     renderImpactResults(result);
     document.getElementById('analysisTime').textContent = 'Analyzed at ' + new Date().toLocaleTimeString();
 
   } catch(err) {
-    clearInterval(labelInterval);
+    clearInterval(intv);
     document.getElementById('impactLoading').classList.remove('show');
     document.getElementById('impactOutput').style.display = 'block';
-    document.getElementById('impactCards').innerHTML = `<div style="color:var(--r);font-size:13px;padding:20px;">Error: ${err.message}</div>`;
-    document.getElementById('impactStats').style.display = 'none';
-    document.getElementById('impactTCSection').innerHTML = '';
+    document.getElementById('impactCards').innerHTML = `<div style="color:var(--r);font-size:13px;padding:10px;">Error: ${err.message}</div>`;
     toast('Analysis failed: ' + err.message, 'err');
   }
-
-  btn.disabled = false;
+  document.getElementById('analyzeBtn').disabled = false;
 }
 
 function renderImpactResults(r) {
   document.getElementById('impactLoading').classList.remove('show');
   document.getElementById('impactOutput').style.display = 'block';
 
-  // Stats
   const tcs = r.test_cases || [];
-  const counts = {
-    p0: tcs.filter(t=>t.priority==='P0').length,
-    p1: tcs.filter(t=>t.priority==='P1').length,
-    p2: tcs.filter(t=>t.priority==='P2').length,
-    p3: tcs.filter(t=>t.priority==='P3').length,
-  };
-  const riskColor = {CRITICAL:'n-r',HIGH:'n-o',MEDIUM:'n-b',LOW:'n-g'}[r.risk_score] || 'n-b';
+  const p0 = tcs.filter(t=>t.priority==='P0').length;
+  const p1 = tcs.filter(t=>t.priority==='P1').length;
+  const p2 = tcs.filter(t=>t.priority==='P2').length;
+  const p3 = tcs.filter(t=>t.priority==='P3').length;
+  const riskCls = {CRITICAL:'n-r',HIGH:'n-o',MEDIUM:'n-b',LOW:'n-g'}[r.risk_score]||'n-b';
+
   document.getElementById('impactStats').innerHTML = `
-    <div class="stat-item"><span class="stat-n ${riskColor}">${r.risk_score||'—'}</span><span class="stat-l">Risk Level</span></div>
-    <div class="stat-item"><span class="stat-n n-r">${counts.p0}</span><span class="stat-l">P0 Cases</span></div>
-    <div class="stat-item"><span class="stat-n n-o">${counts.p1}</span><span class="stat-l">P1 Cases</span></div>
-    <div class="stat-item"><span class="stat-n n-b">${counts.p2}</span><span class="stat-l">P2 Cases</span></div>
-    <div class="stat-item"><span class="stat-n n-g">${counts.p3}</span><span class="stat-l">P3 Cases</span></div>
+    <div class="stat-item"><span class="stat-n ${riskCls}">${r.risk_score||'—'}</span><span class="stat-l">Risk</span></div>
+    <div class="stat-item"><span class="stat-n n-r">${p0}</span><span class="stat-l">P0</span></div>
+    <div class="stat-item"><span class="stat-n n-o">${p1}</span><span class="stat-l">P1</span></div>
+    <div class="stat-item"><span class="stat-n n-b">${p2}</span><span class="stat-l">P2</span></div>
+    <div class="stat-item"><span class="stat-n n-g">${p3}</span><span class="stat-l">P3</span></div>
     <div class="stat-item" style="margin-left:auto;"><span class="stat-n">${tcs.length}</span><span class="stat-l">Total TCs</span></div>
   `;
 
-  // Impact cards
   const grid = document.getElementById('impactCards');
-  const areas = r.impact_areas || [];
-
-  // Summary card
-  let html = `<div class="icard col-span2" style="grid-column:1/-1;border-color:rgba(59,139,255,0.25);">
+  let html = `<div class="icard" style="grid-column:1/-1;border-color:rgba(59,139,255,0.25);">
     <div class="icard-head"><span style="font-size:16px;">📋</span><span class="icard-title">Summary</span></div>
     <p style="font-size:13px;line-height:1.8;color:#c0c0d8;">${r.summary||''}</p>
-    ${r.regression_scope&&r.regression_scope.length?`<div style="margin-top:12px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Regression Scope</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;">${r.regression_scope.map(s=>`<span style="background:rgba(59,139,255,0.1);border:1px solid rgba(59,139,255,0.2);color:var(--b);font-size:10px;padding:2px 8px;border-radius:2px;">${s}</span>`).join('')}</div>`:''}
+    ${r.regression_scope?.length ? `
+      <div style="margin-top:12px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Regression Scope</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">${r.regression_scope.map(s=>`<span style="background:rgba(59,139,255,0.1);border:1px solid rgba(59,139,255,0.2);color:var(--b);font-size:10px;padding:2px 8px;border-radius:2px;">${s}</span>`).join('')}</div>
+    ` : ''}
   </div>`;
 
-  areas.forEach(a => {
-    const sc = `sev-${a.severity||'medium'}`;
+  (r.impact_areas||[]).forEach(a => {
     const icon = {critical:'🔴',high:'🟠',medium:'🔵',low:'🟢'}[a.severity]||'⚪';
     html += `<div class="icard">
-      <div class="icard-head">
-        <span>${icon}</span>
-        <span class="icard-title">${a.title}</span>
-        <span class="sev ${sc}">${a.severity||'medium'}</span>
-      </div>
-      <ul>${(a.items||[]).map(item=>`<li>${item}</li>`).join('')}</ul>
+      <div class="icard-head"><span>${icon}</span><span class="icard-title">${a.title}</span><span class="sev sev-${a.severity||'medium'}">${a.severity||'medium'}</span></div>
+      <ul>${(a.items||[]).map(i=>`<li>${i}</li>`).join('')}</ul>
     </div>`;
   });
 
-  // Edge cases card
-  if (r.edge_cases && r.edge_cases.length) {
-    html += `<div class="icard">
-      <div class="icard-head"><span>⚠️</span><span class="icard-title">Edge Cases</span><span class="sev sev-high">watch</span></div>
-      <ul>${r.edge_cases.map(e=>`<li>${e}</li>`).join('')}</ul>
-    </div>`;
-  }
+  if (r.edge_cases?.length) html += `<div class="icard">
+    <div class="icard-head"><span>⚠️</span><span class="icard-title">Edge Cases</span><span class="sev sev-high">watch</span></div>
+    <ul>${r.edge_cases.map(e=>`<li>${e}</li>`).join('')}</ul>
+  </div>`;
 
-  // Downstream risks card
-  if (r.downstream_risks && r.downstream_risks.length) {
-    html += `<div class="icard">
-      <div class="icard-head"><span>🔗</span><span class="icard-title">Downstream Risks</span><span class="sev sev-medium">deps</span></div>
-      <ul>${r.downstream_risks.map(d=>`<li>${d}</li>`).join('')}</ul>
-    </div>`;
-  }
+  if (r.downstream_risks?.length) html += `<div class="icard">
+    <div class="icard-head"><span>🔗</span><span class="icard-title">Downstream Risks</span><span class="sev sev-medium">deps</span></div>
+    <ul>${r.downstream_risks.map(d=>`<li>${d}</li>`).join('')}</ul>
+  </div>`;
 
   grid.innerHTML = html;
 
-  // Test cases table
   const tcSec = document.getElementById('impactTCSection');
+  const prioCls = {P0:'p-p0',P1:'p-p1',P2:'p-p2',P3:'p-p3'};
   if (tcs.length) {
-    const prioCls = {'P0':'p-p0','P1':'p-p1','P2':'p-p2','P3':'p-p3'};
     tcSec.innerHTML = `
-      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--g);margin-bottom:12px;">
-        ✅ Test Cases to Execute (${tcs.length})
-      </div>
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--g);margin-bottom:12px;">✅ Test Cases to Execute (${tcs.length})</div>
       <div style="overflow-x:auto;">
         <table class="tc-table">
-          <thead><tr>
-            <th>ID</th><th>Feature</th><th>Title</th>
-            <th>Category</th><th>Preconditions</th>
-            <th>Steps</th><th>Expected</th><th>Priority</th>
-          </tr></thead>
+          <thead><tr><th>ID</th><th>Feature</th><th>Title</th><th>Category</th><th>Preconditions</th><th>Steps</th><th>Expected</th><th>Priority</th></tr></thead>
           <tbody>${tcs.map(tc=>`<tr>
             <td class="tc-id">${tc.id||''}</td>
             <td>${tc.feature||''}</td>
@@ -1133,7 +906,7 @@ function renderImpactResults(r) {
             <td>${tc.category||''}</td>
             <td style="min-width:120px;">${tc.preconditions||''}</td>
             <td style="min-width:200px;">${tc.steps||''}</td>
-            <td style="min-width:200px;">${tc.expected||''}</td>
+            <td style="min-width:180px;">${tc.expected||''}</td>
             <td><span class="prio-badge ${prioCls[tc.priority]||'p-p2'}">${tc.priority||'P2'}</span></td>
           </tr>`).join('')}</tbody>
         </table>
@@ -1141,20 +914,38 @@ function renderImpactResults(r) {
   }
 }
 
-function saveAnalysisToKB() {
-  if (!lastAnalysisResult) { toast('No analysis to save', 'err'); return; }
-  const changeDesc = document.getElementById('changeDesc').value.substring(0, 80);
-  kbEntries.unshift({
-    id: Date.now(), type: 'test_cases',
-    title: 'Impact Analysis: ' + changeDesc + '...',
-    area: document.querySelectorAll('#featureTags .tag.on').length
-      ? Array.from(document.querySelectorAll('#featureTags .tag.on')).map(t=>t.dataset.val).join(', ')
-      : 'Impact Analysis',
-    content: JSON.stringify(lastAnalysisResult, null, 2),
-    addedAt: new Date().toLocaleString()
-  });
-  persistKB(); updateKBCount(); updateKBContextPanel();
-  toast('Analysis saved to Knowledge Base ✓', 'ok');
+async function saveAnalysisToKB() {
+  if (!lastAnalysis) { toast('No analysis to save', 'err'); return; }
+  const desc = document.getElementById('changeDesc').value.substring(0, 60);
+  const tags = Array.from(document.querySelectorAll('#featureTags .tag.on')).map(t=>t.dataset.val).join(', ');
+  setCloudStatus('syncing', 'saving...');
+  try {
+    const data = await cfFetch('/kb', 'POST', {
+      type: 'test_cases',
+      title: 'Impact Analysis: ' + desc + '...',
+      area: tags || 'Impact Analysis',
+      content: JSON.stringify(lastAnalysis, null, 2)
+    });
+    kbEntries.unshift(data.entry);
+    updateKBCount(); updateKBContextPanel();
+    setCloudStatus('ok', `☁️ connected · ${kbEntries.length} entries`);
+    toast('Analysis saved to cloud KB ✓', 'ok');
+  } catch(e) {
+    setCloudStatus('err', 'save failed');
+    toast('Save failed: ' + e.message, 'err');
+  }
+}
+
+function copyImpactCSV() {
+  if (!lastAnalysis?.test_cases?.length) { toast('No test cases to copy', 'err'); return; }
+  const header = 'TC ID,Feature,Title,Category,Preconditions,Steps,Expected,Priority';
+  const rows = lastAnalysis.test_cases.map(tc =>
+    [tc.id,tc.feature,tc.title,tc.category,tc.preconditions,tc.steps,tc.expected,tc.priority]
+    .map(v=>'"'+(v||'').replace(/"/g,'""')+'"').join(',')
+  );
+  navigator.clipboard.writeText([header,...rows].join('\n'))
+    .then(() => toast('CSV copied ✓', 'ok'))
+    .catch(() => toast('Copy failed', 'err'));
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1162,11 +953,7 @@ function saveAnalysisToKB() {
 // ═══════════════════════════════════════════════════════
 function dragOver(e) { e.preventDefault(); document.getElementById('uploadZone').classList.add('drag'); }
 function dragLeave() { document.getElementById('uploadZone').classList.remove('drag'); }
-function dropFile(e) {
-  e.preventDefault(); dragLeave();
-  const file = e.dataTransfer.files[0];
-  if (file) processFile(file);
-}
+function dropFile(e) { e.preventDefault(); dragLeave(); if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); }
 function fileSelected(e) { if (e.target.files[0]) processFile(e.target.files[0]); }
 
 function processFile(file) {
@@ -1174,14 +961,13 @@ function processFile(file) {
   document.getElementById('fileBadge').style.display = 'inline-flex';
   const reader = new FileReader();
   if (file.type === 'application/pdf') {
-    reader.onload = e => { prdFileData = { type: 'pdf', data: e.target.result.split(',')[1], name: file.name }; };
+    reader.onload = e => { prdFileData = { type: 'pdf', data: e.target.result.split(',')[1] }; };
     reader.readAsDataURL(file);
   } else {
-    reader.onload = e => { prdFileData = { type: 'text', data: e.target.result, name: file.name }; };
+    reader.onload = e => { prdFileData = { type: 'text', data: e.target.result }; };
     reader.readAsText(file);
   }
 }
-
 function clearFile() {
   prdFileData = null;
   document.getElementById('fileBadge').style.display = 'none';
@@ -1192,60 +978,70 @@ async function runPRDAnalysis() {
   const pastedText = document.getElementById('prdText').value.trim();
   if (!prdFileData && !pastedText) { toast('Upload a file or paste PRD text', 'err'); return; }
 
-  const format = document.getElementById('tcFormat').value;
-  const prioSys = document.getElementById('prioSystem').value;
-  const focus = document.getElementById('prdFocus').value.trim();
+  const format   = document.getElementById('tcFormat').value;
+  const prioSys  = document.getElementById('prioSystem').value;
+  const focus    = document.getElementById('prdFocus').value.trim();
 
   document.getElementById('prdLoading').classList.add('show');
   document.getElementById('prdOutput').style.display = 'none';
   document.getElementById('prdEmpty').style.display = 'none';
   document.getElementById('prdBtn').disabled = true;
 
-  const labels = ['Reading document...', 'Understanding requirements...', 'Generating test cases...', 'Formatting output...'];
+  const labels = ['Reading document...','Understanding requirements...','Generating test cases...','Formatting output...'];
   let li = 0;
   const lbl = document.getElementById('prdLoadingLabel');
   const intv = setInterval(() => { li=(li+1)%labels.length; lbl.textContent=labels[li]; }, 2000);
 
-  let messages;
+  const prdPrompt = `You are a senior QA engineer for Hitwicket, a mobile cricket game. Analyze the PRD/spec and generate comprehensive test cases.
 
-  if (prdFileData && prdFileData.type === 'pdf') {
-    messages = [{
-      role: 'user',
-      content: [
-        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: prdFileData.data } },
-        { type: 'text', text: buildPRDPrompt(null, format, prioSys, focus) }
-      ]
-    }];
+${prdFileData?.type !== 'pdf' ? 'PRD CONTENT:\n' + (prdFileData ? prdFileData.data : pastedText) : ''}
+${focus ? '\nSPECIAL FOCUS: ' + focus : ''}
+
+Respond ONLY with valid JSON (no markdown):
+{
+  "feature_name": "Feature being tested",
+  "test_cases": [
+    {
+      "id": "TC-001",
+      "feature": "Sub-feature",
+      "title": "Clear test title",
+      "category": "Functional|UI|Regression|Edge Case|Performance",
+      "preconditions": "Setup required",
+      "steps": "1. Do X  2. Tap Y  3. Check Z",
+      "expected_result": "What should happen",
+      "priority": "${prioSys === 'P0-P3' ? 'P0|P1|P2|P3' : 'Critical|High|Medium|Low'}",
+      "platform": "Android|iOS|Both"
+    }
+  ]
+}
+Generate 25-35 test cases. Format: ${format}. Cover happy path, negative, edge cases, UI, performance. Be specific to Hitwicket flows.`;
+
+  let messages;
+  if (prdFileData?.type === 'pdf') {
+    messages = [{ role: 'user', content: [
+      { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: prdFileData.data } },
+      { type: 'text', text: prdPrompt }
+    ]}];
   } else {
-    const content = prdFileData ? prdFileData.data : pastedText;
-    messages = [{ role: 'user', content: buildPRDPrompt(content, format, prioSys, focus) }];
+    messages = [{ role: 'user', content: prdPrompt }];
   }
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages })
     });
-
     clearInterval(intv);
-    if (!response.ok) throw new Error('API error: ' + response.status);
-
-    const data = await response.json();
+    if (!res.ok) throw new Error('API error ' + res.status);
+    const data = await res.json();
     let raw = data.content.map(b=>b.text||'').join('');
     raw = raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
-
     let result;
     try { result = JSON.parse(raw); }
-    catch(e) {
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (match) result = JSON.parse(match[0]);
-      else throw new Error('Could not parse response');
-    }
-
+    catch { const m = raw.match(/\{[\s\S]*\}/); if(m) result=JSON.parse(m[0]); else throw new Error('Parse failed'); }
     lastPRDResult = result;
     renderPRDResults(result);
-
   } catch(err) {
     clearInterval(intv);
     document.getElementById('prdLoading').classList.remove('show');
@@ -1253,120 +1049,83 @@ async function runPRDAnalysis() {
     document.getElementById('prdEmpty').textContent = 'Error: ' + err.message;
     toast('Failed: ' + err.message, 'err');
   }
-
   document.getElementById('prdBtn').disabled = false;
-}
-
-function buildPRDPrompt(content, format, prioSys, focus) {
-  return `You are a senior QA engineer for Hitwicket, a mobile cricket game. Analyze the following Product Requirements Document and generate comprehensive test cases.
-
-${content ? 'PRD CONTENT:\n' + content : 'Analyze the attached document.'}
-
-${focus ? 'SPECIAL FOCUS: ' + focus : ''}
-
-Generate test cases in this EXACT JSON format (no markdown, just JSON):
-
-{
-  "feature_name": "Name of the feature being tested",
-  "total_count": 30,
-  "test_cases": [
-    {
-      "id": "TC-001",
-      "feature": "Sub-feature or area",
-      "title": "Clear descriptive title",
-      "category": "Functional | UI | Regression | Edge Case | Performance | Security",
-      "preconditions": "What must be set up / in place before running",
-      "steps": "Numbered steps: 1. Do X 2. Tap Y 3. Observe Z",
-      "expected_result": "Clear expected outcome",
-      "priority": "${prioSys === 'P0-P3' ? 'P0 | P1 | P2 | P3' : 'Critical | High | Medium | Low'}",
-      "platform": "Android | iOS | Both"
-    }
-  ]
-}
-
-Requirements:
-- Generate at least 25–35 test cases
-- Format: ${format}
-- Priority system: ${prioSys}
-- Cover: happy path, negative cases, edge cases, UI/UX, performance
-- Be specific — reference actual UI elements and game mechanics
-- Include platform-specific tests where relevant`;
 }
 
 function renderPRDResults(r) {
   document.getElementById('prdLoading').classList.remove('show');
   document.getElementById('prdOutput').style.display = 'block';
-
   const tcs = r.test_cases || [];
-  document.getElementById('prdStats').textContent = `${r.feature_name || 'Feature'} · ${tcs.length} test cases generated`;
-
-  const prioCls = { P0:'p-p0',P1:'p-p1',P2:'p-p2',P3:'p-p3',Critical:'p-p0',High:'p-p1',Medium:'p-p2',Low:'p-p3' };
-  const tbody = document.getElementById('prdTableBody');
-  tbody.innerHTML = tcs.map(tc => `
+  document.getElementById('prdStats').textContent = `${r.feature_name||'Feature'} · ${tcs.length} test cases generated`;
+  const prioCls = {P0:'p-p0',P1:'p-p1',P2:'p-p2',P3:'p-p3',Critical:'p-p0',High:'p-p1',Medium:'p-p2',Low:'p-p3'};
+  document.getElementById('prdTableBody').innerHTML = tcs.map(tc => `
     <tr>
       <td class="tc-id">${tc.id||''}</td>
       <td>${tc.feature||''}</td>
       <td>${tc.title||''}</td>
       <td>${tc.category||''}</td>
-      <td style="min-width:140px;">${tc.preconditions||''}</td>
+      <td style="min-width:130px;">${tc.preconditions||''}</td>
       <td style="min-width:200px;">${tc.steps||''}</td>
-      <td style="min-width:200px;">${tc.expected_result||tc.expected||''}</td>
+      <td style="min-width:180px;">${tc.expected_result||tc.expected||''}</td>
       <td><span class="prio-badge ${prioCls[tc.priority]||'p-p2'}">${tc.priority||''}</span></td>
-    </tr>
-  `).join('');
+    </tr>`).join('');
 }
 
 function copyTCAsCSV() {
-  if (!lastPRDResult) { toast('No test cases to copy', 'err'); return; }
-  const tcs = lastPRDResult.test_cases || [];
+  if (!lastPRDResult?.test_cases?.length) { toast('No test cases to copy', 'err'); return; }
   const header = 'TC ID,Feature,Title,Category,Preconditions,Steps,Expected Result,Priority,Platform';
-  const rows = tcs.map(tc =>
+  const rows = lastPRDResult.test_cases.map(tc =>
     [tc.id,tc.feature,tc.title,tc.category,tc.preconditions,tc.steps,tc.expected_result||tc.expected,tc.priority,tc.platform||'Both']
-    .map(v => '"'+(v||'').replace(/"/g,'""')+'"').join(',')
+    .map(v=>'"'+(v||'').replace(/"/g,'""')+'"').join(',')
   );
   navigator.clipboard.writeText([header,...rows].join('\n'))
-    .then(() => toast('CSV copied to clipboard ✓', 'ok'))
-    .catch(() => toast('Copy failed', 'err'));
+    .then(()=>toast('CSV copied ✓','ok'))
+    .catch(()=>toast('Copy failed','err'));
 }
 
-function savePRDToKB() {
+async function savePRDToKB() {
   if (!lastPRDResult) { toast('No results to save', 'err'); return; }
-  kbEntries.unshift({
-    id: Date.now(), type: 'prd',
-    title: 'PRD Test Cases: ' + (lastPRDResult.feature_name || 'Unknown Feature'),
-    area: lastPRDResult.feature_name || '',
-    content: JSON.stringify(lastPRDResult, null, 2),
-    addedAt: new Date().toLocaleString()
-  });
-  persistKB(); updateKBCount(); updateKBContextPanel();
-  toast('Saved to Knowledge Base ✓', 'ok');
+  setCloudStatus('syncing', 'saving...');
+  try {
+    const data = await cfFetch('/kb', 'POST', {
+      type: 'prd',
+      title: 'PRD Test Cases: ' + (lastPRDResult.feature_name || 'Unknown Feature'),
+      area: lastPRDResult.feature_name || '',
+      content: JSON.stringify(lastPRDResult, null, 2)
+    });
+    kbEntries.unshift(data.entry);
+    updateKBCount(); updateKBContextPanel();
+    setCloudStatus('ok', `☁️ connected · ${kbEntries.length} entries`);
+    toast('Saved to cloud KB ✓', 'ok');
+  } catch(e) {
+    setCloudStatus('err', 'save failed');
+    toast('Save failed: ' + e.message, 'err');
+  }
 }
 
 // ═══════════════════════════════════════════════════════
 // TOAST
 // ═══════════════════════════════════════════════════════
 let toastTimeout;
-function toast(msg, type = 'ok') {
+function toast(msg, type='ok') {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'toast ' + type + ' show';
+  el.textContent = msg; el.className = 'toast '+type+' show';
   clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => el.className = 'toast', 3000);
+  toastTimeout = setTimeout(() => el.className = 'toast', 3200);
 }
 
 // ═══════════════════════════════════════════════════════
-// STORAGE FALLBACK (if window.storage not available)
-// ═══════════════════════════════════════════════════════
-if (!window.storage) {
-  window.storage = {
-    _store: {},
-    get: async (k) => window.storage._store[k] ? { value: window.storage._store[k] } : null,
-    set: async (k, v) => { window.storage._store[k] = v; return { key: k, value: v }; },
-    delete: async (k) => { delete window.storage._store[k]; return { deleted: true }; }
-  };
-}
-
 // INIT
+// ═══════════════════════════════════════════════════════
+function init() {
+  const wrap = document.getElementById('featureTags');
+  FEATURES.forEach(f => {
+    const s = document.createElement('span');
+    s.className = 'tag'; s.textContent = f; s.dataset.val = f;
+    s.onclick = () => s.classList.toggle('on');
+    wrap.appendChild(s);
+  });
+}
 window.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
