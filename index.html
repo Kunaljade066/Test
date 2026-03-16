@@ -599,6 +599,136 @@ select option { background: var(--s2); }
 }
 .info-row:last-child { border-bottom: none; }
 .info-dot { color: var(--jade); flex-shrink: 0; }
+
+/* ══════════════════════════════════
+   HISTORY PANEL
+══════════════════════════════════ */
+.hist-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 14px; height: 100%;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--mute);
+  background: none; border: none; cursor: pointer;
+  border-left: 1px solid var(--bd); transition: color .18s;
+  white-space: nowrap; flex-shrink: 0;
+}
+.hist-btn:hover { color: var(--ghost); }
+.hist-btn .hb-cnt {
+  background: var(--blue); color: #fff;
+  font-size: 9px; padding: 1px 5px;
+  border-radius: 20px; min-width: 16px; text-align: center;
+}
+
+.hist-drawer {
+  position: fixed; top: 52px; right: 0; bottom: 0;
+  width: 380px; z-index: 200;
+  background: var(--s1); border-left: 1px solid var(--bd);
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform .25s cubic-bezier(.4,0,.2,1);
+  box-shadow: -8px 0 32px rgba(0,0,0,.4);
+}
+.hist-drawer.open { transform: translateX(0); }
+
+.hist-drawer-hd {
+  padding: 14px 16px; border-bottom: 1px solid var(--bd);
+  background: var(--s2);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.hist-drawer-title {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--mist);
+}
+.hist-drawer-close {
+  background: none; border: none; color: var(--mute);
+  font-size: 18px; cursor: pointer; line-height: 1;
+  transition: color .15s; padding: 0 2px;
+}
+.hist-drawer-close:hover { color: var(--text); }
+
+.hist-filters {
+  display: flex; gap: 0;
+  border-bottom: 1px solid var(--bd);
+  flex-shrink: 0;
+}
+.hist-filter-btn {
+  flex: 1; padding: 8px 0;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--mute);
+  background: none; border: none; border-bottom: 2px solid transparent;
+  cursor: pointer; transition: all .15s;
+}
+.hist-filter-btn:hover { color: var(--ghost); }
+.hist-filter-btn.on { color: var(--blue2); border-bottom-color: var(--blue); }
+
+.hist-list {
+  flex: 1; overflow-y: auto; padding: 8px;
+}
+.hist-list::-webkit-scrollbar { width: 3px; }
+
+.hist-item {
+  background: var(--s2); border: 1px solid var(--bd);
+  border-radius: 8px; padding: 11px 13px;
+  margin-bottom: 7px; cursor: pointer;
+  transition: all .15s; position: relative;
+}
+.hist-item:hover { border-color: var(--blue); background: rgba(61,142,255,.04); }
+.hist-item-top {
+  display: flex; align-items: center; gap: 7px;
+  margin-bottom: 5px;
+}
+.hist-item-type {
+  font-family: var(--mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 20px;
+}
+.ht-impact { background: rgba(255,45,85,.1);  color: var(--red2);  border: 1px solid rgba(255,45,85,.2); }
+.ht-prd    { background: rgba(61,142,255,.1); color: var(--blue2); border: 1px solid rgba(61,142,255,.2); }
+.hist-item-title {
+  font-size: 12px; font-weight: 500; color: var(--text);
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hist-item-meta {
+  font-family: var(--mono); font-size: 10px; color: var(--dim);
+  margin-bottom: 4px;
+}
+.hist-item-preview {
+  font-family: var(--mono); font-size: 10px; color: var(--smoke, #444466);
+  line-height: 1.5; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.hist-item-del {
+  position: absolute; top: 8px; right: 8px;
+  background: none; border: none; color: var(--dim);
+  font-size: 13px; cursor: pointer; padding: 2px;
+  border-radius: 3px; transition: color .15s;
+  display: none;
+}
+.hist-item:hover .hist-item-del { display: block; }
+.hist-item-del:hover { color: var(--red2); }
+
+.hist-empty {
+  padding: 40px 16px; text-align: center;
+  font-family: var(--mono); font-size: 11px; color: var(--mute);
+  line-height: 2;
+}
+
+.hist-overlay {
+  position: fixed; inset: 0; z-index: 199;
+  background: rgba(0,0,0,.3);
+  display: none;
+}
+.hist-overlay.on { display: block; }
+
+/* Restored badge on result panel */
+.restored-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(61,142,255,.1); border: 1px solid rgba(61,142,255,.2);
+  border-radius: 20px; padding: 2px 9px;
+  font-family: var(--mono); font-size: 9px; color: var(--blue2);
+  margin-left: 8px;
+}
 </style>
 </head>
 <body>
@@ -648,7 +778,35 @@ select option { background: var(--s2); }
       <span class="role-tag" id="uRole">viewer</span>
     </div>
   </div>
+  <button class="hist-btn" onclick="toggleHistory()" id="histBtn">
+    🕐 History <span class="hb-cnt" id="histCnt">0</span>
+  </button>
 </nav>
+
+<!-- History Overlay -->
+<div class="hist-overlay" id="histOverlay" onclick="closeHistory()"></div>
+
+<!-- History Drawer -->
+<div class="hist-drawer" id="histDrawer">
+  <div class="hist-drawer-hd">
+    <span class="hist-drawer-title">Analysis History</span>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-family:var(--mono);font-size:10px;color:var(--mute);" id="histUserLabel"></span>
+      <button class="hist-drawer-close" onclick="closeHistory()">✕</button>
+    </div>
+  </div>
+  <div class="hist-filters">
+    <button class="hist-filter-btn on" id="hf-all"    onclick="setHistFilter('all')">All</button>
+    <button class="hist-filter-btn"    id="hf-impact" onclick="setHistFilter('impact')">⚡ Impact</button>
+    <button class="hist-filter-btn"    id="hf-prd"    onclick="setHistFilter('prd')">📋 PRD</button>
+  </div>
+  <div class="hist-list" id="histList">
+    <div class="hist-empty">No history yet.<br>Run an analysis to see it here.</div>
+  </div>
+  <div style="padding:10px 12px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;">
+    <button class="btn btn-ghost btn-xs" onclick="clearHistory()" style="color:var(--red2);border-color:rgba(255,45,85,.25);">🗑 Clear History</button>
+  </div>
+</div>
 
 <!-- MAIN -->
 <div class="wrap">
@@ -1012,8 +1170,206 @@ let G = {
   user: null, failCount: 0,
   kb: [],
   prdFile: null, importChunks: [],
-  lastImpact: null, lastPRD: null
+  lastImpact: null, lastPRD: null,
+  histFilter: 'all'
 };
+
+// ════════════════════════════════════════════
+// SESSION PERSISTENCE — localStorage
+// ════════════════════════════════════════════
+const SESSION_KEY = 'qabp_session_v5';
+
+function saveSession() {
+  if (!G.user) return;
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      user:      G.user,
+      savedAt:   Date.now()
+    }));
+  } catch(e) {}
+}
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    // Session valid for 8 hours
+    if (!s.user || !s.savedAt || (Date.now() - s.savedAt) > 8 * 60 * 60 * 1000) {
+      localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return s;
+  } catch(e) { return null; }
+}
+
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+// ════════════════════════════════════════════
+// HISTORY — per-account localStorage
+// ════════════════════════════════════════════
+function histKey(email) {
+  return `qabp_hist_${(email||'').replace(/[^a-z0-9]/gi,'_')}`;
+}
+
+function loadHistory(email) {
+  try {
+    const raw = localStorage.getItem(histKey(email));
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) { return []; }
+}
+
+function saveHistory(email, entries) {
+  try {
+    // Keep max 50 entries
+    const trimmed = entries.slice(0, 50);
+    localStorage.setItem(histKey(email), JSON.stringify(trimmed));
+  } catch(e) {}
+}
+
+function addHistoryEntry(type, input, output, title) {
+  if (!G.user?.email) return;
+  const entries = loadHistory(G.user.email);
+  const entry = {
+    id:        Date.now(),
+    type,       // 'impact' | 'prd'
+    title:     title || (type === 'impact' ? input.desc : input.feature_name) || 'Untitled',
+    input,      // original form inputs
+    output,     // AI result object
+    ts:        Date.now(),
+    dateStr:   new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' })
+  };
+  entries.unshift(entry);
+  saveHistory(G.user.email, entries);
+  renderHistoryDrawer();
+}
+
+function getHistory() {
+  if (!G.user?.email) return [];
+  return loadHistory(G.user.email);
+}
+
+function clearHistory() {
+  if (!G.user?.email) return;
+  if (!confirm('Clear all your history? This cannot be undone.')) return;
+  localStorage.removeItem(histKey(G.user.email));
+  renderHistoryDrawer();
+  toast('History cleared', 'ok');
+}
+
+function deleteHistoryEntry(id) {
+  if (!G.user?.email) return;
+  const entries = loadHistory(G.user.email).filter(e => e.id !== id);
+  saveHistory(G.user.email, entries);
+  renderHistoryDrawer();
+}
+
+function setHistFilter(f) {
+  G.histFilter = f;
+  ['all','impact','prd'].forEach(k => {
+    document.getElementById('hf-'+k)?.classList.toggle('on', k === f);
+  });
+  renderHistoryDrawer();
+}
+
+function renderHistoryDrawer() {
+  const all     = getHistory();
+  const entries = G.histFilter === 'all' ? all : all.filter(e => e.type === G.histFilter);
+  const list    = document.getElementById('histList');
+  const cnt     = document.getElementById('histCnt');
+  if (cnt) cnt.textContent = all.length;
+  const userLbl = document.getElementById('histUserLabel');
+  if (userLbl && G.user) userLbl.textContent = G.user.email.split('@')[0];
+
+  if (!entries.length) {
+    list.innerHTML = `<div class="hist-empty">${all.length ? 'No entries for this filter.' : 'No history yet.<br>Run an analysis to see it here.'}</div>`;
+    return;
+  }
+
+  list.innerHTML = entries.map(e => `
+    <div class="hist-item" onclick="restoreHistory(${e.id})">
+      <div class="hist-item-top">
+        <span class="hist-item-type ${e.type === 'impact' ? 'ht-impact' : 'ht-prd'}">${e.type === 'impact' ? '⚡ Impact' : '📋 PRD'}</span>
+        <span class="hist-item-title">${escHtml(e.title)}</span>
+        <button class="hist-item-del" onclick="event.stopPropagation();deleteHistoryEntry(${e.id})" title="Delete">✕</button>
+      </div>
+      <div class="hist-item-meta">${e.dateStr} · ${e.output?.test_cases?.length || 0} test cases</div>
+      <div class="hist-item-preview">${escHtml(e.output?.summary || e.output?.feature_name || '—')}</div>
+    </div>`).join('');
+}
+
+function restoreHistory(id) {
+  const entries = getHistory();
+  const entry   = entries.find(e => e.id === id);
+  if (!entry) return;
+
+  closeHistory();
+
+  if (entry.type === 'impact') {
+    goTab('impact');
+    // Restore inputs
+    const d = entry.input;
+    document.getElementById('iDesc').value = d.desc || '';
+    document.getElementById('iType').value = d.type || document.getElementById('iType').options[0].value;
+    document.getElementById('iPlatform').value = d.platform || document.getElementById('iPlatform').options[0].value;
+    // Restore tags
+    document.querySelectorAll('#iTags .tag').forEach(t => {
+      t.classList.toggle('on', (d.tags||[]).includes(t.dataset.v));
+    });
+    // Restore output
+    G.lastImpact = entry.output;
+    document.getElementById('iResultPanel').style.display = 'block';
+    document.getElementById('iLoader').classList.remove('on');
+    document.getElementById('iOut').style.display = 'block';
+    renderImpact(entry.output);
+    document.getElementById('iTime').innerHTML =
+      `${entry.dateStr} <span class="restored-badge">↩ restored</span>`;
+    setTimeout(() => document.getElementById('iResultPanel').scrollIntoView({behavior:'smooth',block:'start'}), 100);
+
+  } else if (entry.type === 'prd') {
+    goTab('prd');
+    const d = entry.input;
+    document.getElementById('prdTxt').value      = d.txt      || '';
+    document.getElementById('prdPrio').value     = d.prio     || document.getElementById('prdPrio').options[0].value;
+    document.getElementById('prdPlatform').value = d.platform || document.getElementById('prdPlatform').options[0].value;
+    document.getElementById('prdFocus').value    = d.focus    || '';
+    // Restore output
+    G.lastPRD = entry.output;
+    document.getElementById('prdLoader').classList.remove('on');
+    document.getElementById('prdOut').style.display = 'block';
+    document.getElementById('prdActs').style.display = 'flex';
+    document.getElementById('prdEmpty').style.display = 'none';
+    renderPRD(entry.output);
+    document.getElementById('prdStats').innerHTML =
+      `${entry.output.feature_name||'Feature'} · ${entry.output.test_cases?.length||0} test cases &nbsp;<span class="restored-badge">↩ restored from ${entry.dateStr}</span>`;
+  }
+
+  toast(`Restored: ${entry.title}`, 'ok');
+}
+
+function toggleHistory() {
+  const drawer  = document.getElementById('histDrawer');
+  const overlay = document.getElementById('histOverlay');
+  const isOpen  = drawer.classList.contains('open');
+  if (isOpen) {
+    closeHistory();
+  } else {
+    renderHistoryDrawer();
+    drawer.classList.add('open');
+    overlay.classList.add('on');
+  }
+}
+
+function closeHistory() {
+  document.getElementById('histDrawer')?.classList.remove('open');
+  document.getElementById('histOverlay')?.classList.remove('on');
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
 // ════════════════════════════════════════════
 // GOOGLE AUTH
@@ -1077,6 +1433,19 @@ async function handleGoogleCred(response) {
   }
 }
 
+// Ensure Google GSI is always initialized for manual sign-in
+if (document.readyState === 'complete') {
+  if (typeof google !== 'undefined') {
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT, callback: handleGoogleCred, auto_select: false });
+  }
+} else {
+  window.addEventListener('load', () => {
+    if (typeof google !== 'undefined') {
+      google.accounts.id.initialize({ client_id: GOOGLE_CLIENT, callback: handleGoogleCred, auto_select: false });
+    }
+  });
+}
+
 function loginErr(msg) {
   const el = document.getElementById('loginErr');
   el.textContent = msg; el.classList.add('on');
@@ -1084,6 +1453,9 @@ function loginErr(msg) {
 }
 
 function onLoginSuccess() {
+  // Save session to localStorage so refresh doesn't log out
+  saveSession();
+
   // Hide login
   const ls = document.getElementById('loginScreen');
   ls.style.transition = 'opacity .35s';
@@ -1107,8 +1479,11 @@ function onLoginSuccess() {
   rt.textContent = G.user.role;
   rt.className = `role-tag role-${G.user.role}`;
 
+  // Update history count badge
+  renderHistoryDrawer();
+
   loadKB();
-  toast(`Welcome, ${(G.user.name||'').split(' ')[0]} 👋`, 'ok');
+  toast(`Welcome back, ${(G.user.name||'').split(' ')[0]} 👋`, 'ok');
 }
 
 function applyRole(role) {
@@ -1126,6 +1501,7 @@ function applyRole(role) {
 function doSignOut() {
   if (!confirm('Sign out?')) return;
   try { google.accounts.id.disableAutoSelect(); } catch(e) {}
+  clearSession();
   G.user = null;
   location.reload();
 }
@@ -1500,6 +1876,12 @@ HARD REQUIREMENTS:
     G.lastImpact = result;
     renderImpact(result);
     document.getElementById('iTime').textContent = new Date().toLocaleTimeString();
+    // Save to per-account history
+    addHistoryEntry('impact',
+      { desc, type, platform, tags },
+      result,
+      desc.substring(0, 60) + (desc.length > 60 ? '…' : '')
+    );
   } catch(e) {
     clearInterval(ticker);
     document.getElementById('iLoader').classList.remove('on');
@@ -1705,6 +2087,12 @@ REQUIREMENTS:
     }
     G.lastPRD = result;
     renderPRD(result);
+    // Save to per-account history
+    addHistoryEntry('prd',
+      { txt: txt.substring(0, 500), prio, platform, focus },
+      result,
+      result.feature_name || txt.substring(0, 50) || 'PRD Analysis'
+    );
   } catch(e) {
     clearInterval(ticker);
     document.getElementById('prdLoader').classList.remove('on');
@@ -2106,7 +2494,43 @@ window.addEventListener('DOMContentLoaded', () => {
     wrap.appendChild(s);
   });
 
-  // Init Google
+  // ── Try to restore saved session first ──
+  const saved = loadSession();
+  if (saved?.user) {
+    G.user = saved.user;
+    // Re-verify the token is still valid before silently logging in
+    fetch(WORKER + '/auth/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id_token: saved.user.idToken })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok && data.email) {
+        // Token still valid — restore session silently
+        G.user = { ...data, idToken: saved.user.idToken };
+        saveSession(); // refresh TTL
+        onLoginSuccess();
+        toast('Session restored ✓', 'ok');
+      } else {
+        // Token expired — show login
+        clearSession();
+        G.user = null;
+        initGoogle();
+      }
+    })
+    .catch(() => {
+      // Network error — still try to show app with cached user
+      // (KB calls will fail gracefully)
+      G.user = saved.user;
+      onLoginSuccess();
+    });
+  } else {
+    initGoogle();
+  }
+});
+
+function initGoogle() {
   window.addEventListener('load', () => {
     if (typeof google !== 'undefined') {
       google.accounts.id.initialize({
@@ -2116,7 +2540,7 @@ window.addEventListener('DOMContentLoaded', () => {
       });
     }
   });
-});
+}
 </script>
 </body>
 </html>
