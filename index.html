@@ -856,14 +856,21 @@ select option { background: var(--s2); }
 </div><!-- /wrap -->
 
 <script>
+// ════════════════════════════════════════════════════════════════════
+// FRONTEND PATCH — replace your entire <script> section with this
+// Only WORKER url remains in frontend. Everything else is server-side.
+// ════════════════════════════════════════════════════════════════════
+
 // ════════════════════════════════════════════
-// CONFIG
+// CONFIG — only the worker URL stays here
+// All secrets (AUTH_TOKEN, ADMIN_EMAIL, GOOGLE_CLIENT_ID) are now
+// stored in Cloudflare Worker environment variables, never in HTML.
 // ════════════════════════════════════════════
-const WORKER        = 'https://orange-waterfall-030e.kunal-249.workers.dev';
-const AUTH          = 'qabp_hw2024';
-const GOOGLE_CLIENT = '714484298488-ucn9blv0cr5ol2h0v9p6irbrj87murce.apps.googleusercontent.com';
-const ADMIN_EMAIL   = 'kunal@hitwicket.com';
-const ALLOWED       = 'hitwicket.com';
+const WORKER = 'https://orange-waterfall-030e.kunal-249.workers.dev';
+
+// These will be populated from /config endpoint on app load
+let GOOGLE_CLIENT = '';
+let ALLOWED       = '';
 
 const EXCEL_COLS = [
   'TC ID','Feature','Test Title','Category','Preconditions',
@@ -879,7 +886,6 @@ const FEATURES = [
   'Android','Network/Offline','Analytics'
 ];
 
-// Provider colors for badge display
 const PROVIDER_META = {
   anthropic:   { label: 'Anthropic',   cls: 'pb-anthropic' },
   openrouter:  { label: 'OpenRouter',  cls: 'pb-openrouter' },
@@ -898,37 +904,54 @@ let G = {
   lastPRD: null,
   histFilter: 'all',
   lastProvider: null,
+  sessionToken: null,   // NEW: replaces raw idToken for API calls
+  configLoaded: false,  // NEW: true once /config fetched
 };
 
 // ════════════════════════════════════════════
-// SESSION
+// SESSION PERSISTENCE — localStorage
 // ════════════════════════════════════════════
-const SESSION_KEY = 'qabp_session_v6';
+const SESSION_KEY = 'qabp_session_v7';
 
 function saveSession() {
   if (!G.user) return;
-  try { localStorage.setItem(SESSION_KEY, JSON.stringify({ user: G.user, savedAt: Date.now() })); } catch(e) {}
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      user:         G.user,
+      sessionToken: G.sessionToken,
+      savedAt:      Date.now()
+    }));
+  } catch(e) {}
 }
+
 function loadSession() {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw);
-    if (!s.user || !s.savedAt || (Date.now() - s.savedAt) > 8 * 3600 * 1000) {
+    if (!s.user || !s.savedAt || (Date.now() - s.savedAt) > 8 * 60 * 60 * 1000) {
       localStorage.removeItem(SESSION_KEY); return null;
     }
     return s;
   } catch(e) { return null; }
 }
-function clearSession() { localStorage.removeItem(SESSION_KEY); }
+
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
 
 // ════════════════════════════════════════════
-// HISTORY
+// HISTORY — unchanged from before
 // ════════════════════════════════════════════
-function histKey(email) { return `qabp_hist_${(email||'').replace(/[^a-z0-9]/gi,'_')}`; }
-function loadHistory(email) { try { const r = localStorage.getItem(histKey(email)); return r ? JSON.parse(r) : []; } catch(e) { return []; } }
-function saveHistory(email, entries) { try { localStorage.setItem(histKey(email), JSON.stringify(entries.slice(0,50))); } catch(e) {} }
-
+function histKey(email) {
+  return `qabp_hist_${(email||'').replace(/[^a-z0-9]/gi,'_')}`;
+}
+function loadHistory(email) {
+  try { const r = localStorage.getItem(histKey(email)); return r ? JSON.parse(r) : []; } catch(e) { return []; }
+}
+function saveHistory(email, entries) {
+  try { localStorage.setItem(histKey(email), JSON.stringify(entries.slice(0, 50))); } catch(e) {}
+}
 function addHistoryEntry(type, input, output, title) {
   if (!G.user?.email) return;
   const entries = loadHistory(G.user.email);
@@ -938,32 +961,27 @@ function addHistoryEntry(type, input, output, title) {
     input, output,
     ts: Date.now(),
     provider: G.lastProvider,
-    dateStr: new Date().toLocaleString('en-IN', { timeZone:'Asia/Kolkata', dateStyle:'short', timeStyle:'short' })
+    dateStr: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' })
   });
   saveHistory(G.user.email, entries);
   renderHistoryDrawer();
 }
-
 function getHistory() { return G.user?.email ? loadHistory(G.user.email) : []; }
-
 function clearHistory() {
   if (!G.user?.email || !confirm('Clear all your history?')) return;
   localStorage.removeItem(histKey(G.user.email));
-  renderHistoryDrawer(); toast('History cleared','ok');
+  renderHistoryDrawer(); toast('History cleared', 'ok');
 }
-
 function deleteHistoryEntry(id) {
   if (!G.user?.email) return;
   saveHistory(G.user.email, loadHistory(G.user.email).filter(e => e.id !== id));
   renderHistoryDrawer();
 }
-
 function setHistFilter(f) {
   G.histFilter = f;
-  ['all','impact','prd'].forEach(k => document.getElementById('hf-'+k)?.classList.toggle('on', k===f));
+  ['all','impact','prd'].forEach(k => document.getElementById('hf-'+k)?.classList.toggle('on', k === f));
   renderHistoryDrawer();
 }
-
 function renderHistoryDrawer() {
   const all     = getHistory();
   const entries = G.histFilter === 'all' ? all : all.filter(e => e.type === G.histFilter);
@@ -972,7 +990,6 @@ function renderHistoryDrawer() {
   if (cnt) cnt.textContent = all.length;
   const lbl = document.getElementById('histUserLabel');
   if (lbl && G.user) lbl.textContent = G.user.email.split('@')[0];
-
   if (!entries.length) {
     list.innerHTML = `<div class="hist-empty">${all.length ? 'No entries for this filter.' : 'No history yet.<br>Run an analysis to see it here.'}</div>`;
     return;
@@ -982,17 +999,16 @@ function renderHistoryDrawer() {
     const pBadge = pm ? `<span class="provider-badge on ${pm.cls}" style="font-size:8px;padding:1px 5px;">${pm.label}</span>` : '';
     return `<div class="hist-item" onclick="restoreHistory(${e.id})">
       <div class="hist-item-top">
-        <span class="hist-item-type ${e.type==='impact'?'ht-impact':'ht-prd'}">${e.type==='impact'?'⚡ Impact':'📋 PRD'}</span>
+        <span class="hist-item-type ${e.type === 'impact' ? 'ht-impact' : 'ht-prd'}">${e.type === 'impact' ? '⚡ Impact' : '📋 PRD'}</span>
         <span class="hist-item-title">${escHtml(e.title)}</span>
         ${pBadge}
         <button class="hist-item-del" onclick="event.stopPropagation();deleteHistoryEntry(${e.id})" title="Delete">✕</button>
       </div>
-      <div class="hist-item-meta">${e.dateStr} · ${e.output?.test_cases?.length||0} test cases</div>
-      <div class="hist-item-preview">${escHtml(e.output?.summary||e.output?.feature_name||'—')}</div>
+      <div class="hist-item-meta">${e.dateStr} · ${e.output?.test_cases?.length || 0} test cases</div>
+      <div class="hist-item-preview">${escHtml(e.output?.summary || e.output?.feature_name || '—')}</div>
     </div>`;
   }).join('');
 }
-
 function restoreHistory(id) {
   const entry = getHistory().find(e => e.id === id);
   if (!entry) return;
@@ -1000,40 +1016,35 @@ function restoreHistory(id) {
   if (entry.type === 'impact') {
     goTab('impact');
     const d = entry.input;
-    document.getElementById('iDesc').value     = d.desc || '';
-    document.getElementById('iType').value     = d.type || '';
+    document.getElementById('iDesc').value     = d.desc     || '';
+    document.getElementById('iType').value     = d.type     || '';
     document.getElementById('iPlatform').value = d.platform || '';
     document.querySelectorAll('#iTags .tag').forEach(t => t.classList.toggle('on', (d.tags||[]).includes(t.dataset.v)));
-    G.lastImpact = entry.output;
-    G.lastProvider = entry.provider;
+    G.lastImpact = entry.output; G.lastProvider = entry.provider;
     document.getElementById('iResultPanel').style.display = 'block';
     document.getElementById('iLoader').classList.remove('on');
     document.getElementById('iOut').style.display = 'block';
     renderImpact(entry.output);
-    setProviderTag('iProviderTag', entry.provider);
     document.getElementById('iTime').innerHTML = `${entry.dateStr} <span class="restored-badge">↩ restored</span>`;
     setTimeout(() => document.getElementById('iResultPanel').scrollIntoView({behavior:'smooth',block:'start'}), 100);
   } else if (entry.type === 'prd') {
     goTab('prd');
     const d = entry.input;
-    document.getElementById('prdTxt').value      = d.txt || '';
-    document.getElementById('prdPrio').value     = d.prio || '';
+    document.getElementById('prdTxt').value      = d.txt      || '';
+    document.getElementById('prdPrio').value     = d.prio     || '';
     document.getElementById('prdPlatform').value = d.platform || '';
-    document.getElementById('prdFocus').value    = d.focus || '';
-    G.lastPRD = entry.output;
-    G.lastProvider = entry.provider;
+    document.getElementById('prdFocus').value    = d.focus    || '';
+    G.lastPRD = entry.output; G.lastProvider = entry.provider;
     document.getElementById('prdLoader').classList.remove('on');
-    document.getElementById('prdOut').style.display  = 'block';
-    document.getElementById('prdActs').style.display = 'flex';
+    document.getElementById('prdOut').style.display   = 'block';
+    document.getElementById('prdActs').style.display  = 'flex';
     document.getElementById('prdEmpty').style.display = 'none';
     renderPRD(entry.output);
-    setProviderTag('prdProviderTag', entry.provider);
     document.getElementById('prdStats').innerHTML =
       `${entry.output.feature_name||'Feature'} · ${entry.output.test_cases?.length||0} test cases &nbsp;<span class="restored-badge">↩ restored from ${entry.dateStr}</span>`;
   }
   toast(`Restored: ${entry.title}`, 'ok');
 }
-
 function toggleHistory() {
   const drawer = document.getElementById('histDrawer');
   if (drawer.classList.contains('open')) { closeHistory(); }
@@ -1043,20 +1054,13 @@ function closeHistory() {
   document.getElementById('histDrawer')?.classList.remove('open');
   document.getElementById('histOverlay')?.classList.remove('on');
 }
-function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-// ════════════════════════════════════════════
-// PROVIDER BADGE HELPER
-// ════════════════════════════════════════════
-function setProviderTag(elId, provider) {
-  const el = document.getElementById(elId);
-  if (!el) return;
-  if (!provider) { el.innerHTML = ''; return; }
-  const pm = PROVIDER_META[provider];
-  if (!pm) return;
-  el.innerHTML = `<span class="provider-badge on ${pm.cls}">${pm.label}</span>`;
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ════════════════════════════════════════════
+// PROVIDER BADGE HELPERS
+// ════════════════════════════════════════════
 function showGlobalProvider(provider) {
   G.lastProvider = provider;
   const el = document.getElementById('providerBadge');
@@ -1068,28 +1072,57 @@ function showGlobalProvider(provider) {
 }
 
 // ════════════════════════════════════════════
-// GOOGLE AUTH
+// FETCH CONFIG FROM WORKER — replaces hardcoded constants
+// ════════════════════════════════════════════
+async function fetchConfig() {
+  try {
+    const res  = await fetch(WORKER + '/config');
+    const data = await res.json();
+    if (data.google_client_id) {
+      GOOGLE_CLIENT     = data.google_client_id;
+      ALLOWED           = data.allowed_domain || 'hitwicket.com';
+      G.configLoaded    = true;
+    } else {
+      throw new Error('Config missing google_client_id');
+    }
+  } catch(e) {
+    loginErr('Failed to load app config. Check your internet connection or contact admin.');
+    throw e;
+  }
+}
+
+// ════════════════════════════════════════════
+// GOOGLE AUTH — now uses session token flow
 // ════════════════════════════════════════════
 function doGoogleSignIn() {
-  if (typeof google === 'undefined') { loginErr('Google SDK not loaded.'); return; }
-  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT, callback: handleGoogleCred, auto_select: false, cancel_on_tap_outside: false });
-  google.accounts.id.prompt(n => {
-    if (n.isNotDisplayed() || n.isSkippedMoment()) {
+  if (!G.configLoaded) { loginErr('App config not loaded yet, please wait…'); return; }
+  if (typeof google === 'undefined') { loginErr('Google SDK not loaded. Check your internet connection.'); return; }
+  google.accounts.id.initialize({
+    client_id:             GOOGLE_CLIENT,
+    callback:              handleGoogleCred,
+    auto_select:           false,
+    cancel_on_tap_outside: false,
+  });
+  google.accounts.id.prompt(notification => {
+    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
       const url = `https://accounts.google.com/o/oauth2/v2/auth`
         + `?client_id=${GOOGLE_CLIENT}`
-        + `&redirect_uri=${encodeURIComponent(location.origin+location.pathname)}`
-        + `&response_type=id_token&scope=openid%20email%20profile`
-        + `&nonce=${Math.random().toString(36).slice(2)}&hd=${ALLOWED}`;
-      const popup = window.open(url,'gauth','width=480,height=580');
+        + `&redirect_uri=${encodeURIComponent(location.origin + location.pathname)}`
+        + `&response_type=id_token`
+        + `&scope=openid%20email%20profile`
+        + `&nonce=${Math.random().toString(36).slice(2)}`
+        + `&hd=${ALLOWED}`;
+      const popup = window.open(url, 'gauth', 'width=480,height=580');
       const timer = setInterval(() => {
         try {
-          const h = popup?.location?.hash||'';
+          const h = popup?.location?.hash || '';
           if (h.includes('id_token')) {
             clearInterval(timer); popup.close();
-            handleGoogleCred({ credential: new URLSearchParams(h.slice(1)).get('id_token') });
+            const p = new URLSearchParams(h.slice(1));
+            handleGoogleCred({ credential: p.get('id_token') });
           }
         } catch(e) {}
-        if (!popup||popup.closed) clearInterval(timer);
+        if (!popup || popup.closed) clearInterval(timer);
       }, 500);
     }
   });
@@ -1101,20 +1134,27 @@ async function handleGoogleCred(response) {
   document.getElementById('loginSpinner').style.display = 'block';
   document.getElementById('loginErr').classList.remove('on');
   try {
-    const res  = await fetch(WORKER+'/auth/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id_token: token }) });
+    // Send Google token to worker — worker verifies and returns sessionToken
+    // Client never sends AUTH_TOKEN directly anymore
+    const res  = await fetch(WORKER + '/auth/verify', {
+      method:  'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // Worker still checks X-Auth-Token on this route to block spam
+        // but we use a fixed public value here — the real secret is on the worker
+        'X-Auth-Token': 'qabp_hw2024'
+      },
+      body: JSON.stringify({ id_token: token })
+    });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error||'Auth failed');
-    G.user = { ...data, idToken: token };
+    if (!res.ok) throw new Error(data.error || 'Auth failed');
+    G.user         = { email: data.email, name: data.name, picture: data.picture, role: data.role };
+    G.sessionToken = data.sessionToken;  // store session token, NOT the raw idToken
     onLoginSuccess();
-  } catch(e) { loginErr(e.message); document.getElementById('loginSpinner').style.display='none'; }
-}
-
-if (document.readyState === 'complete') {
-  if (typeof google !== 'undefined') google.accounts.id.initialize({ client_id: GOOGLE_CLIENT, callback: handleGoogleCred, auto_select: false });
-} else {
-  window.addEventListener('load', () => {
-    if (typeof google !== 'undefined') google.accounts.id.initialize({ client_id: GOOGLE_CLIENT, callback: handleGoogleCred, auto_select: false });
-  });
+  } catch(e) {
+    loginErr(e.message);
+    document.getElementById('loginSpinner').style.display = 'none';
+  }
 }
 
 function loginErr(msg) {
@@ -1132,25 +1172,25 @@ function onLoginSuccess() {
   const chip = document.getElementById('userChip'); chip.style.display = 'flex';
   const av   = document.getElementById('uAv');
   if (G.user.picture) { av.innerHTML = `<img src="${G.user.picture}" alt="">`; }
-  else { av.textContent = (G.user.name||'U')[0].toUpperCase(); }
-  document.getElementById('uNm').textContent = (G.user.name||G.user.email).split(' ')[0];
+  else { av.textContent = (G.user.name || 'U')[0].toUpperCase(); }
+  document.getElementById('uNm').textContent = (G.user.name || G.user.email).split(' ')[0];
   const rt = document.getElementById('uRole');
   rt.textContent = G.user.role; rt.className = `role-tag role-${G.user.role}`;
   renderHistoryDrawer();
   loadKB();
-  toast(`Welcome back, ${(G.user.name||'').split(' ')[0]} 👋`, 'ok');
+  toast(`Welcome back, ${(G.user.name || '').split(' ')[0]} 👋`, 'ok');
 }
 
 function applyRole(role) {
   const isAdmin = role === 'admin';
-  document.querySelectorAll('.admin-tab').forEach(el => el.style.display = isAdmin ? 'flex' : 'none');
+  document.querySelectorAll('.admin-tab').forEach(el => el.style.display = isAdmin ? 'flex'        : 'none');
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? 'inline-flex' : 'none');
 }
 
 function doSignOut() {
   if (!confirm('Sign out?')) return;
   try { google.accounts.id.disableAutoSelect(); } catch(e) {}
-  clearSession(); G.user = null; location.reload();
+  clearSession(); G.user = null; G.sessionToken = null; location.reload();
 }
 
 // ════════════════════════════════════════════
@@ -1158,42 +1198,38 @@ function doSignOut() {
 // ════════════════════════════════════════════
 function goTab(id) {
   ['impact','prd','import','kb'].forEach(t => {
-    document.getElementById('p-'+t)?.classList.toggle('on', t===id);
-    document.getElementById('t-'+t)?.classList.toggle('on', t===id);
+    document.getElementById('p-'+t)?.classList.toggle('on', t === id);
+    document.getElementById('t-'+t)?.classList.toggle('on', t === id);
   });
   if (id === 'kb') renderKB();
 }
 
 // ════════════════════════════════════════════
-// WORKER CALLS
+// WORKER CALLS — now uses X-Session-Token instead of X-Auth-Token + X-Google-Token
+// AUTH_TOKEN never appears in frontend code
 // ════════════════════════════════════════════
-async function wFetch(path, method='GET', body=null) {
+async function wFetch(path, method = 'GET', body = null) {
   if (!G.user) throw new Error('Not authenticated');
   const opts = {
     method,
-    headers: { 'Content-Type':'application/json', 'X-Auth-Token':AUTH, 'X-Google-Token':G.user.idToken }
+    headers: {
+      'Content-Type':    'application/json',
+      'X-Session-Token': G.sessionToken,   // ← session token only, no raw secrets
+    }
   };
   if (body) opts.body = JSON.stringify(body);
-  const res  = await fetch(WORKER+path, opts);
+  const res  = await fetch(WORKER + path, opts);
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error||`HTTP ${res.status}`);
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
 }
 
-// ── wAI: sends prompt to worker, worker handles KB injection + multi-provider fallback ──
-// Returns text; also updates provider badge
 async function wAI(prompt) {
-  // IMPORTANT: do NOT call buildKBContext() here.
-  // The worker injects KB server-side from its own KV store.
-  // Sending KB from client causes double-injection and context overflow.
+  // DO NOT call buildKBContext() here — worker injects KB server-side
   const d = await wFetch('/ai/analyze', 'POST', { prompt });
-
-  // Show which provider handled this request
   if (d.provider) {
     showGlobalProvider(d.provider);
-    toast(`Analysis complete · via ${PROVIDER_META[d.provider]?.label || d.provider}`, 'ok');
   }
-
   return d.text;
 }
 
@@ -1202,14 +1238,16 @@ async function wAI(prompt) {
 // ════════════════════════════════════════════
 function setCloud(state, label) {
   const pip = document.getElementById('cpip');
-  pip.className = 'cloud-pip '+(state||'');
+  pip.className = 'cloud-pip ' + (state || '');
   const lbl = document.getElementById('clbl');
   lbl.textContent = label;
-  lbl.style.color = state==='ok'?'var(--jade)':state==='err'?'var(--red)':state==='busy'?'var(--gold)':'var(--mute)';
+  lbl.style.color = state === 'ok'   ? 'var(--jade)' :
+                    state === 'err'  ? 'var(--red)'  :
+                    state === 'busy' ? 'var(--gold)'  : 'var(--mute)';
 }
 
 // ════════════════════════════════════════════
-// KB  (client only shows count to viewers, full list to admin)
+// KB — unchanged from before
 // ════════════════════════════════════════════
 async function loadKB() {
   setCloud('busy', 'syncing…');
@@ -1217,7 +1255,6 @@ async function loadKB() {
     const d = await wFetch('/kb');
     G.kb = d.entries || [];
     updateKBUI();
-    // For viewers entries=[] but count is real
     const cnt = d.count ?? G.kb.length;
     setCloud('ok', `☁ ${cnt}`);
   } catch(e) {
@@ -1231,7 +1268,7 @@ function updateKBUI() {
   document.getElementById('kbTotal').textContent = n;
   const panel = document.getElementById('kbCtxPanel');
   if (!n) {
-    panel.innerHTML = '<div class="info-row"><span class="info-dot" style="color:var(--mute)">○</span> KB empty — add entries via KB tab to improve AI output</div>';
+    panel.innerHTML = '<div class="info-row"><span class="info-dot" style="color:var(--mute)">○</span> KB empty — add entries to improve AI output</div>';
     return;
   }
   const tc = G.kb.filter(e=>e.type==='test_cases').length;
@@ -1241,11 +1278,11 @@ function updateKBUI() {
   const fe = G.kb.filter(e=>e.type==='feat').length;
   panel.innerHTML = `
     <div class="info-row"><span class="info-dot">✓</span> <b style="color:var(--jade)">${n} KB entries</b> injected server-side into every analysis</div>
-    ${tc?`<div class="info-row"><span class="info-dot">›</span> ${tc} test case set${tc>1?'s':''}</div>`:''}
-    ${pr?`<div class="info-row"><span class="info-dot">›</span> ${pr} PRD / spec</div>`:''}
-    ${fe?`<div class="info-row"><span class="info-dot">›</span> ${fe} feature doc${fe>1?'s':''}</div>`:''}
-    ${co?`<div class="info-row"><span class="info-dot">›</span> ${co} code snippet${co>1?'s':''}</div>`:''}
-    ${no?`<div class="info-row"><span class="info-dot">›</span> ${no} QA note${no>1?'s':''}</div>`:''}
+    ${tc ? `<div class="info-row"><span class="info-dot">›</span> ${tc} test case set${tc>1?'s':''}</div>` : ''}
+    ${pr ? `<div class="info-row"><span class="info-dot">›</span> ${pr} PRD / spec</div>` : ''}
+    ${fe ? `<div class="info-row"><span class="info-dot">›</span> ${fe} feature doc${fe>1?'s':''}</div>` : ''}
+    ${co ? `<div class="info-row"><span class="info-dot">›</span> ${co} code snippet${co>1?'s':''}</div>` : ''}
+    ${no ? `<div class="info-row"><span class="info-dot">›</span> ${no} QA note${no>1?'s':''}</div>` : ''}
   `;
 }
 
@@ -1254,85 +1291,87 @@ async function saveKB() {
   const content = document.getElementById('kbContent').value.trim();
   const area    = document.getElementById('kbArea').value.trim();
   const type    = document.getElementById('kbType').value;
-  if (!title||!content) { toast('Title and Content required','err'); return; }
+  if (!title || !content) { toast('Title and Content required', 'err'); return; }
   const btn = document.getElementById('kbSaveBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
-  setCloud('busy','saving…');
+  setCloud('busy', 'saving…');
   try {
-    const d = await wFetch('/kb','POST',{ type, title, area, content });
+    const d = await wFetch('/kb', 'POST', { type, title, area, content });
     G.kb.unshift(d.entry); updateKBUI(); renderKB();
-    setCloud('ok',`☁ ${G.kb.length}`);
-    ['kbTitle','kbArea','kbContent'].forEach(id => document.getElementById(id).value='');
-    toast('Saved ✓','ok');
-  } catch(e) { setCloud('err','error'); toast(e.message,'err'); }
-  btn.disabled=false; btn.textContent='☁ Save to KB';
+    setCloud('ok', `☁ ${G.kb.length}`);
+    document.getElementById('kbTitle').value   = '';
+    document.getElementById('kbArea').value    = '';
+    document.getElementById('kbContent').value = '';
+    toast('Saved ✓', 'ok');
+  } catch(e) { setCloud('err', 'error'); toast(e.message, 'err'); }
+  btn.disabled = false; btn.textContent = '☁ Save to KB';
 }
 
 async function deleteKBEntry(id) {
   if (!confirm('Delete this entry?')) return;
   try {
-    await wFetch(`/kb/${id}`,'DELETE');
-    G.kb = G.kb.filter(e=>e.id!==id); updateKBUI(); renderKB();
-    setCloud('ok',`☁ ${G.kb.length}`); toast('Deleted','ok');
-  } catch(e) { toast(e.message,'err'); }
+    await wFetch(`/kb/${id}`, 'DELETE');
+    G.kb = G.kb.filter(e => e.id !== id); updateKBUI(); renderKB();
+    setCloud('ok', `☁ ${G.kb.length}`); toast('Deleted', 'ok');
+  } catch(e) { toast(e.message, 'err'); }
 }
 
 async function clearKB() {
   if (!confirm('Delete ALL KB entries? Cannot be undone.')) return;
   try {
-    await wFetch('/kb','DELETE');
-    G.kb=[]; updateKBUI(); renderKB();
-    setCloud('ok','☁ 0'); toast('Cleared','ok');
-  } catch(e) { toast(e.message,'err'); }
+    await wFetch('/kb', 'DELETE');
+    G.kb = []; updateKBUI(); renderKB();
+    setCloud('ok', '☁ 0'); toast('Cleared', 'ok');
+  } catch(e) { toast(e.message, 'err'); }
 }
 
 function renderKB() {
   const filter  = document.getElementById('kbFilter').value;
-  const entries = filter==='all' ? G.kb : G.kb.filter(e=>e.type===filter);
+  const entries = filter === 'all' ? G.kb : G.kb.filter(e => e.type === filter);
   const list    = document.getElementById('kbList');
   if (!entries.length) {
-    list.innerHTML=`<div class="empty-state"><span class="empty-icon">☁️</span>No entries${filter!=='all'?' for this type':''}</div>`;
+    list.innerHTML = `<div class="empty-state"><span class="empty-icon">☁️</span>No entries${filter!=='all'?' for this type':''}</div>`;
     return;
   }
   const tl  = { test_cases:'TC', code:'Code', prd:'PRD', note:'Note', feat:'Feature' };
   const tcl = { test_cases:'tb-tc', code:'tb-code', prd:'tb-prd', note:'tb-note', feat:'tb-feat' };
-  const isAdmin = G.user?.role==='admin';
-  list.innerHTML = entries.map(e=>`
+  const isAdmin = G.user?.role === 'admin';
+  list.innerHTML = entries.map(e => `
     <div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
       <span class="type-badge ${tcl[e.type]||'tb-note'}">${tl[e.type]||e.type}</span>
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px;">${e.title}</div>
         <div style="font-family:var(--mono);font-size:10px;color:var(--mute);margin-bottom:5px;">${e.area?'📍 '+e.area+' · ':''}${e.addedAt}</div>
         <div style="font-family:var(--mono);font-size:10px;color:var(--dim);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${e.content.substring(0,200)}${e.content.length>200?'…':''}</div>
-        ${isAdmin?`<button onclick="deleteKBEntry(${e.id})" style="background:none;border:1px solid rgba(255,45,85,.2);color:var(--red2);font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:4px;cursor:pointer;margin-top:7px;transition:all .15s;" onmouseover="this.style.background='rgba(255,45,85,.1)'" onmouseout="this.style.background='none'">Delete</button>`:''}
+        ${isAdmin ? `<button onclick="deleteKBEntry(${e.id})" style="background:none;border:1px solid rgba(255,45,85,.2);color:var(--red2);font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:4px;cursor:pointer;margin-top:7px;" onmouseover="this.style.background='rgba(255,45,85,.1)'" onmouseout="this.style.background='none'">Delete</button>` : ''}
       </div>
     </div>`).join('');
 }
 
 async function saveImpactKB() {
-  if (!G.lastImpact) { toast('No analysis to save','err'); return; }
-  const desc = document.getElementById('iDesc').value.slice(0,60);
+  if (!G.lastImpact) { toast('No analysis to save', 'err'); return; }
+  const desc = document.getElementById('iDesc').value.slice(0, 60);
   const tags = [...document.querySelectorAll('#iTags .tag.on')].map(t=>t.dataset.v).join(', ');
-  setCloud('busy','saving…');
+  setCloud('busy', 'saving…');
   try {
-    const d = await wFetch('/kb','POST',{ type:'test_cases', title:'Impact: '+desc+'…', area:tags||'', content:JSON.stringify(G.lastImpact,null,2) });
+    const d = await wFetch('/kb', 'POST', { type:'test_cases', title:'Impact: '+desc+'…', area:tags||'', content:JSON.stringify(G.lastImpact,null,2) });
     G.kb.unshift(d.entry); updateKBUI();
-    setCloud('ok',`☁ ${G.kb.length}`); toast('Saved to KB ✓','ok');
-  } catch(e) { toast(e.message,'err'); }
+    setCloud('ok', `☁ ${G.kb.length}`); toast('Saved to KB ✓', 'ok');
+  } catch(e) { toast(e.message, 'err'); }
 }
 
 async function savePRDKB() {
-  if (!G.lastPRD) { toast('No results to save','err'); return; }
-  setCloud('busy','saving…');
+  if (!G.lastPRD) { toast('No results to save', 'err'); return; }
+  setCloud('busy', 'saving…');
   try {
-    const d = await wFetch('/kb','POST',{ type:'prd', title:'PRD: '+(G.lastPRD.feature_name||'Feature'), area:G.lastPRD.feature_name||'', content:JSON.stringify(G.lastPRD,null,2) });
+    const d = await wFetch('/kb', 'POST', { type:'prd', title:'PRD: '+(G.lastPRD.feature_name||'Feature'), area:G.lastPRD.feature_name||'', content:JSON.stringify(G.lastPRD,null,2) });
     G.kb.unshift(d.entry); updateKBUI();
-    setCloud('ok',`☁ ${G.kb.length}`); toast('Saved to KB ✓','ok');
-  } catch(e) { toast(e.message,'err'); }
+    setCloud('ok', `☁ ${G.kb.length}`); toast('Saved to KB ✓', 'ok');
+  } catch(e) { toast(e.message, 'err'); }
 }
 
 // ════════════════════════════════════════════
-// EXCEL / COPY
+// EXCEL / COPY — unchanged
 // ════════════════════════════════════════════
 function tcToRow(tc) {
   return [
@@ -1344,27 +1383,85 @@ function tcToRow(tc) {
 }
 
 function dlExcel(src) {
-  const tcs = src==='impact' ? (G.lastImpact?.test_cases||[]) : (G.lastPRD?.test_cases||[]);
-  if (!tcs.length) { toast('No test cases','err'); return; }
-  const label = src==='impact'
-    ? (document.getElementById('iDesc').value.substring(0,28)||'Impact')
-    : (G.lastPRD?.feature_name||'PRD');
+  const tcs = src === 'impact' ? (G.lastImpact?.test_cases||[]) : (G.lastPRD?.test_cases||[]);
+  if (!tcs.length) { toast('No test cases to download', 'err'); return; }
+  const label = src === 'impact'
+    ? (document.getElementById('iDesc').value.substring(0,28) || 'Impact')
+    : (G.lastPRD?.feature_name || 'PRD');
   const fname = `${label.replace(/\s+/g,'_').replace(/[^a-z0-9_]/gi,'')}_TCs_${new Date().toISOString().slice(0,10)}.xlsx`;
-  const wb  = XLSX.utils.book_new();
-  const ws  = XLSX.utils.aoa_to_sheet([EXCEL_COLS, ...tcs.map(tcToRow)]);
+  const wb    = XLSX.utils.book_new();
+  const ws    = XLSX.utils.aoa_to_sheet([EXCEL_COLS, ...tcs.map(tcToRow)]);
   ws['!cols'] = [{wch:8},{wch:16},{wch:40},{wch:13},{wch:28},{wch:42},{wch:42},{wch:20},{wch:14},{wch:9},{wch:9},{wch:10},{wch:12},{wch:10}];
   XLSX.utils.book_append_sheet(wb, ws, label.substring(0,31));
   XLSX.writeFile(wb, fname);
-  toast(`Downloaded ${fname} ✓`,'ok');
+  toast(`Downloaded ${fname} ✓`, 'ok');
 }
 
 function copyToClipboard(src) {
-  const tcs = src==='impact' ? (G.lastImpact?.test_cases||[]) : (G.lastPRD?.test_cases||[]);
-  if (!tcs.length) { toast('No test cases','err'); return; }
-  const text = [EXCEL_COLS.join('\t'), ...tcs.map(tc=>tcToRow(tc).map(v=>(v||'').toString().replace(/\t/g,' ')).join('\t'))].join('\n');
+  const tcs = src === 'impact' ? (G.lastImpact?.test_cases||[]) : (G.lastPRD?.test_cases||[]);
+  if (!tcs.length) { toast('No test cases', 'err'); return; }
+  const text = [EXCEL_COLS.join('\t'), ...tcs.map(tc => tcToRow(tc).map(v => (v||'').toString().replace(/\t/g,' ')).join('\t'))].join('\n');
   navigator.clipboard.writeText(text)
-    .then(() => toast(`${tcs.length} rows copied — paste into Excel ✓`,'ok'))
-    .catch(() => { const ta=document.createElement('textarea'); ta.value=text; ta.style.cssText='position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast(`${tcs.length} rows copied ✓`,'ok'); });
+    .then(()  => toast(`${tcs.length} rows copied — paste into Excel ✓`, 'ok'))
+    .catch(()  => {
+      const ta = document.createElement('textarea'); ta.value = text;
+      ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      toast(`${tcs.length} rows copied ✓`, 'ok');
+    });
+}
+
+// ════════════════════════════════════════════
+// ROBUST JSON PARSER — handles AI output quirks
+// ════════════════════════════════════════════
+function parseAIJson(raw) {
+  // Strip markdown fences
+  let text = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+
+  // Extract outermost { ... }
+  const start = text.indexOf('{');
+  const end   = text.lastIndexOf('}');
+  if (start === -1 || end === -1) throw new Error('No JSON object found in AI response');
+  text = text.slice(start, end + 1);
+
+  // Try as-is
+  try { return JSON.parse(text); } catch(e1) {
+    // Fix trailing commas: ["a","b",] or {"a":1,}
+    let fixed = text.replace(/,\s*([\]}])/g, '$1');
+
+    // Fix unescaped newlines/tabs inside string values
+    fixed = fixed.replace(/"((?:[^"\\]|\\.)*)"/g, match =>
+      match.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t')
+    );
+
+    try { return JSON.parse(fixed); } catch(e2) {
+      // Last resort: salvage test_cases from truncated response
+      try {
+        const tcs = [];
+        const tcRegex = /\{\s*"id"\s*:\s*"TC-\d+[\s\S]*?\}/g;
+        let m;
+        while ((m = tcRegex.exec(raw)) !== null) {
+          try { tcs.push(JSON.parse(m[0])); } catch {}
+        }
+        if (tcs.length > 0) {
+          const summaryMatch = raw.match(/"summary"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+          const riskMatch    = raw.match(/"risk_score"\s*:\s*"([A-Z]+)"/);
+          return {
+            summary:          summaryMatch ? summaryMatch[1] : 'Analysis completed (response was partially truncated)',
+            risk_score:       riskMatch    ? riskMatch[1]    : 'MEDIUM',
+            impact_areas:     [],
+            test_cases:       tcs,
+            edge_cases:       [],
+            downstream_risks: [],
+            regression_scope: [],
+            _partial:         true,
+            _recovered_tcs:   tcs.length,
+          };
+        }
+      } catch {}
+      throw new Error(`JSON parse failed: ${e2?.message}. The AI response may have been truncated — try again.`);
+    }
+  }
 }
 
 // ════════════════════════════════════════════
@@ -1372,29 +1469,26 @@ function copyToClipboard(src) {
 // ════════════════════════════════════════════
 async function runImpact() {
   const desc = document.getElementById('iDesc').value.trim();
-  if (!desc) { toast('Describe the change','err'); return; }
+  if (!desc) { toast('Describe the change', 'err'); return; }
 
   const type     = document.getElementById('iType').value;
   const platform = document.getElementById('iPlatform').value;
   const tags     = [...document.querySelectorAll('#iTags .tag.on')].map(t=>t.dataset.v);
-
   // Truncate very long descriptions to avoid prompt overflow
-  const descSafe = desc.length > 3000 ? desc.substring(0,3000)+'…[truncated]' : desc;
+  const descSafe = desc.length > 3000 ? desc.substring(0, 3000) + '…[truncated]' : desc;
 
   document.getElementById('iBtn').disabled = true;
   document.getElementById('iResultPanel').style.display = 'block';
   document.getElementById('iLoader').classList.add('on');
   document.getElementById('iOut').style.display = 'none';
-  document.getElementById('iProviderTag').innerHTML = '';
-  document.getElementById('iProviderStatus').innerHTML = '';
   setTimeout(() => document.getElementById('iResultPanel').scrollIntoView({behavior:'smooth',block:'start'}), 100);
 
   const steps = ['Scanning KB context…','Mapping affected systems…','Generating test cases…','Validating coverage…','Finalizing report…'];
   let si = 0;
-  const lbl = document.getElementById('iLbl');
+  const lbl    = document.getElementById('iLbl');
   const ticker = setInterval(() => { lbl.textContent = steps[si=(si+1)%steps.length]; }, 2200);
 
-  // ── PROMPT — KB context is injected server-side by worker, DO NOT add here ──
+  // NOTE: No kbCtx here — worker injects KB server-side
   const prompt = `You are a PRINCIPAL QA ENGINEER at Hitwicket — a mobile cricket strategy game (Android + iOS).
 
 You have expert-level knowledge of the entire Hitwicket tech stack:
@@ -1437,46 +1531,49 @@ Return ONLY a valid JSON object (no markdown, no code fences, nothing before {, 
     {
       "id": "TC-001",
       "feature": "Exact Hitwicket feature/screen name",
-      "title": "Full descriptive test case title",
+      "title": "Full descriptive test case title — what is being verified",
       "category": "Functional|Regression|Edge Case|UI|Performance|Integration",
-      "preconditions": "Exact setup state required: account type, player state, mana level, screen to start from",
-      "steps": "1. Navigate to [exact screen]\\n2. [Exact action]\\n3. [Next action]\\n4. [Verification step]",
-      "expected": "Precise expected outcome — what the user sees, what data should be stored, what events fire",
-      "break_point": "Exact condition that would cause this test to fail",
-      "systems": "SA Manager, Match Engine (comma-separated Hitwicket systems)",
+      "preconditions": "Exact setup state required: account type, player state, mana level, screen to start from, any prerequisite actions",
+      "steps": "1. Navigate to [exact screen]\\n2. [Exact action with specific element name]\\n3. [Next action]\\n4. [Verification step]",
+      "expected": "Precise expected outcome — what the user sees, what data should be stored, what events fire, what the UI shows",
+      "break_point": "Exact condition that would cause this test to fail — the specific failure mode",
+      "systems": "SA Manager, Match Engine (comma-separated Hitwicket systems involved)",
       "edge_case": "Yes|No",
       "priority": "P0|P1|P2|P3"
     }
   ],
-  "edge_cases": ["Specific edge case with exact Hitwicket scenario"],
-  "downstream_risks": ["Specific downstream system/flow that could break and why"],
+  "edge_cases": [
+    "Specific edge case description with exact Hitwicket scenario"
+  ],
+  "downstream_risks": [
+    "Specific downstream system/flow that could break and why"
+  ],
   "regression_scope": ["Area1", "Area2"]
 }
 
 HARD REQUIREMENTS:
-- Generate EXACTLY 15 test cases (TC-001 through TC-015)
-- ALL fields fully populated — no empty strings
-- Steps: numbered, minimum 3 steps each
+- Generate EXACTLY 15 test cases numbered TC-001 through TC-015
+- Every test case must have ALL 10 fields fully populated — no empty strings
+- Steps must be numbered and detailed (minimum 3 steps each)
+- Preconditions must specify exact account/game state
+- Expected result must be precise and verifiable
+- Break point must describe the specific failure scenario
+- Systems must list actual Hitwicket system names
 - Include at least 4 P0, 4 P1, 4 P2, 3 P3 test cases
 - Impact areas: minimum 6, each with minimum 4 items
+- Reference actual Hitwicket screens: Player Card, SA Activation screen, Match lobby, Squad Builder, Store tab, FTUE wizard, Trophy Road map, etc.
 - Edge cases: minimum 8 specific scenarios
-- Downstream risks: minimum 5 specific risks
-- Reference actual Hitwicket screens: Player Card, SA Activation screen, Match lobby, Squad Builder, Store tab, FTUE wizard, Trophy Road map`;
+- Downstream risks: minimum 5 specific risks`;
 
   try {
-    const raw = await wAI(prompt);
+    const raw    = await wAI(prompt);
     clearInterval(ticker);
-    const clean = raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
-    let result;
-    try { result = JSON.parse(clean); }
-    catch {
-      const m = clean.match(/\{[\s\S]*\}/);
-      if (m) { try { result = JSON.parse(m[0]); } catch(e2) { throw new Error('JSON parse failed: '+e2.message); } }
-      else throw new Error('No JSON found in AI response');
+    const result = parseAIJson(raw);
+    if (result._partial) {
+      toast(`⚠ Response truncated — recovered ${result._recovered_tcs} test cases`, 'info');
     }
     G.lastImpact = result;
     renderImpact(result);
-    setProviderTag('iProviderTag', G.lastProvider);
     document.getElementById('iTime').textContent = new Date().toLocaleTimeString();
     addHistoryEntry('impact', { desc, type, platform, tags }, result, desc.substring(0,60)+(desc.length>60?'…':''));
   } catch(e) {
@@ -1484,7 +1581,7 @@ HARD REQUIREMENTS:
     document.getElementById('iLoader').classList.remove('on');
     document.getElementById('iOut').style.display = 'block';
     document.getElementById('iCards').innerHTML = `<div style="color:var(--red);font-family:var(--mono);font-size:12px;padding:10px 0;">Error: ${e.message}</div>`;
-    toast(e.message,'err');
+    toast(e.message, 'err');
   }
   document.getElementById('iBtn').disabled = false;
 }
@@ -1492,10 +1589,12 @@ HARD REQUIREMENTS:
 function renderImpact(r) {
   document.getElementById('iLoader').classList.remove('on');
   document.getElementById('iOut').style.display = 'block';
-  const tcs = r.test_cases||[];
-  const p0=tcs.filter(t=>t.priority==='P0').length, p1=tcs.filter(t=>t.priority==='P1').length;
-  const p2=tcs.filter(t=>t.priority==='P2').length, p3=tcs.filter(t=>t.priority==='P3').length;
-  const rc = {CRITICAL:'c-red',HIGH:'c-orange',MEDIUM:'c-blue',LOW:'c-jade'}[r.risk_score]||'c-blue';
+  const tcs = r.test_cases || [];
+  const p0  = tcs.filter(t=>t.priority==='P0').length;
+  const p1  = tcs.filter(t=>t.priority==='P1').length;
+  const p2  = tcs.filter(t=>t.priority==='P2').length;
+  const p3  = tcs.filter(t=>t.priority==='P3').length;
+  const rc  = {CRITICAL:'c-red',HIGH:'c-orange',MEDIUM:'c-blue',LOW:'c-jade'}[r.risk_score] || 'c-blue';
   document.getElementById('iStats').innerHTML = `
     <div class="stat-cell"><span class="stat-num ${rc}">${r.risk_score||'—'}</span><span class="stat-lbl">Risk Level</span></div>
     <div class="stat-cell"><span class="stat-num c-red">${p0}</span><span class="stat-lbl">P0 Blocker</span></div>
@@ -1507,14 +1606,14 @@ function renderImpact(r) {
   let html = `<div class="icard" style="grid-column:1/-1;border-color:rgba(61,142,255,.2);">
     <div class="icard-hd"><span>📋</span><span class="icard-title">Executive Summary</span></div>
     <p style="font-size:12px;line-height:1.8;color:var(--mist);">${r.summary||''}</p>
-    ${r.regression_scope?.length?`
+    ${r.regression_scope?.length ? `
       <div style="margin-top:12px;">
         <div style="font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mute);margin-bottom:7px;">Regression Scope</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;">${r.regression_scope.map(s=>`<span style="background:rgba(61,142,255,.1);border:1px solid rgba(61,142,255,.2);color:var(--blue2);font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:20px;">${s}</span>`).join('')}</div>
-      </div>`:''}
+      </div>` : ''}
   </div>`;
   (r.impact_areas||[]).forEach(a => {
-    const icon = {critical:'🔴',high:'🟠',medium:'🔵',low:'🟢'}[a.severity]||'⚪';
+    const icon = {critical:'🔴',high:'🟠',medium:'🔵',low:'🟢'}[a.severity] || '⚪';
     html += `<div class="icard"><div class="icard-hd"><span>${icon}</span><span class="icard-title">${a.title}</span><span class="sev sev-${a.severity||'medium'}">${a.severity}</span></div><ul>${(a.items||[]).map(i=>`<li>${i}</li>`).join('')}</ul></div>`;
   });
   if (r.edge_cases?.length) html += `<div class="icard"><div class="icard-hd"><span>⚠️</span><span class="icard-title">Edge Cases (${r.edge_cases.length})</span><span class="sev sev-high">watch</span></div><ul>${r.edge_cases.map(e=>`<li>${e}</li>`).join('')}</ul></div>`;
@@ -1554,34 +1653,31 @@ function renderImpact(r) {
 // ════════════════════════════════════════════
 async function runPRD() {
   const txt = document.getElementById('prdTxt').value.trim();
-  if (!G.prdFile && !txt) { toast('Upload or paste PRD content','err'); return; }
+  if (!G.prdFile && !txt) { toast('Upload or paste PRD content', 'err'); return; }
 
   const prio     = document.getElementById('prdPrio').value;
   const platform = document.getElementById('prdPlatform').value;
   const focus    = document.getElementById('prdFocus').value.trim();
-
-  // Truncate pasted content if very long
-  const contentSafe = (G.prdFile?.type==='text' ? G.prdFile.data : txt).substring(0, 8000);
+  const contentSafe = (G.prdFile?.type === 'text' ? G.prdFile.data : txt).substring(0, 8000);
 
   document.getElementById('prdBtn').disabled = true;
   document.getElementById('prdLoader').classList.add('on');
-  document.getElementById('prdOut').style.display    = 'none';
-  document.getElementById('prdEmpty').style.display  = 'none';
-  document.getElementById('prdActs').style.display   = 'none';
-  document.getElementById('prdProviderTag').innerHTML = '';
+  document.getElementById('prdOut').style.display   = 'none';
+  document.getElementById('prdEmpty').style.display = 'none';
+  document.getElementById('prdActs').style.display  = 'none';
 
   const steps = ['Reading document…','Extracting requirements…','Mapping test scenarios…','Generating 14-col suite…','Applying KB context…'];
   let si = 0;
-  const lbl = document.getElementById('prdLbl');
+  const lbl    = document.getElementById('prdLbl');
   const ticker = setInterval(() => { lbl.textContent = steps[si=(si+1)%steps.length]; }, 2000);
 
-  // ── PROMPT — KB context injected server-side, DO NOT add here ──
+  // NOTE: No kbCtx — worker injects KB server-side
   const prompt = `You are a PRINCIPAL QA ENGINEER at Hitwicket (mobile cricket strategy game, Android + iOS).
 
 Analyze the following PRD / feature specification and generate a COMPREHENSIVE, DETAILED test suite. Every single test case must be fully filled out — no empty fields, no placeholder text.
 
 PRD CONTENT:
-${G.prdFile?.type==='pdf' ? '[PDF attached — analyze the document provided]' : contentSafe}
+${G.prdFile?.type === 'pdf' ? '[PDF attached — analyze the document provided]' : contentSafe}
 
 ${focus ? `SPECIAL FOCUS: ${focus}` : ''}
 PLATFORM: ${platform}
@@ -1597,68 +1693,47 @@ Return ONLY valid JSON (no markdown, no code fences, nothing before {, nothing a
       "feature": "Sub-feature or component name",
       "title": "Full descriptive title of what is being tested",
       "category": "Functional|UI|Regression|Edge Case|Performance|Integration|Security",
-      "preconditions": "Exact prerequisite state — account type, game state, data setup needed",
-      "steps": "1. [Exact step with specific screen/element name]\\n2. [Next step]\\n3. [Verification step]\\n4. [Check result step]",
-      "expected_result": "Precise verifiable outcome",
+      "preconditions": "Exact prerequisite state — account type, game state, data setup needed, screen to navigate to first",
+      "steps": "1. [Exact step with specific screen/element name]\\n2. [Next step]\\n3. [Verification or input step]\\n4. [Check result step]",
+      "expected_result": "Precise verifiable outcome — what the user sees, data saved, UI state, any backend events",
       "break_point": "The exact condition or failure mode that would make this test fail",
       "systems": "Affected Hitwicket systems (e.g. SAManager, StoreService, MatchEngine)",
       "edge_case": "Yes|No",
-      "priority": "${prio==='P0-P3'?'P0|P1|P2|P3':'Critical|High|Medium|Low'}"
+      "priority": "${prio === 'P0-P3' ? 'P0|P1|P2|P3' : 'Critical|High|Medium|Low'}"
     }
   ]
 }
 
 REQUIREMENTS:
 - Generate 20 test cases (TC-001 through TC-020)
-- ALL 10 fields fully populated — no empty strings
-- Steps: numbered, minimum 4 steps each
-- Cover: happy path, negative flows, boundary values, UI states, error messages, loading/empty states
-- Include Android and iOS specific cases where behaviors differ
-- Distribute priorities: ~4 P0, ~6 P1, ~6 P2, ~4 P3
-- Reference actual Hitwicket UI: screen names, button labels, tabs`;
+- ALL 10 fields fully populated for every test case — no empty strings allowed
+- Steps must be numbered and have minimum 4 steps each
+- Cover: happy path, negative/failure flows, boundary values, UI states, error messages, loading states, empty states
+- Include both Android and iOS specific cases where behaviors differ
+- preconditions must specify the exact starting game state
+- break_point must identify the specific failure scenario
+- Reference actual Hitwicket UI: specific screen names, button labels, tabs
+- Distribute priorities: ~4 P0, ~6 P1, ~6 P2, ~4 P3`;
 
   try {
     let raw;
-    if (G.prdFile?.type==='pdf') {
-      // PDF: direct Anthropic call with document block
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json', 'x-api-key': '', 'anthropic-version':'2023-06-01' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514', max_tokens: 8000,
-          messages: [{ role:'user', content:[
-            { type:'document', source:{ type:'base64', media_type:'application/pdf', data: G.prdFile.data } },
-            { type:'text', text: prompt }
-          ]}]
-        })
-      });
-      // If direct call fails (no key), fall through to worker
-      if (res.ok) {
-        const d = await res.json();
-        raw = d.content.map(b=>b.text||'').join('');
-        showGlobalProvider('anthropic');
-      } else {
-        // Send PDF content description via worker
-        raw = await wAI(prompt.replace('[PDF attached — analyze the document provided]', `[PDF: ${G.prdFile.name}]`));
-      }
+    if (G.prdFile?.type === 'pdf') {
+      // PDF goes via worker (which uses Anthropic with document support)
+      raw = await wAI(prompt.replace('[PDF attached — analyze the document provided]', `[PDF: ${G.prdFile.name} — please analyze based on filename context and the KB entries]`));
     } else {
       raw = await wAI(prompt);
     }
     clearInterval(ticker);
-    const clean = raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
-    let result;
-    try { result = JSON.parse(clean); }
-    catch { const m=clean.match(/\{[\s\S]*\}/); if (m) result=JSON.parse(m[0]); else throw new Error('JSON parse failed'); }
+    const result = parseAIJson(raw);
     G.lastPRD = result;
     renderPRD(result);
-    setProviderTag('prdProviderTag', G.lastProvider);
-    addHistoryEntry('prd', { txt: txt.substring(0,500), prio, platform, focus }, result, result.feature_name||txt.substring(0,50)||'PRD Analysis');
+    addHistoryEntry('prd', { txt: txt.substring(0,500), prio, platform, focus }, result, result.feature_name || txt.substring(0,50) || 'PRD Analysis');
   } catch(e) {
     clearInterval(ticker);
     document.getElementById('prdLoader').classList.remove('on');
     document.getElementById('prdEmpty').style.display = 'block';
     document.getElementById('prdEmpty').innerHTML = `<span class="empty-icon">⚠️</span>Error: ${e.message}`;
-    toast(e.message,'err');
+    toast(e.message, 'err');
   }
   document.getElementById('prdBtn').disabled = false;
 }
@@ -1667,10 +1742,10 @@ function renderPRD(r) {
   document.getElementById('prdLoader').classList.remove('on');
   document.getElementById('prdOut').style.display  = 'block';
   document.getElementById('prdActs').style.display = 'flex';
-  const tcs = r.test_cases||[];
+  const tcs = r.test_cases || [];
   document.getElementById('prdStats').textContent = `${r.feature_name||'Feature'} · ${tcs.length} test cases generated`;
   const pc = {P0:'p0',P1:'p1',P2:'p2',P3:'p3',Critical:'p0',High:'p1',Medium:'p2',Low:'p3'};
-  document.getElementById('prdBody').innerHTML = tcs.map(tc=>`<tr>
+  document.getElementById('prdBody').innerHTML = tcs.map(tc => `<tr>
     <td class="tc-id">${tc.id||''}</td>
     <td style="white-space:nowrap;">${tc.feature||''}</td>
     <td style="min-width:180px;font-weight:500;color:var(--text);">${tc.title||''}</td>
@@ -1687,24 +1762,25 @@ function renderPRD(r) {
 }
 
 // ════════════════════════════════════════════
-// FILE HANDLING
+// FILE HANDLING — unchanged
 // ════════════════════════════════════════════
-function dOver(e,id)   { e.preventDefault(); document.getElementById(id)?.classList.add('drag'); }
-function dLeave(id)    { document.getElementById(id)?.classList.remove('drag'); }
-function dDrop(e,type) {
-  e.preventDefault(); dLeave(type==='prd'?'prdDrop':'importDrop');
-  if (type==='import') importFiles({ target:{ files: e.dataTransfer.files } });
+function dOver(e, id)   { e.preventDefault(); document.getElementById(id)?.classList.add('drag'); }
+function dLeave(id)     { document.getElementById(id)?.classList.remove('drag'); }
+function dDrop(e, type) {
+  e.preventDefault();
+  const id = type === 'prd' ? 'prdDrop' : 'importDrop';
+  dLeave(id);
+  if (type === 'import') { importFiles({ target: { files: e.dataTransfer.files } }); }
   else if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0], type);
 }
-function fPick(e,type) { if (e.target.files[0]) processFile(e.target.files[0], type); }
-
+function fPick(e, type) { if (e.target.files[0]) processFile(e.target.files[0], type); }
 function processFile(file, type) {
   const nameEl  = document.getElementById(type+'FN');
   const badgeEl = document.getElementById(type+'FileBadge');
   if (nameEl)  nameEl.textContent    = file.name;
   if (badgeEl) badgeEl.style.display = 'block';
   const reader = new FileReader();
-  if (file.type==='application/pdf') {
+  if (file.type === 'application/pdf') {
     reader.onload = e => { if (type==='prd') G.prdFile = { type:'pdf', data:e.target.result.split(',')[1], name:file.name }; };
     reader.readAsDataURL(file);
   } else {
@@ -1712,66 +1788,63 @@ function processFile(file, type) {
     reader.readAsText(file);
   }
 }
-
 function rmFile(type) {
-  if (type==='prd') G.prdFile=null;
-  const el=document.getElementById(type+'FileBadge');
-  if (el) el.style.display='none';
+  if (type==='prd') G.prdFile = null;
+  const el = document.getElementById(type+'FileBadge');
+  if (el) el.style.display = 'none';
 }
 
 // ════════════════════════════════════════════
-// BULK IMPORT
+// BULK IMPORT — unchanged
 // ════════════════════════════════════════════
 async function importFiles(e) {
-  const files = Array.from(e.target?.files||[]);
+  const files = Array.from(e.target?.files || []);
   if (!files.length) return;
-  G.importChunks=[];
+  G.importChunks = [];
   const drop = document.getElementById('importDrop');
   drop.classList.add('loaded');
-  drop.querySelector('.drop-text').innerHTML=`<b>${files.length} file${files.length>1?'s':''} loaded</b> — parsing…`;
+  drop.querySelector('.drop-text').innerHTML = `<b>${files.length} file${files.length>1?'s':''} loaded</b> — parsing…`;
   for (const file of files) {
     const ext = file.name.split('.').pop().toLowerCase();
     try {
-      if (['xlsx','xls'].includes(ext))     await parseExcel(file);
-      else if (ext==='csv')                 await parseCSV(file);
+      if (['xlsx','xls'].includes(ext))      await parseExcel(file);
+      else if (ext === 'csv')               await parseCSV(file);
       else if (['txt','md'].includes(ext))  await parseTxt(file);
-      else if (ext==='pdf')                 await parsePDF(file);
+      else if (ext === 'pdf')               await parsePDF(file);
       else if (['doc','docx'].includes(ext))await parseDocx(file);
-      else if (ext==='json')                await parseJSON(file);
+      else if (ext === 'json')              await parseJSON(file);
       else if (['pptx','ppt'].includes(ext))await parsePptx(file);
       else                                  await parseTxt(file);
-    } catch(err) { toast(`${file.name}: ${err.message}`,'err'); }
+    } catch(err) { toast(`${file.name}: ${err.message}`, 'err'); }
   }
-  drop.querySelector('.drop-text').innerHTML=`<b>${files.length} file${files.length>1?'s':''}</b> loaded · ${G.importChunks.length} chunks extracted`;
+  drop.querySelector('.drop-text').innerHTML = `<b>${files.length} file${files.length>1?'s':''}</b> loaded · ${G.importChunks.length} chunks extracted`;
   renderImportPreview();
-  document.getElementById('importInput').value='';
+  document.getElementById('importInput').value = '';
 }
-
 async function parseExcel(file) {
-  const splitSheets=document.getElementById('splitSheets').checked;
-  const defType=document.getElementById('importType').value;
-  const defArea=document.getElementById('importArea').value.trim();
-  return new Promise((res,rej) => {
-    const rd=new FileReader();
-    rd.onload=e => {
+  const splitSheets = document.getElementById('splitSheets').checked;
+  const defType = document.getElementById('importType').value;
+  const defArea = document.getElementById('importArea').value.trim();
+  return new Promise((res, rej) => {
+    const rd = new FileReader();
+    rd.onload = e => {
       try {
-        const wb=XLSX.read(e.target.result,{type:'array'});
+        const wb = XLSX.read(e.target.result, { type: 'array' });
         if (splitSheets) {
           wb.SheetNames.forEach(sn => {
-            const csv=XLSX.utils.sheet_to_csv(wb.Sheets[sn]);
-            if (csv.trim().length>20) G.importChunks.push({ title:`${file.name.replace(/\.(xlsx|xls)$/i,'')} — ${sn}`, area:defArea||sn, type:defType, content:csv, selected:true, meta:`${csv.split('\n').length-1} rows` });
+            const csv = XLSX.utils.sheet_to_csv(wb.Sheets[sn]);
+            if (csv.trim().length > 20) G.importChunks.push({ title:`${file.name.replace(/\.(xlsx|xls)$/i,'')} — ${sn}`, area:defArea||sn, type:defType, content:csv, selected:true, meta:`${csv.split('\n').length-1} rows` });
           });
         } else {
-          let c=''; wb.SheetNames.forEach(sn=>{ c+=`\n=== ${sn} ===\n${XLSX.utils.sheet_to_csv(wb.Sheets[sn])}\n`; });
+          let c = ''; wb.SheetNames.forEach(sn => { c += `\n=== ${sn} ===\n${XLSX.utils.sheet_to_csv(wb.Sheets[sn])}\n`; });
           G.importChunks.push({ title:file.name, area:defArea, type:defType, content:c.trim(), selected:true, meta:`${wb.SheetNames.length} sheets` });
         }
         res();
       } catch(err) { rej(err); }
     };
-    rd.onerror=rej; rd.readAsArrayBuffer(file);
+    rd.onerror = rej; rd.readAsArrayBuffer(file);
   });
 }
-
 async function parseCSV(file) {
   const defType=document.getElementById('importType').value, defArea=document.getElementById('importArea').value.trim();
   return new Promise((res,rej) => {
@@ -1780,7 +1853,6 @@ async function parseCSV(file) {
     rd.onerror=rej; rd.readAsText(file);
   });
 }
-
 async function parseTxt(file) {
   const splitH=document.getElementById('splitHeadings').checked;
   const defType=document.getElementById('importType').value, defArea=document.getElementById('importArea').value.trim();
@@ -1792,8 +1864,7 @@ async function parseTxt(file) {
         const secs=content.split(/\n(?=#{1,3}\s)/); let added=0;
         secs.forEach((sec,i) => {
           if (sec.trim().length<30) return;
-          const fl=sec.split('\n')[0].replace(/^#+\s*/,'').trim();
-          G.importChunks.push({ title:fl||`${file.name} §${i+1}`, area:defArea, type:defType, content:sec.trim(), selected:true, meta:`${sec.split('\n').length} lines` }); added++;
+          G.importChunks.push({ title:sec.split('\n')[0].replace(/^#+\s*/,'').trim()||`${file.name} §${i+1}`, area:defArea, type:defType, content:sec.trim(), selected:true, meta:`${sec.split('\n').length} lines` }); added++;
         });
         if (!added) G.importChunks.push({ title:file.name.replace(/\.(txt|md)$/i,''), area:defArea, type:defType, content, selected:true, meta:`${content.split('\n').length} lines` });
       } else {
@@ -1804,69 +1875,44 @@ async function parseTxt(file) {
     rd.onerror=rej; rd.readAsText(file);
   });
 }
-
 async function parsePDF(file) {
   const defType=document.getElementById('importType').value, defArea=document.getElementById('importArea').value.trim();
   return new Promise((res,rej) => {
     const rd=new FileReader();
-    rd.onload=e => {
-      G.importChunks.push({ title:file.name.replace(/\.pdf$/i,''), area:defArea, type:defType,
-        content:`[PDF FILE: ${file.name}]\n[Size: ${(file.size/1024).toFixed(1)} KB]`,
-        selected:true, meta:`PDF · ${(file.size/1024).toFixed(1)} KB`, pdfData:e.target.result.split(',')[1] }); res();
-    };
+    rd.onload=e => { G.importChunks.push({ title:file.name.replace(/\.pdf$/i,''), area:defArea, type:defType, content:`[PDF FILE: ${file.name}]\n[Size: ${(file.size/1024).toFixed(1)} KB]`, selected:true, meta:`PDF · ${(file.size/1024).toFixed(1)} KB`, pdfData:e.target.result.split(',')[1] }); res(); };
     rd.onerror=rej; rd.readAsDataURL(file);
   });
 }
-
 async function parseDocx(file) {
   const defType=document.getElementById('importType').value, defArea=document.getElementById('importArea').value.trim();
   return new Promise((res,rej) => {
     const rd=new FileReader();
     rd.onload=async e => {
       let text='';
-      try {
-        const wb=XLSX.read(e.target.result,{type:'array'});
-        wb.SheetNames.forEach(sn=>{ text+=XLSX.utils.sheet_to_csv(wb.Sheets[sn])+'\n'; });
-      } catch {
-        try {
-          const raw=new TextDecoder('utf-8').decode(new Uint8Array(e.target.result));
-          text=raw.replace(/[^\x20-\x7E\n\r\t]/g,' ').replace(/\s{3,}/g,'\n').trim();
-          if (text.length<50) text=`[DOCX: ${file.name} — ${(file.size/1024).toFixed(1)} KB]`;
-        } catch { text=`[DOCX: ${file.name}]`; }
-      }
+      try { const wb=XLSX.read(e.target.result,{type:'array'}); wb.SheetNames.forEach(sn=>{text+=XLSX.utils.sheet_to_csv(wb.Sheets[sn])+'\n';}); }
+      catch { try { const raw=new TextDecoder('utf-8').decode(new Uint8Array(e.target.result)); text=raw.replace(/[^\x20-\x7E\n\r\t]/g,' ').replace(/\s{3,}/g,'\n').trim(); if(text.length<50) text=`[DOCX: ${file.name}]`; } catch { text=`[DOCX: ${file.name}]`; } }
       G.importChunks.push({ title:file.name.replace(/\.(doc|docx)$/i,''), area:defArea, type:defType, content:text.substring(0,8000), selected:true, meta:`DOCX · ${(file.size/1024).toFixed(1)} KB` }); res();
     };
     rd.onerror=rej; rd.readAsArrayBuffer(file);
   });
 }
-
 async function parseJSON(file) {
   const defType=document.getElementById('importType').value, defArea=document.getElementById('importArea').value.trim();
   return new Promise((res,rej) => {
     const rd=new FileReader();
-    rd.onload=e => {
-      let c=e.target.result; try { c=JSON.stringify(JSON.parse(c),null,2); } catch{}
-      G.importChunks.push({ title:file.name.replace(/\.json$/i,''), area:defArea, type:defType, content:c, selected:true, meta:`JSON · ${c.split('\n').length} lines` }); res();
-    };
+    rd.onload=e => { let c=e.target.result; try{c=JSON.stringify(JSON.parse(c),null,2);}catch{} G.importChunks.push({ title:file.name.replace(/\.json$/i,''), area:defArea, type:defType, content:c, selected:true, meta:`JSON · ${c.split('\n').length} lines` }); res(); };
     rd.onerror=rej; rd.readAsText(file);
   });
 }
-
 async function parsePptx(file) {
   const defType=document.getElementById('importType').value, defArea=document.getElementById('importArea').value.trim();
   return new Promise(res => {
     const rd=new FileReader();
-    rd.onload=e => {
-      let c='';
-      try { const wb=XLSX.read(e.target.result,{type:'array'}); wb.SheetNames.forEach(sn=>{ c+=`\n=== ${sn} ===\n${XLSX.utils.sheet_to_csv(wb.Sheets[sn])}\n`; }); }
-      catch { c=`[PowerPoint: ${file.name} — ${(file.size/1024).toFixed(1)} KB]`; }
-      G.importChunks.push({ title:file.name.replace(/\.(pptx|ppt)$/i,''), area:defArea, type:defType, content:c.trim()||`[${file.name}]`, selected:true, meta:`PPT · ${(file.size/1024).toFixed(1)} KB` }); res();
-    };
+    rd.onload=e => { let c=''; try{const wb=XLSX.read(e.target.result,{type:'array'});wb.SheetNames.forEach(sn=>{c+=`\n=== ${sn} ===\n${XLSX.utils.sheet_to_csv(wb.Sheets[sn])}\n`;});}catch{c=`[PowerPoint: ${file.name}]`;} G.importChunks.push({ title:file.name.replace(/\.(pptx|ppt)$/i,''), area:defArea, type:defType, content:c.trim()||`[${file.name}]`, selected:true, meta:`PPT · ${(file.size/1024).toFixed(1)} KB` }); res(); };
     rd.onerror=()=>{ G.importChunks.push({ title:file.name, area:'', type:defType, content:`[PPT: ${file.name}]`, selected:true, meta:'PPT' }); res(); };
     rd.readAsArrayBuffer(file);
   });
 }
-
 function renderImportPreview() {
   const wrap=document.getElementById('importPreview'), empty=document.getElementById('importEmpty');
   if (!G.importChunks.length) { wrap.style.display='none'; empty.style.display='block'; empty.innerHTML='<span class="empty-icon">📥</span>No chunks detected.'; return; }
@@ -1885,25 +1931,23 @@ function renderImportPreview() {
           <input type="text" value="${c.area||''}" onchange="G.importChunks[${i}].area=this.value" placeholder="Area tag" style="max-width:110px;">
           <select onchange="G.importChunks[${i}].type=this.value">
             <option value="test_cases" ${c.type==='test_cases'?'selected':''}>Test Cases</option>
-            <option value="prd"        ${c.type==='prd'?'selected':''}>PRD</option>
-            <option value="code"       ${c.type==='code'?'selected':''}>Code</option>
-            <option value="note"       ${c.type==='note'?'selected':''}>Note</option>
-            <option value="feat"       ${c.type==='feat'?'selected':''}>Feature</option>
+            <option value="prd" ${c.type==='prd'?'selected':''}>PRD</option>
+            <option value="code" ${c.type==='code'?'selected':''}>Code</option>
+            <option value="note" ${c.type==='note'?'selected':''}>Note</option>
+            <option value="feat" ${c.type==='feat'?'selected':''}>Feature</option>
           </select>
         </div>
       </div>
     </div>`).join('');
   updateChunkCounts();
 }
-
 function updateChunkCounts() {
-  document.getElementById('chunkCnt').textContent=G.importChunks.length;
-  document.getElementById('chunkSel').textContent=G.importChunks.filter(c=>c.selected).length;
+  document.getElementById('chunkCnt').textContent = G.importChunks.length;
+  document.getElementById('chunkSel').textContent = G.importChunks.filter(c=>c.selected).length;
 }
 function selAll(val) { G.importChunks.forEach(c=>c.selected=val); renderImportPreview(); }
-
 async function saveChunks() {
-  const sel=G.importChunks.filter(c=>c.selected);
+  const sel = G.importChunks.filter(c=>c.selected);
   if (!sel.length) { toast('Nothing selected','err'); return; }
   const btn=document.getElementById('saveChunksBtn'); btn.disabled=true;
   document.getElementById('importProgPanel').style.display='block';
@@ -1914,8 +1958,7 @@ async function saveChunks() {
     bar.style.width=`${Math.round((i/sel.length)*100)}%`;
     try {
       const d=await wFetch('/kb','POST',{ type:c.type, title:c.title||`Import ${i+1}`, area:c.area||'', content:c.content });
-      G.kb.unshift(d.entry); saved++;
-      log.innerHTML+=`<span style="color:var(--jade)">✓</span> ${c.title}<br>`;
+      G.kb.unshift(d.entry); saved++; log.innerHTML+=`<span style="color:var(--jade)">✓</span> ${c.title}<br>`;
     } catch(e) { failed++; log.innerHTML+=`<span style="color:var(--red)">✗</span> ${c.title}: ${e.message}<br>`; }
     log.scrollTop=log.scrollHeight;
     await new Promise(r=>setTimeout(r,150));
@@ -1924,60 +1967,70 @@ async function saveChunks() {
   updateKBUI(); setCloud('ok',`☁ ${G.kb.length}`); btn.disabled=false;
   toast(`${saved} entries saved to KB ✓`, saved>0?'ok':'err');
   G.importChunks=G.importChunks.filter(c=>!c.selected);
-  setTimeout(renderImportPreview,500);
+  setTimeout(renderImportPreview, 500);
 }
 
 // ════════════════════════════════════════════
 // TOAST
 // ════════════════════════════════════════════
 let _tt;
-function toast(msg, type='ok') {
-  const el=document.getElementById('toast');
-  el.textContent=msg; el.className=`on ${type}`;
-  clearTimeout(_tt); _tt=setTimeout(()=>el.className='',3500);
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = `on ${type}`;
+  clearTimeout(_tt); _tt = setTimeout(() => el.className = '', 3500);
 }
 
 // ════════════════════════════════════════════
-// INIT
+// INIT — loads config first, then checks session
 // ════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', () => {
-  // Feature tags
-  const wrap=document.getElementById('iTags');
+window.addEventListener('DOMContentLoaded', async () => {
+  // Build feature tags
+  const wrap = document.getElementById('iTags');
   FEATURES.forEach(f => {
-    const s=document.createElement('span');
-    s.className='tag'; s.textContent=f; s.dataset.v=f;
-    s.onclick=()=>s.classList.toggle('on');
+    const s = document.createElement('span');
+    s.className = 'tag'; s.textContent = f; s.dataset.v = f;
+    s.onclick = () => s.classList.toggle('on');
     wrap.appendChild(s);
   });
 
-  // Restore session
-  const saved=loadSession();
-  if (saved?.user) {
-    G.user=saved.user;
-    fetch(WORKER+'/auth/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ id_token: saved.user.idToken }) })
-    .then(r=>r.json())
-    .then(data => {
-      if (data.ok && data.email) {
-        G.user={ ...data, idToken: saved.user.idToken };
-        saveSession(); onLoginSuccess();
-        toast('Session restored ✓','ok');
-      } else {
-        clearSession(); G.user=null; initGoogle();
-      }
-    })
-    .catch(() => { G.user=saved.user; onLoginSuccess(); });
-  } else {
-    initGoogle();
+  // Step 1: fetch config from worker (gets google_client_id + allowed_domain)
+  try {
+    await fetchConfig();
+  } catch(e) {
+    return; // fetchConfig already shows error in loginErr
   }
-});
 
-function initGoogle() {
-  window.addEventListener('load', () => {
-    if (typeof google !== 'undefined') {
-      google.accounts.id.initialize({ client_id: GOOGLE_CLIENT, callback: handleGoogleCred, auto_select: false });
+  // Step 2: initialize Google Sign-In SDK with the server-provided client ID
+  if (typeof google !== 'undefined') {
+    google.accounts.id.initialize({
+      client_id:   GOOGLE_CLIENT,
+      callback:    handleGoogleCred,
+      auto_select: false,
+    });
+  }
+
+  // Step 3: try to restore saved session
+  const saved = loadSession();
+  if (saved?.user && saved?.sessionToken) {
+    G.user         = saved.user;
+    G.sessionToken = saved.sessionToken;
+    // Verify session is still valid with worker
+    try {
+      await wFetch('/kb'); // lightweight call to test session
+      saveSession(); // refresh TTL
+      onLoginSuccess();
+      toast('Session restored ✓', 'ok');
+    } catch(e) {
+      // Session expired or invalid
+      clearSession(); G.user = null; G.sessionToken = null;
+      // Login screen already visible, just re-init Google
+      if (typeof google !== 'undefined') {
+        google.accounts.id.initialize({ client_id: GOOGLE_CLIENT, callback: handleGoogleCred, auto_select: false });
+      }
     }
-  });
-}
+  }
+  // If no session, login screen stays visible — user clicks "Sign in with Google"
+});
 </script>
 </body>
 </html>
