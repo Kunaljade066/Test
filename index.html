@@ -446,7 +446,7 @@ select.fi2 option { background: var(--sf2); }
     <div class="login-logo">🐛</div>
     <div class="login-title">HW Tracker</div>
     <div class="login-sub">Hitwicket · Bug Intelligence</div>
-    <button class="google-btn" onclick="doGoogleSignIn()">
+    <button class="google-btn" id="googleSignInBtn">
       <svg width="20" height="20" viewBox="0 0 48 48">
         <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.6 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.6-.4-3.9z"/>
         <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 19 12 24 12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.6 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
@@ -641,11 +641,11 @@ select.fi2 option { background: var(--sf2); }
   </div>
 </div>
 
-<script>
+<script data-cfasync="false">
 // ══════════════════════════════════════════════
 // CONFIG — all secrets live in the Worker
 // ══════════════════════════════════════════════
-const WORKER    = 'https://orange-waterfall-030e.kunal-249.workers.dev'; // ← your Worker URL
+const WORKER    = 'https://frosty-wood-37ecbugiq-workerjs.kunal-249.workers.dev';
 const GOOGLE_ID = '714484298488-ucn9blv0cr5ol2h0v9p6irbrj87murce.apps.googleusercontent.com';
 const ALLOWED   = 'hitwicket.com';
 const ADMIN     = 'kunal@hitwicket.com';
@@ -1720,11 +1720,41 @@ function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
 // ══════════════════════════════════════════════
 // INIT — session restore only (Google init NOT needed here — popup handles it)
 // ══════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded',()=>{
-  const sess=loadSession();
-  if(sess?.user){
-    G.user=sess.user;
-    fetch(WORKER+'/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id_token:sess.user.idToken})})
-    .then(r=>r.json())
-    .then(d=>{
-      if(d.ok){ G.user={...d,idTo
+window.addEventListener('
+// ══════════════════════════════════════════════
+// INIT — attach button + session restore
+// ══════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  // Attach sign-in button via JS (not inline onclick) so CF can't break it
+  const btn = document.getElementById('googleSignInBtn');
+  if (btn) btn.addEventListener('click', doGoogleSignIn);
+
+  // Session restore
+  const sess = loadSession();
+  if (sess?.user) {
+    G.user = sess.user;
+    fetch(WORKER + '/auth/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id_token: sess.user.idToken })
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        G.user = { ...d, idToken: sess.user.idToken };
+        saveSession();
+        onLogin();
+        toast('Session restored ✓', 'ok');
+      } else {
+        clearSession();
+      }
+    })
+    .catch(() => {
+      // Network error — use cached session, KB calls will fail gracefully
+      onLogin();
+    });
+  }
+});
+</script>
+</body>
+</html>
