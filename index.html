@@ -720,8 +720,8 @@ function markAllRead(){
 // GOOGLE AUTH
 // ══════════════════════════════════════════════
 function doGoogleSignIn(){
-  if(typeof google==='undefined'){ loginErr('Google SDK not loaded. Check connection.'); return; }
-  // Direct popup OAuth — avoids FedCM warnings and double-initialize issues
+  // Direct OAuth popup — no Google SDK needed
+
   const nonce = Math.random().toString(36).slice(2);
   const params = new URLSearchParams({
     client_id:    GOOGLE_ID,
