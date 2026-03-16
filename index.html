@@ -72,7 +72,6 @@ body::after {
 ::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--dim); }
 
-/* ══ LOGIN ══ */
 #loginScreen {
   position: fixed; inset: 0; z-index: 9999;
   background: var(--bg);
@@ -116,7 +115,6 @@ body::after {
 .login-err.on { display: block; }
 .login-spinner { margin-top: 16px; font-family: var(--mono); font-size: 10px; letter-spacing: 2px; color: var(--mute); text-transform: uppercase; display: none; }
 
-/* ══ NAV ══ */
 .nav {
   position: sticky; top: 0; z-index: 100;
   background: rgba(6,6,14,.94); border-bottom: 1px solid var(--bd);
@@ -161,7 +159,6 @@ body::after {
 @keyframes pipblink { 0%,100%{opacity:1}50%{opacity:.3} }
 .cloud-lbl { font-family: var(--mono); font-size: 9px; color: var(--mute); }
 
-/* Provider badge in nav */
 .provider-badge {
   font-family: var(--mono); font-size: 9px; letter-spacing: 1px;
   padding: 2px 7px; border-radius: 20px; text-transform: uppercase;
@@ -204,7 +201,6 @@ body::after {
 .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media(max-width:840px) { .g2 { grid-template-columns: 1fr; } }
 
-/* ══ PANELS ══ */
 .panel { background: var(--s1); border: 1px solid var(--bd); border-radius: 10px; overflow: hidden; }
 .panel-hd {
   padding: 11px 16px; border-bottom: 1px solid var(--bd); background: var(--s2);
@@ -218,7 +214,6 @@ body::after {
 .panel-acts { margin-left: auto; display: flex; gap: 6px; }
 .panel-body { padding: 16px; }
 
-/* ══ FORMS ══ */
 .fg { margin-bottom: 14px; }
 .fg:last-child { margin-bottom: 0; }
 .fl { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--mute); margin-bottom: 6px; }
@@ -239,7 +234,6 @@ select option { background: var(--s2); }
 .g2-f { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media(max-width:540px) { .g2-f { grid-template-columns: 1fr; } }
 
-/* Tags */
 .tag-wrap { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
 .tag {
   padding: 3px 9px; background: var(--s3); border: 1px solid var(--bd2);
@@ -249,7 +243,6 @@ select option { background: var(--s2); }
 .tag:hover { border-color: var(--blue); color: var(--blue2); }
 .tag.on { background: rgba(61,142,255,.1); border-color: var(--blue); color: var(--blue2); font-weight: 700; }
 
-/* ══ BUTTONS ══ */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   padding: 9px 16px; font-family: var(--disp); letter-spacing: 2px;
@@ -270,7 +263,6 @@ select option { background: var(--s2); }
 .btn-sm { padding: 6px 12px; font-size: 11px; letter-spacing: 1.5px; }
 .btn-xs { padding: 4px 9px; font-size: 10px; letter-spacing: 1px; }
 
-/* ══ DROP ZONE ══ */
 .drop-zone {
   border: 2px dashed var(--bd2); border-radius: 8px;
   padding: 24px 16px; text-align: center; cursor: pointer;
@@ -290,7 +282,6 @@ select option { background: var(--s2); }
 }
 .file-chip-rm { cursor: pointer; color: var(--red2); font-size: 14px; line-height: 1; }
 
-/* ══ STATS BAR ══ */
 .stats-bar { display: flex; gap: 0; flex-wrap: wrap; background: var(--s2); border-bottom: 1px solid var(--bd); }
 .stat-cell { display: flex; flex-direction: column; gap: 3px; padding: 12px 20px; border-right: 1px solid var(--bd); }
 .stat-num { font-family: var(--disp); font-size: 24px; line-height: 1; }
@@ -303,7 +294,6 @@ select option { background: var(--s2); }
 .c-ghost  { color: var(--ghost); }
 .c-purple { color: var(--purple); }
 
-/* ══ IMPACT CARDS ══ */
 .impact-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 10px; }
 .icard { background: var(--s2); border: 1px solid var(--bd); border-radius: 8px; padding: 13px; }
 .icard-hd { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--bd); }
@@ -317,7 +307,6 @@ select option { background: var(--s2); }
 .icard li { font-size: 11px; line-height: 1.65; color: var(--mist); padding-left: 14px; position: relative; }
 .icard li::before { content: '›'; position: absolute; left: 0; color: var(--blue); font-size: 13px; line-height: 1.4; }
 
-/* ══ TABLE ══ */
 .tc-table { width: 100%; border-collapse: collapse; font-size: 11px; }
 .tc-table th {
   background: var(--s3); padding: 7px 9px; text-align: left;
@@ -336,7 +325,6 @@ select option { background: var(--s2); }
 .tbl-scroll { overflow-x: auto; max-height: 520px; overflow-y: auto; }
 .tbl-scroll::-webkit-scrollbar { height: 3px; width: 3px; }
 
-/* ══ IMPORT CHUNKS ══ */
 .import-preview { background: var(--bg); border: 1px solid var(--bd); border-radius: 8px; overflow: hidden; }
 .import-preview-hd {
   padding: 9px 13px; background: var(--s2); border-bottom: 1px solid var(--bd);
@@ -367,7 +355,6 @@ select option { background: var(--s2); }
 .prog-lbl   { font-family: var(--mono); font-size: 10px; color: var(--mute); text-align: center; margin-top: 5px; }
 .prog-log   { font-family: var(--mono); font-size: 10px; color: var(--mute); line-height: 1.6; max-height: 100px; overflow-y: auto; margin-top: 7px; }
 
-/* ══ LOADER ══ */
 .loader { display: none; flex-direction: column; align-items: center; gap: 12px; padding: 48px 16px; text-align: center; }
 .loader.on { display: flex; }
 .spin { width: 32px; height: 32px; border: 2px solid var(--bd); border-top-color: var(--red); border-right-color: var(--purple); border-radius: 50%; animation: spin .65s linear infinite; }
@@ -377,7 +364,6 @@ select option { background: var(--s2); }
 @keyframes loadslide { 0%{width:0%;margin-left:0} 50%{width:60%;margin-left:20%} 100%{width:0%;margin-left:100%} }
 .load-lbl { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; color: var(--mute); text-transform: uppercase; }
 
-/* Provider indicator inside loader */
 .load-provider {
   font-family: var(--mono); font-size: 9px; color: var(--mute);
   letter-spacing: 1px; text-transform: uppercase;
@@ -385,7 +371,6 @@ select option { background: var(--s2); }
 }
 .load-provider-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--mute); }
 
-/* ══ TOAST ══ */
 #toast {
   position: fixed; bottom: 20px; right: 20px; z-index: 9999;
   background: var(--s2); border: 1px solid var(--bd2); border-radius: 8px; padding: 10px 16px;
@@ -410,7 +395,6 @@ select option { background: var(--s2); }
 .info-row:last-child { border-bottom: none; }
 .info-dot { color: var(--jade); flex-shrink: 0; }
 
-/* ══ HISTORY ══ */
 .hist-btn {
   display: flex; align-items: center; gap: 6px; padding: 0 14px; height: 100%;
   font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
@@ -462,7 +446,6 @@ select option { background: var(--s2); }
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-emblem">🏏</div>
@@ -485,7 +468,6 @@ select option { background: var(--s2); }
 
 <div id="toast"></div>
 
-<!-- NAV -->
 <nav class="nav">
   <div class="nav-brand">QA <span class="acc">Automation Tool</span></div>
   <div class="nav-tabs">
@@ -495,7 +477,7 @@ select option { background: var(--s2); }
     <div class="nav-tab admin-tab" id="t-kb"     onclick="goTab('kb')">☁️ KB <span class="nav-badge" id="kbCnt">0</span></div>
   </div>
   <div class="nav-end">
-    <!-- Provider badge: shows which AI handled last request -->
+   
     <span class="provider-badge" id="providerBadge"></span>
     <div class="cloud-row">
       <div class="cloud-pip" id="cpip"></div>
@@ -534,10 +516,8 @@ select option { background: var(--s2); }
   </div>
 </div>
 
-<!-- MAIN -->
 <div class="wrap">
 
-<!-- ═══ IMPACT ANALYZER ═══ -->
 <div class="tab-pane on" id="p-impact">
   <div class="page-hd">
     <h2>Impact <span>Analyzer</span></h2>
@@ -619,7 +599,6 @@ select option { background: var(--s2); }
   </div>
 </div>
 
-<!-- ═══ PRD → TEST CASES ═══ -->
 <div class="tab-pane" id="p-prd">
   <div class="page-hd">
     <h2>PRD <span>→ Test Cases</span></h2>
@@ -718,7 +697,6 @@ select option { background: var(--s2); }
   </div>
 </div>
 
-<!-- ═══ BULK IMPORT (admin) ═══ -->
 <div class="tab-pane" id="p-import">
   <div class="page-hd">
     <h2>Bulk <span>Import</span></h2>
@@ -802,7 +780,6 @@ select option { background: var(--s2); }
   </div>
 </div>
 
-<!-- ═══ KNOWLEDGE BASE (admin) ═══ -->
 <div class="tab-pane" id="p-kb">
   <div class="page-hd">
     <h2>Cloud <span>Knowledge Base</span></h2>
@@ -853,22 +830,12 @@ select option { background: var(--s2); }
   </div>
 </div>
 
-</div><!-- /wrap -->
+</div>
 
 <script>
-// ════════════════════════════════════════════════════════════════════
-// FRONTEND PATCH — replace your entire <script> section with this
-// Only WORKER url remains in frontend. Everything else is server-side.
-// ════════════════════════════════════════════════════════════════════
 
-// ════════════════════════════════════════════
-// CONFIG — only the worker URL stays here
-// All secrets (AUTH_TOKEN, ADMIN_EMAIL, GOOGLE_CLIENT_ID) are now
-// stored in Cloudflare Worker environment variables, never in HTML.
-// ════════════════════════════════════════════
 const WORKER = 'https://orange-waterfall-030e.kunal-249.workers.dev';
 
-// These will be populated from /config endpoint on app load
 let GOOGLE_CLIENT = '';
 let ALLOWED       = '';
 
@@ -892,9 +859,7 @@ const PROVIDER_META = {
   groq:        { label: 'Groq',        cls: 'pb-groq' },
 };
 
-// ════════════════════════════════════════════
-// STATE
-// ════════════════════════════════════════════
+
 let G = {
   user: null,
   kb: [],
@@ -904,13 +869,10 @@ let G = {
   lastPRD: null,
   histFilter: 'all',
   lastProvider: null,
-  sessionToken: null,   // NEW: replaces raw idToken for API calls
-  configLoaded: false,  // NEW: true once /config fetched
+  sessionToken: null,   
+  configLoaded: false, 
 };
 
-// ════════════════════════════════════════════
-// SESSION PERSISTENCE — localStorage
-// ════════════════════════════════════════════
 const SESSION_KEY = 'qabp_session_v7';
 
 function saveSession() {
@@ -940,9 +902,6 @@ function clearSession() {
   localStorage.removeItem(SESSION_KEY);
 }
 
-// ════════════════════════════════════════════
-// HISTORY — unchanged from before
-// ════════════════════════════════════════════
 function histKey(email) {
   return `qabp_hist_${(email||'').replace(/[^a-z0-9]/gi,'_')}`;
 }
@@ -1058,9 +1017,6 @@ function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ════════════════════════════════════════════
-// PROVIDER BADGE HELPERS
-// ════════════════════════════════════════════
 function showGlobalProvider(provider) {
   G.lastProvider = provider;
   const el = document.getElementById('providerBadge');
@@ -1071,9 +1027,6 @@ function showGlobalProvider(provider) {
   el.textContent = pm.label;
 }
 
-// ════════════════════════════════════════════
-// FETCH CONFIG FROM WORKER — replaces hardcoded constants
-// ════════════════════════════════════════════
 async function fetchConfig() {
   try {
     const res  = await fetch(WORKER + '/config');
@@ -1091,9 +1044,6 @@ async function fetchConfig() {
   }
 }
 
-// ════════════════════════════════════════════
-// GOOGLE AUTH — now uses session token flow
-// ════════════════════════════════════════════
 function doGoogleSignIn() {
   if (!G.configLoaded) { loginErr('App config not loaded yet, please wait…'); return; }
   if (typeof google === 'undefined') { loginErr('Google SDK not loaded. Check your internet connection.'); return; }
@@ -1134,14 +1084,12 @@ async function handleGoogleCred(response) {
   document.getElementById('loginSpinner').style.display = 'block';
   document.getElementById('loginErr').classList.remove('on');
   try {
-    // Send Google token to worker — worker verifies and returns sessionToken
-    // Client never sends AUTH_TOKEN directly anymore
+  
     const res  = await fetch(WORKER + '/auth/verify', {
       method:  'POST',
       headers: {
         'Content-Type': 'application/json',
-        // Worker still checks X-Auth-Token on this route to block spam
-        // but we use a fixed public value here — the real secret is on the worker
+     
         'X-Auth-Token': 'qabp_hw2024'
       },
       body: JSON.stringify({ id_token: token })
@@ -1193,9 +1141,6 @@ function doSignOut() {
   clearSession(); G.user = null; G.sessionToken = null; location.reload();
 }
 
-// ════════════════════════════════════════════
-// NAV
-// ════════════════════════════════════════════
 function goTab(id) {
   ['impact','prd','import','kb'].forEach(t => {
     document.getElementById('p-'+t)?.classList.toggle('on', t === id);
@@ -1204,17 +1149,13 @@ function goTab(id) {
   if (id === 'kb') renderKB();
 }
 
-// ════════════════════════════════════════════
-// WORKER CALLS — now uses X-Session-Token instead of X-Auth-Token + X-Google-Token
-// AUTH_TOKEN never appears in frontend code
-// ════════════════════════════════════════════
 async function wFetch(path, method = 'GET', body = null) {
   if (!G.user) throw new Error('Not authenticated');
   const opts = {
     method,
     headers: {
       'Content-Type':    'application/json',
-      'X-Session-Token': G.sessionToken,   // ← session token only, no raw secrets
+      'X-Session-Token': G.sessionToken,   
     }
   };
   if (body) opts.body = JSON.stringify(body);
@@ -1225,7 +1166,6 @@ async function wFetch(path, method = 'GET', body = null) {
 }
 
 async function wAI(prompt) {
-  // DO NOT call buildKBContext() here — worker injects KB server-side
   const d = await wFetch('/ai/analyze', 'POST', { prompt });
   if (d.provider) {
     showGlobalProvider(d.provider);
@@ -1233,9 +1173,6 @@ async function wAI(prompt) {
   return d.text;
 }
 
-// ════════════════════════════════════════════
-// CLOUD STATUS
-// ════════════════════════════════════════════
 function setCloud(state, label) {
   const pip = document.getElementById('cpip');
   pip.className = 'cloud-pip ' + (state || '');
@@ -1246,9 +1183,6 @@ function setCloud(state, label) {
                     state === 'busy' ? 'var(--gold)'  : 'var(--mute)';
 }
 
-// ════════════════════════════════════════════
-// KB — unchanged from before
-// ════════════════════════════════════════════
 async function loadKB() {
   setCloud('busy', 'syncing…');
   try {
@@ -1370,9 +1304,6 @@ async function savePRDKB() {
   } catch(e) { toast(e.message, 'err'); }
 }
 
-// ════════════════════════════════════════════
-// EXCEL / COPY — unchanged
-// ════════════════════════════════════════════
 function tcToRow(tc) {
   return [
     tc.id||'', tc.feature||'', tc.title||tc.test_title||'', tc.category||'',
@@ -1411,31 +1342,26 @@ function copyToClipboard(src) {
     });
 }
 
-// ════════════════════════════════════════════
-// ROBUST JSON PARSER — handles AI output quirks
-// ════════════════════════════════════════════
 function parseAIJson(raw) {
-  // Strip markdown fences
+  
   let text = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
 
-  // Extract outermost { ... }
+  
   const start = text.indexOf('{');
   const end   = text.lastIndexOf('}');
   if (start === -1 || end === -1) throw new Error('No JSON object found in AI response');
   text = text.slice(start, end + 1);
 
-  // Try as-is
+
   try { return JSON.parse(text); } catch(e1) {
-    // Fix trailing commas: ["a","b",] or {"a":1,}
     let fixed = text.replace(/,\s*([\]}])/g, '$1');
 
-    // Fix unescaped newlines/tabs inside string values
+
     fixed = fixed.replace(/"((?:[^"\\]|\\.)*)"/g, match =>
       match.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t')
     );
 
     try { return JSON.parse(fixed); } catch(e2) {
-      // Last resort: salvage test_cases from truncated response
       try {
         const tcs = [];
         const tcRegex = /\{\s*"id"\s*:\s*"TC-\d+[\s\S]*?\}/g;
@@ -1464,9 +1390,6 @@ function parseAIJson(raw) {
   }
 }
 
-// ════════════════════════════════════════════
-// IMPACT ANALYZER
-// ════════════════════════════════════════════
 async function runImpact() {
   const desc = document.getElementById('iDesc').value.trim();
   if (!desc) { toast('Describe the change', 'err'); return; }
@@ -1648,9 +1571,6 @@ function renderImpact(r) {
   }
 }
 
-// ════════════════════════════════════════════
-// PRD → TEST CASES
-// ════════════════════════════════════════════
 async function runPRD() {
   const txt = document.getElementById('prdTxt').value.trim();
   if (!G.prdFile && !txt) { toast('Upload or paste PRD content', 'err'); return; }
@@ -1671,7 +1591,6 @@ async function runPRD() {
   const lbl    = document.getElementById('prdLbl');
   const ticker = setInterval(() => { lbl.textContent = steps[si=(si+1)%steps.length]; }, 2000);
 
-  // NOTE: No kbCtx — worker injects KB server-side
   const prompt = `You are a PRINCIPAL QA ENGINEER at Hitwicket (mobile cricket strategy game, Android + iOS).
 
 Analyze the following PRD / feature specification and generate a COMPREHENSIVE, DETAILED test suite. Every single test case must be fully filled out — no empty fields, no placeholder text.
@@ -1718,7 +1637,6 @@ REQUIREMENTS:
   try {
     let raw;
     if (G.prdFile?.type === 'pdf') {
-      // PDF goes via worker (which uses Anthropic with document support)
       raw = await wAI(prompt.replace('[PDF attached — analyze the document provided]', `[PDF: ${G.prdFile.name} — please analyze based on filename context and the KB entries]`));
     } else {
       raw = await wAI(prompt);
@@ -1760,10 +1678,6 @@ function renderPRD(r) {
     <td></td><td></td><td></td>
   </tr>`).join('');
 }
-
-// ════════════════════════════════════════════
-// FILE HANDLING — unchanged
-// ════════════════════════════════════════════
 function dOver(e, id)   { e.preventDefault(); document.getElementById(id)?.classList.add('drag'); }
 function dLeave(id)     { document.getElementById(id)?.classList.remove('drag'); }
 function dDrop(e, type) {
@@ -1794,9 +1708,6 @@ function rmFile(type) {
   if (el) el.style.display = 'none';
 }
 
-// ════════════════════════════════════════════
-// BULK IMPORT — unchanged
-// ════════════════════════════════════════════
 async function importFiles(e) {
   const files = Array.from(e.target?.files || []);
   if (!files.length) return;
@@ -1970,9 +1881,6 @@ async function saveChunks() {
   setTimeout(renderImportPreview, 500);
 }
 
-// ════════════════════════════════════════════
-// TOAST
-// ════════════════════════════════════════════
 let _tt;
 function toast(msg, type = 'ok') {
   const el = document.getElementById('toast');
@@ -1980,11 +1888,8 @@ function toast(msg, type = 'ok') {
   clearTimeout(_tt); _tt = setTimeout(() => el.className = '', 3500);
 }
 
-// ════════════════════════════════════════════
-// INIT — loads config first, then checks session
-// ════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
-  // Build feature tags
+ 
   const wrap = document.getElementById('iTags');
   FEATURES.forEach(f => {
     const s = document.createElement('span');
@@ -1993,14 +1898,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     wrap.appendChild(s);
   });
 
-  // Step 1: fetch config from worker (gets google_client_id + allowed_domain)
+
   try {
     await fetchConfig();
   } catch(e) {
-    return; // fetchConfig already shows error in loginErr
+    return; 
   }
 
-  // Step 2: initialize Google Sign-In SDK with the server-provided client ID
+
   if (typeof google !== 'undefined') {
     google.accounts.id.initialize({
       client_id:   GOOGLE_CLIENT,
@@ -2009,27 +1914,27 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Step 3: try to restore saved session
+
   const saved = loadSession();
   if (saved?.user && saved?.sessionToken) {
     G.user         = saved.user;
     G.sessionToken = saved.sessionToken;
-    // Verify session is still valid with worker
+   
     try {
-      await wFetch('/kb'); // lightweight call to test session
-      saveSession(); // refresh TTL
+      await wFetch('/kb'); 
+      saveSession(); 
       onLoginSuccess();
       toast('Session restored ✓', 'ok');
     } catch(e) {
-      // Session expired or invalid
+   
       clearSession(); G.user = null; G.sessionToken = null;
-      // Login screen already visible, just re-init Google
+  
       if (typeof google !== 'undefined') {
         google.accounts.id.initialize({ client_id: GOOGLE_CLIENT, callback: handleGoogleCred, auto_select: false });
       }
     }
   }
-  // If no session, login screen stays visible — user clicks "Sign in with Google"
+  
 });
 </script>
 </body>
