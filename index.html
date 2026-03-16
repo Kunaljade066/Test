@@ -865,7 +865,7 @@ select option { background: var(--s2); }
 
     <div style="display:flex;flex-direction:column;gap:14px;">
       <div class="panel">
-     <!--   <div class="panel-hd"><div class="pdot"></div><span class="panel-title">What you'll get</span></div>
+      <div class="panel-hd"><div class="pdot"></div><span class="panel-title">What you'll get</span></div>
         <div class="panel-body">
           <div class="info-row"><span class="info-dot">✓</span> Full impact area breakdown with severity</div>
           <div class="info-row"><span class="info-dot">✓</span> 15 test cases in 14-column Excel format</div>
@@ -874,7 +874,7 @@ select option { background: var(--s2); }
           <div class="info-row"><span class="info-dot">✓</span> Your stored KB used as full context</div>
           <div class="info-row"><span class="info-dot">✓</span> Excel download + clipboard copy</div>
         </div>
-      </div> -->
+      
 
       <div class="panel" id="iResultPanel" style="display:none;">
         <div class="panel-hd">
@@ -1586,7 +1586,7 @@ function updateKBUI() {
   const no = G.kb.filter(e=>e.type==='note').length;
   const fe = G.kb.filter(e=>e.type==='feat').length;
   panel.innerHTML = `
-    <div class="info-row"><span class="info-dot">✓</span> <b style="color:var(--jade)">${n} KB entries</b> will be injected into every analysis</div>
+ <div class="info-row"><span class="info-dot">✓</span> <b style="color:var(--jade)">${n} KB entries</b> will be injected into every analysis</div> 
     ${tc ? `<div class="info-row"><span class="info-dot">›</span> ${tc} test case set${tc>1?'s':''}</div>` : ''}
     ${pr ? `<div class="info-row"><span class="info-dot">›</span> ${pr} PRD / spec</div>` : ''}
     ${fe ? `<div class="info-row"><span class="info-dot">›</span> ${fe} feature doc${fe>1?'s':''}</div>` : ''}
