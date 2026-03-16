@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HW Tracker · Hitwicket</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root {
   --bg:    #07070d;
@@ -415,6 +414,26 @@ select.fi2 option { background: var(--sf2); }
 
 @media(max-width:1024px) { .sidebar { display: none; } }
 @media(max-width:768px) { .main-inner { padding: 14px; } .stats-row { grid-template-columns: 1fr 1fr; } .slide-panel { width: 100%; } .form-grid2 { grid-template-columns: 1fr; } .detail-grid { grid-template-columns: 1fr; } }
+
+/* ═══════════════════ ASSIGNEE DROPDOWN ═══════════════════ */
+.assignee-wrap { position: relative; }
+.assignee-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 999;
+  background: var(--sf2); border: 1px solid var(--bd2);
+  border-radius: 8px; overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  max-height: 220px; overflow-y: auto; display: none;
+}
+.assignee-dropdown.on { display: block; }
+.assignee-option {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 12px; cursor: pointer; transition: background .12s;
+  font-size: 13px;
+}
+.assignee-option:hover, .assignee-option.focused { background: var(--vbg); }
+.assignee-option-name { font-weight: 500; color: var(--text); }
+.assignee-option-email { font-family: var(--mono); font-size: 10px; color: var(--dim); }
+.assignee-none { padding: 12px; text-align: center; font-family: var(--mono); font-size: 11px; color: var(--dim); }
 </style>
 </head>
 <body>
@@ -436,7 +455,7 @@ select.fi2 option { background: var(--sf2); }
     </button>
     <div class="login-note">
       Restricted to <b>@hitwicket.com</b> accounts.<br>
-      Contact <b>kunal@hitwicket.com</b> for access.
+      Contact <b><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="86edf3e8e7eac6eeeff2f1efe5ede3f2a8e5e9eb">[email&#160;protected]</a></b> for access.
     </div>
     <div class="login-err" id="loginErr"></div>
   </div>
@@ -620,11 +639,11 @@ select.fi2 option { background: var(--sf2); }
   </div>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ══════════════════════════════════════════════
 // CONFIG — all secrets live in the Worker
 // ══════════════════════════════════════════════
-const WORKER    = 'https://frosty-wood-37ecbugiq-workerjs.kunal-249.workers.dev'; // ← Replace with your Worker URL
+const WORKER    = 'https://orange-waterfall-030e.kunal-249.workers.dev'; // ← your Worker URL
 const GOOGLE_ID = '714484298488-ucn9blv0cr5ol2h0v9p6irbrj87murce.apps.googleusercontent.com';
 const ALLOWED   = 'hitwicket.com';
 const ADMIN     = 'kunal@hitwicket.com';
@@ -641,9 +660,11 @@ let G = {
   sortCol: null, sortDir: 1,
   sbFilter: { mode: 'status', val: 'all' },
   currentView: 'backlog',
-  editing: null,     // bug id being edited
+  editing: null,
   notifs: [],
-  localNotifs: [],   // stored in localStorage per user
+  localNotifs: [],
+  // Known team members — populated from existing bugs + manual list
+  teamMembers: [],
 };
 
 const SESSION_KEY = 'hw_tracker_session_v1';
@@ -698,16 +719,30 @@ function markAllRead(){
 // ══════════════════════════════════════════════
 function doGoogleSignIn(){
   if(typeof google==='undefined'){ loginErr('Google SDK not loaded. Check connection.'); return; }
-  google.accounts.id.initialize({ client_id: GOOGLE_ID, callback: handleGCred, auto_select: false, hd: ALLOWED });
-  google.accounts.id.prompt(n => {
-    if(n.isNotDisplayed()||n.isSkippedMoment()){
-      const w=window.open(`https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_ID}&redirect_uri=${encodeURIComponent(location.origin+location.pathname)}&response_type=id_token&scope=openid%20email%20profile&nonce=${Math.random().toString(36).slice(2)}&hd=${ALLOWED}`,'gauth','width=480,height=580');
-      const t=setInterval(()=>{
-        try{ const h=w?.location?.hash||''; if(h.includes('id_token')){ clearInterval(t); w.close(); handleGCred({credential:new URLSearchParams(h.slice(1)).get('id_token')}); } }catch(e){}
-        if(!w||w.closed) clearInterval(t);
-      },500);
-    }
+  // Direct popup OAuth — avoids FedCM warnings and double-initialize issues
+  const nonce = Math.random().toString(36).slice(2);
+  const params = new URLSearchParams({
+    client_id:    GOOGLE_ID,
+    redirect_uri: location.origin + location.pathname,
+    response_type:'id_token',
+    scope:        'openid email profile',
+    nonce,
+    hd:           ALLOWED,
+    prompt:       'select_account',
   });
+  const popup = window.open('https://accounts.google.com/o/oauth2/v2/auth?'+params,'gauth','width=500,height=600,left=200,top=100');
+  if(!popup){ loginErr('Popup blocked — allow popups for this page and try again.'); return; }
+  const timer = setInterval(()=>{
+    try{
+      const h = popup?.location?.hash || '';
+      if(h.includes('id_token')){
+        clearInterval(timer);
+        popup.close();
+        handleGCred({ credential: new URLSearchParams(h.slice(1)).get('id_token') });
+      }
+    }catch(e){}
+    if(!popup || popup.closed) clearInterval(timer);
+  }, 500);
 }
 
 async function handleGCred(resp){
@@ -746,7 +781,7 @@ function onLogin(){
   refreshAll();
 }
 
-function doSignOut(){ if(!confirm('Sign out?')) return; clearSession(); try{google.accounts.id.disableAutoSelect();}catch(e){} location.reload(); }
+function doSignOut(){ if(!confirm('Sign out?')) return; clearSession(); location.reload(); }
 
 // ══════════════════════════════════════════════
 // API
@@ -767,6 +802,7 @@ async function refreshAll(){
     const [bugsRes,sprintsRes]=await Promise.all([api('/bugs'),api('/sprints')]);
     G.bugs    = bugsRes.bugs    || [];
     G.sprints = sprintsRes.sprints || [];
+    buildTeamMembers();
     updateSidebarBadges();
     populateFilters();
     applyFilters();
@@ -776,6 +812,25 @@ async function refreshAll(){
   }catch(e){
     setCloud('err','error'); toast(e.message,'err');
   }
+}
+
+// Build team members list from: logged-in user + all assignees/reporters seen in bugs
+function buildTeamMembers(){
+  const map = {};
+  // Always include current user
+  if(G.user){
+    map[G.user.email] = { name: G.user.name, email: G.user.email, picture: G.user.picture || '' };
+  }
+  // Collect from all bugs
+  G.bugs.forEach(b=>{
+    if(b.assignee_email && b.assignee){
+      map[b.assignee_email] = { name: b.assignee, email: b.assignee_email, picture: b.assignee_picture||'' };
+    }
+    if(b.reporter_email && b.reporter){
+      map[b.reporter_email] = { name: b.reporter, email: b.reporter_email, picture: b.reporter_picture||'' };
+    }
+  });
+  G.teamMembers = Object.values(map).sort((a,b)=>a.name.localeCompare(b.name));
 }
 
 // ══════════════════════════════════════════════
@@ -1261,18 +1316,35 @@ async function addComment(bugId){
 // ══════════════════════════════════════════════
 function openNewBug(){
   G.editing=null;
+  // Reset body immediately (panel is closed, safe to clear)
+  document.getElementById('spBody').innerHTML='';
+  document.getElementById('spBugId').textContent='';
   buildForm(null);
   openPanel();
 }
 
 function openEdit(id){
   const bug=G.bugs.find(b=>b.id===id); if(!bug) return;
-  // Check permission
   if(G.user?.role!=='admin' && bug.reporter_email!==G.user?.email){ toast('Only the reporter or admin can edit this bug','err'); return; }
   G.editing=id;
-  buildForm(bug);
-  closePanel();
-  setTimeout(()=>openPanel(),30);
+  // If panel is open (e.g. came from detail view), close it first then reopen with form
+  const isOpen = document.getElementById('slidePanel').classList.contains('on');
+  if(isOpen){
+    // Close without the delayed body-wipe so we can write form immediately after
+    document.getElementById('overlay').classList.remove('on');
+    document.getElementById('slidePanel').classList.remove('on');
+    setTimeout(()=>{
+      document.getElementById('spBody').innerHTML='';
+      document.getElementById('spBugId').textContent='';
+      buildForm(bug);
+      openPanel();
+    }, 280); // wait for close animation to finish, THEN build + open
+  } else {
+    document.getElementById('spBody').innerHTML='';
+    document.getElementById('spBugId').textContent='';
+    buildForm(bug);
+    openPanel();
+  }
 }
 
 function buildForm(bug){
@@ -1307,8 +1379,18 @@ function buildForm(bug){
         <select class="fi2" id="f-status-form">${statOpts}</select>
       </div>
       <div class="fg">
-        <label class="fl">Assignee (Dev) — start typing</label>
-        <input class="fi2" id="f-assignee" value="${esc(bug?.assignee||'')}" placeholder="Type team member name or email">
+        <label class="fl">Assignee (Dev)</label>
+        <div class="assignee-wrap">
+          <input class="fi2" id="f-assignee" autocomplete="off"
+            value="${esc(bug?.assignee||'')}"
+            placeholder="Search team member…"
+            oninput="filterAssigneeDropdown(this.value)"
+            onfocus="showAssigneeDropdown()"
+            onkeydown="assigneeKeyNav(event)">
+          <input type="hidden" id="f-assignee-email" value="${esc(bug?.assignee_email||'')}">
+          <input type="hidden" id="f-assignee-picture" value="${esc(bug?.assignee_picture||'')}">
+          <div class="assignee-dropdown" id="assigneeDropdown"></div>
+        </div>
       </div>
       <div class="fg">
         <label class="fl">Reporter (Tester)</label>
@@ -1376,7 +1458,13 @@ function closePanel(){
   document.getElementById('overlay').classList.remove('on');
   document.getElementById('slidePanel').classList.remove('on');
   G.editing=null;
-  setTimeout(()=>{ document.getElementById('spBody').innerHTML=''; document.getElementById('spBugId').textContent=''; },300);
+  // Clear body after animation completes — only if panel is not about to reopen
+  setTimeout(()=>{
+    if(!document.getElementById('slidePanel').classList.contains('on')){
+      document.getElementById('spBody').innerHTML='';
+      document.getElementById('spBugId').textContent='';
+    }
+  }, 320);
 }
 
 // ══════════════════════════════════════════════
@@ -1389,12 +1477,14 @@ async function saveBug(){
 
   const data={
     title,
-    priority:   document.getElementById('f-priority')?.value||'Medium',
-    severity:   document.getElementById('f-severity')?.value||'',
-    status:     document.getElementById('f-status-form')?.value||'Open',
-    assignee:   document.getElementById('f-assignee')?.value||'',
-    reporter:   document.getElementById('f-reporter')?.value||G.user?.name||'',
-    reporter_email: G.user?.email||'',
+    priority:         document.getElementById('f-priority')?.value||'Medium',
+    severity:         document.getElementById('f-severity')?.value||'',
+    status:           document.getElementById('f-status-form')?.value||'Open',
+    assignee:         document.getElementById('f-assignee')?.value||'',
+    assignee_email:   document.getElementById('f-assignee-email')?.value||'',
+    assignee_picture: document.getElementById('f-assignee-picture')?.value||'',
+    reporter:         document.getElementById('f-reporter')?.value||G.user?.name||'',
+    reporter_email:   G.user?.email||'',
     reporter_picture: G.user?.picture||'',
     feature:    document.getElementById('f-feature')?.value||'',
     sprint:     document.getElementById('f-sprint-form')?.value||'',
@@ -1469,6 +1559,75 @@ function sChip(s){ const m={Critical:'chip-critical',High:'chip-high',Medium:'ch
 function stChip(s){ const m={Open:'chip-open','In Progress':'chip-prog','In Review':'chip-review',Done:'chip-done',Closed:'chip-wont',Bugged:'chip-bugged','QA Pass':'chip-qa','Non-Recreatable':'chip-review','Not a bug':'chip-wont'}; return `<span class="chip ${m[s]||'chip-gray'}">${esc(s||'—')}</span>`; }
 
 // ══════════════════════════════════════════════
+// ASSIGNEE DROPDOWN
+// ══════════════════════════════════════════════
+let _assigneeFocusIdx = -1;
+
+function showAssigneeDropdown(){
+  filterAssigneeDropdown(document.getElementById('f-assignee')?.value||'');
+}
+
+function filterAssigneeDropdown(query){
+  const dd = document.getElementById('assigneeDropdown'); if(!dd) return;
+  const q  = query.toLowerCase().trim();
+  const members = q
+    ? G.teamMembers.filter(m => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q))
+    : G.teamMembers;
+
+  _assigneeFocusIdx = -1;
+
+  if(!members.length){
+    dd.innerHTML = `<div class="assignee-none">No team members found.<br><span style="color:var(--v3);font-size:10px">Members appear after they log in & interact with bugs.</span></div>`;
+  } else {
+    dd.innerHTML = members.map((m,i)=>`
+      <div class="assignee-option" data-idx="${i}" data-name="${esc(m.name)}" data-email="${esc(m.email)}" data-pic="${esc(m.picture)}"
+        onmousedown="selectAssignee('${esc(m.name)}','${esc(m.email)}','${esc(m.picture)}')">
+        ${avEl(m.name, m.picture, 24)}
+        <div>
+          <div class="assignee-option-name">${esc(m.name)}</div>
+          <div class="assignee-option-email">${esc(m.email)}</div>
+        </div>
+      </div>`).join('');
+  }
+  dd.classList.add('on');
+
+  // Close when clicking outside
+  document.addEventListener('click', closeAssigneeDropdown, {once:true, capture:true});
+}
+
+function closeAssigneeDropdown(e){
+  const dd = document.getElementById('assigneeDropdown');
+  const inp = document.getElementById('f-assignee');
+  if(dd && !dd.contains(e?.target) && e?.target !== inp){
+    dd.classList.remove('on');
+  }
+}
+
+function selectAssignee(name, email, picture){
+  const inp = document.getElementById('f-assignee');
+  const hidEmail = document.getElementById('f-assignee-email');
+  const hidPic   = document.getElementById('f-assignee-picture');
+  if(inp)      inp.value   = name;
+  if(hidEmail) hidEmail.value = email;
+  if(hidPic)   hidPic.value  = picture;
+  const dd = document.getElementById('assigneeDropdown');
+  if(dd) dd.classList.remove('on');
+}
+
+function assigneeKeyNav(e){
+  const dd = document.getElementById('assigneeDropdown');
+  if(!dd || !dd.classList.contains('on')) return;
+  const opts = dd.querySelectorAll('.assignee-option');
+  if(!opts.length) return;
+  if(e.key==='ArrowDown'){ e.preventDefault(); _assigneeFocusIdx=Math.min(_assigneeFocusIdx+1,opts.length-1); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); _assigneeFocusIdx=Math.max(_assigneeFocusIdx-1,0); }
+  else if(e.key==='Enter' && _assigneeFocusIdx>=0){ e.preventDefault(); const o=opts[_assigneeFocusIdx]; if(o) selectAssignee(o.dataset.name,o.dataset.email,o.dataset.pic); return; }
+  else if(e.key==='Escape'){ dd.classList.remove('on'); return; }
+  opts.forEach((o,i)=>o.classList.toggle('focused',i===_assigneeFocusIdx));
+  if(_assigneeFocusIdx>=0) opts[_assigneeFocusIdx].scrollIntoView({block:'nearest'});
+}
+
+// ══════════════════════════════════════════════
 // TOAST
 // ══════════════════════════════════════════════
 function toast(msg,type='ok'){
@@ -1481,27 +1640,13 @@ function toast(msg,type='ok'){
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ══════════════════════════════════════════════
-// INIT — session restore
+// INIT — session restore only (Google init NOT needed here — popup handles it)
 // ══════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded',()=>{
-  window.addEventListener('load',()=>{
-    if(typeof google!=='undefined'){
-      google.accounts.id.initialize({client_id:GOOGLE_ID,callback:handleGCred,auto_select:false});
-    }
-  });
-
   const sess=loadSession();
   if(sess?.user){
     G.user=sess.user;
     fetch(WORKER+'/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id_token:sess.user.idToken})})
     .then(r=>r.json())
     .then(d=>{
-      if(d.ok){ G.user={...d,idToken:sess.user.idToken}; saveSession(); onLogin(); toast('Session restored ✓','ok'); }
-      else { clearSession(); }
-    })
-    .catch(()=>{ G.user=sess.user; onLogin(); }); // offline fallback
-  }
-});
-</script>
-</body>
-</html>
+      if(d.ok){ G.user={...d,idTo
