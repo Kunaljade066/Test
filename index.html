@@ -40,15 +40,14 @@ body::before{content:'';position:fixed;inset:0;
 .nb{font-family:var(--dsp);font-size:20px;letter-spacing:4px;color:var(--t);padding:15px 0;margin-right:16px;white-space:nowrap}
 .nb span{color:var(--r)}
 .ntabs{display:flex;flex:1;overflow-x:auto}
-.ntab{padding:16px 16px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--m);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;user-select:none;white-space:nowrap}
+.ntab{padding:16px 15px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--m);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;user-select:none;white-space:nowrap}
 .ntab:hover{color:var(--t)}
 .ntab.on{color:var(--b);border-bottom-color:var(--b)}
 .nbadge{display:inline-flex;align-items:center;justify-content:center;background:var(--r);color:#fff;font-size:9px;font-weight:700;width:15px;height:15px;border-radius:50%;margin-left:5px;vertical-align:middle}
 .cst{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding-left:12px;flex-shrink:0}
 .cdot{width:7px;height:7px;border-radius:50%;background:var(--m);transition:background .3s;flex-shrink:0}
 .cdot.ok{background:var(--g);animation:glow 2.5s ease-in-out infinite}
-.cdot.er{background:var(--r)}
-.cdot.sy{background:var(--y)}
+.cdot.er{background:var(--r)}.cdot.sy{background:var(--y)}
 @keyframes glow{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* WRAP */
@@ -95,11 +94,17 @@ select option{background:var(--s2)}
 .btn-s:hover{border-color:var(--b);color:var(--b)}
 .btn-g{background:var(--g);color:#000}
 .btn-g:hover{opacity:.88}
-.btn-p{background:var(--p);color:#000}
-.btn-p:hover{opacity:.88}
+.btn-xl{background:rgba(0,229,160,.15);color:var(--g);border:1px solid rgba(0,229,160,.3)}
+.btn-xl:hover{background:rgba(0,229,160,.25)}
+.btn-cp{background:rgba(59,139,255,.12);color:var(--b);border:1px solid rgba(59,139,255,.25)}
+.btn-cp:hover{background:rgba(59,139,255,.22)}
 .bsm{padding:6px 12px;font-size:11px;letter-spacing:2px}
 
-/* UPLOAD ZONE */
+/* DOWNLOAD BAR */
+.dl-bar{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;background:var(--s3);border-top:1px solid var(--bd);align-items:center}
+.dl-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--m);margin-right:4px}
+
+/* UPLOAD */
 .uz{border:2px dashed var(--bd2);border-radius:3px;padding:26px 16px;text-align:center;cursor:pointer;transition:all .2s}
 .uz:hover,.uz.drag{border-color:var(--b);background:rgba(59,139,255,.04)}
 .uz.ok{border-color:var(--g);background:rgba(0,229,160,.04)}
@@ -155,34 +160,32 @@ select option{background:var(--s2)}
 .kdel{background:none;border:1px solid rgba(255,59,92,.3);color:var(--r);font-family:var(--mono);font-size:9px;letter-spacing:1px;padding:3px 7px;border-radius:2px;cursor:pointer;margin-top:7px;transition:all .2s}
 .kdel:hover{background:rgba(255,59,92,.1)}
 
-/* LOADER */
-.spin{width:34px;height:34px;border:2px solid var(--bd);border-top-color:var(--r);border-radius:50%;animation:sp .7s linear infinite;margin:0 auto}
-@keyframes sp{to{transform:rotate(360deg)}}
-.ldr{display:none;flex-direction:column;align-items:center;gap:12px;padding:44px 20px;text-align:center}
-.ldr.on{display:flex}
-.ll{font-size:11px;letter-spacing:2px;color:var(--m);text-transform:uppercase}
-
-/* IMPORT SPECIFIC */
+/* IMPORT */
+.info-box{background:rgba(59,139,255,.06);border:1px solid rgba(59,139,255,.15);border-radius:3px;padding:12px 14px;font-size:12px;color:#b0b8d0;line-height:1.7;margin-bottom:14px}
+.info-box strong{color:var(--b)}
 .import-preview{background:var(--bg);border:1px solid var(--bd);border-radius:3px;overflow:hidden;margin-top:14px}
 .ip-head{padding:10px 14px;background:var(--s2);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .ip-stat{font-size:11px;color:var(--m)}
 .ip-stat strong{color:var(--t)}
-.chunk-list{display:flex;flex-direction:column;gap:0}
-.chunk{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:flex-start;gap:12px;transition:background .15s}
-.chunk:hover{background:rgba(59,139,255,.03)}
+.chunk-list{display:flex;flex-direction:column}
+.chunk{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:flex-start;gap:12px}
 .chunk:last-child{border-bottom:none}
 .chunk-check{width:16px;height:16px;accent-color:var(--b);cursor:pointer;margin-top:2px;flex-shrink:0}
 .chunk-info{flex:1}
 .chunk-title{font-size:12px;color:var(--t);margin-bottom:3px;font-weight:500}
 .chunk-meta{font-size:10px;color:var(--m);margin-bottom:4px}
 .chunk-preview{font-size:11px;color:#808090;line-height:1.5}
-.chunk-type{font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:2px 6px;border-radius:2px;margin-left:auto;flex-shrink:0}
-
-/* PROGRESS BAR */
 .prog-wrap{margin-top:12px}
-.prog-bar-bg{background:var(--s3);border-radius:2px;height:6px;overflow:hidden}
+.prog-bg{background:var(--s3);border-radius:2px;height:6px;overflow:hidden}
 .prog-bar{background:var(--g);height:100%;border-radius:2px;transition:width .3s;width:0%}
-.prog-label{font-size:10px;color:var(--m);margin-top:5px;text-align:center;letter-spacing:1px}
+.prog-lbl{font-size:10px;color:var(--m);margin-top:5px;text-align:center;letter-spacing:1px}
+
+/* LOADER */
+.spin{width:34px;height:34px;border:2px solid var(--bd);border-top-color:var(--r);border-radius:50%;animation:sp .7s linear infinite;margin:0 auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+.ldr{display:none;flex-direction:column;align-items:center;gap:12px;padding:44px 20px;text-align:center}
+.ldr.on{display:flex}
+.ll{font-size:11px;letter-spacing:2px;color:var(--m);text-transform:uppercase}
 
 /* TOAST */
 .toast{position:fixed;bottom:22px;right:22px;z-index:9999;background:var(--s2);border:1px solid var(--bd2);border-radius:3px;padding:11px 16px;font-size:12px;color:var(--t);transform:translateY(70px);opacity:0;transition:all .3s;pointer-events:none;max-width:340px;line-height:1.5}
@@ -192,8 +195,6 @@ select option{background:var(--s2)}
 .toast.in{border-left:3px solid var(--b)}
 
 .empty{padding:36px 16px;text-align:center;font-size:12px;color:var(--m);line-height:1.7}
-.info-box{background:rgba(59,139,255,.06);border:1px solid rgba(59,139,255,.15);border-radius:3px;padding:12px 14px;font-size:12px;color:#b0b8d0;line-height:1.7;margin-bottom:14px}
-.info-box strong{color:var(--b)}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
@@ -238,7 +239,7 @@ select option{background:var(--s2)}
 <div class="tp on" id="p-impact">
   <div class="sh">
     <h2>Impact <span>Analyzer</span></h2>
-    <p>Describe a change → AI cross-references 1,200+ items + your cloud KB → Deep report + 20+ test cases</p>
+    <p>Describe a change → AI cross-references 1,200+ items + cloud KB → Deep report + 20+ test cases</p>
   </div>
   <div class="g2">
     <div class="pn">
@@ -246,7 +247,7 @@ select option{background:var(--s2)}
       <div class="pb">
         <div class="fi">
           <label>What was changed?</label>
-          <textarea id="cd" placeholder="e.g. Dev refactored SA (Super Ability) activation flow. Mana calc moved from GameplayController.cs to SAManager.cs. Trigger changed from mana >= 100 to mana >= configurable threshold per player..."></textarea>
+          <textarea id="cd" placeholder="e.g. Dev refactored SA (Super Ability) activation flow. Mana calc moved from GameplayController.cs to SAManager.cs. Trigger changed from mana >= 100 to configurable threshold per player..."></textarea>
         </div>
         <div class="fi">
           <label>Feature area tags</label>
@@ -272,6 +273,7 @@ select option{background:var(--s2)}
         <button class="btn btn-r" id="anBtn" onclick="runAnalysis()">⚡ Analyze Impact</button>
       </div>
     </div>
+
     <div style="display:flex;flex-direction:column;gap:14px;">
       <div class="pn">
         <div class="ph"><div class="pd g"></div><span class="pt">Cloud KB Context</span></div>
@@ -280,25 +282,32 @@ select option{background:var(--s2)}
       <div class="pn">
         <div class="ph"><div class="pd"></div><span class="pt">Info</span></div>
         <div class="pb" style="font-size:12px;color:#b0b0c8;line-height:1.9;">
-          ✓ 20+ specific test cases<br>✓ P0/P1/P2/P3 priorities<br>
-          ✓ Platform-specific checks<br>✓ Edge cases + risks<br>
-          ✓ KB context injected<br>✓ All calls via Worker (no CORS)
+          ✓ 20+ test cases per analysis<br>✓ P0/P1/P2/P3 priority levels<br>
+          ✓ Platform-specific checks<br>✓ Edge cases + downstream risks<br>
+          ✓ Cloud KB injected as context<br>✓ Download as 14-col Excel
         </div>
       </div>
     </div>
+
+    <!-- RESULTS -->
     <div class="pn c2" id="arPanel" style="display:none;">
       <div class="ph">
         <div class="pd r"></div><span class="pt">Impact Analysis Report</span>
         <span id="aTime" style="margin-left:auto;font-size:10px;color:var(--m);"></span>
       </div>
       <div class="ldr" id="aLdr"><div class="spin"></div><div class="ll" id="aLbl">Analyzing…</div></div>
-      <div id="aOut" style="display:none;padding:16px;">
-        <div class="sbar" id="aSbar" style="margin:-16px -16px 16px;"></div>
-        <div class="igrid" id="aCards"></div>
-        <div id="aTCs" style="margin-top:18px;"></div>
-        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+      <div id="aOut" style="display:none;">
+        <div class="sbar" id="aSbar"></div>
+        <div style="padding:16px;">
+          <div class="igrid" id="aCards"></div>
+          <div id="aTCs" style="margin-top:18px;"></div>
+        </div>
+        <!-- DOWNLOAD BAR -->
+        <div class="dl-bar">
+          <span class="dl-label">Download:</span>
+          <button class="btn btn-xl bsm" onclick="downloadExcel('impact')">⬇️ Excel (.xlsx)</button>
+          <button class="btn btn-cp bsm" onclick="copyClipboard('impact')">📋 Copy to Clipboard</button>
           <button class="btn btn-s bsm" onclick="saveAnalysisToKB()">☁️ Save to KB</button>
-          <button class="btn btn-s bsm" onclick="copyAnalysisCSV()">📋 Copy CSV</button>
         </div>
       </div>
     </div>
@@ -328,7 +337,7 @@ select option{background:var(--s2)}
           <div style="text-align:center;font-size:10px;color:var(--m);letter-spacing:2px;text-transform:uppercase;margin:4px 0;">— or paste —</div>
           <div class="fi">
             <label>Paste PRD text</label>
-            <textarea id="prdTxt" style="min-height:140px;" placeholder="Paste your PRD, feature spec, acceptance criteria here…"></textarea>
+            <textarea id="prdTxt" style="min-height:140px;" placeholder="Paste your PRD, feature spec, acceptance criteria…"></textarea>
           </div>
         </div>
       </div>
@@ -355,22 +364,31 @@ select option{background:var(--s2)}
         </div>
       </div>
     </div>
+
     <div class="pn">
       <div class="ph"><div class="pd g"></div><span class="pt">Generated Test Cases</span></div>
       <div class="ldr" id="pLdr"><div class="spin"></div><div class="ll" id="pLbl">Reading PRD…</div></div>
-      <div id="pOut" style="padding:16px;display:none;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-          <div id="pStats" style="font-size:12px;color:var(--m);"></div>
-          <div style="display:flex;gap:7px;">
-            <button class="btn btn-s bsm" onclick="copyPRDCSV()">📋 Copy CSV</button>
-            <button class="btn btn-s bsm" onclick="savePRDToKB()">☁️ Save to KB</button>
+      <div id="pOut" style="display:none;">
+        <div style="padding:16px 16px 0;">
+          <div id="pStats" style="font-size:12px;color:var(--m);margin-bottom:12px;"></div>
+          <div style="overflow-x:auto;">
+            <table class="tct">
+              <thead><tr>
+                <th>TC ID</th><th>Feature</th><th>Test Title</th><th>Category</th>
+                <th>Preconditions</th><th>Steps</th><th>Expected Result</th>
+                <th>Break Point</th><th>Systems</th><th>Edge Case</th>
+                <th>Priority</th><th>Status</th><th>Dev Result</th><th>QA Result</th>
+              </tr></thead>
+              <tbody id="pTBody"></tbody>
+            </table>
           </div>
         </div>
-        <div style="overflow-x:auto;">
-          <table class="tct">
-            <thead><tr><th>ID</th><th>Feature</th><th>Title</th><th>Category</th><th>Preconditions</th><th>Steps</th><th>Expected</th><th>Priority</th></tr></thead>
-            <tbody id="pTBody"></tbody>
-          </table>
+        <!-- DOWNLOAD BAR -->
+        <div class="dl-bar" style="margin-top:12px;">
+          <span class="dl-label">Download:</span>
+          <button class="btn btn-xl bsm" onclick="downloadExcel('prd')">⬇️ Excel (.xlsx)</button>
+          <button class="btn btn-cp bsm" onclick="copyClipboard('prd')">📋 Copy to Clipboard</button>
+          <button class="btn btn-s bsm" onclick="savePRDToKB()">☁️ Save to KB</button>
         </div>
       </div>
       <div class="empty" id="pEmpty">Upload or paste a PRD on the left, then click Generate</div>
@@ -382,134 +400,104 @@ select option{background:var(--s2)}
 <div class="tp" id="p-import">
   <div class="sh">
     <h2>Bulk <span>Import</span></h2>
-    <p>Upload Excel / CSV / TXT files with test cases or PRDs → preview chunks → save all to cloud KB in one click</p>
+    <p>Upload Excel / CSV / TXT → preview chunks → save all to cloud KB in one click</p>
   </div>
   <div class="g2">
-
-    <!-- LEFT: Upload + options -->
     <div style="display:flex;flex-direction:column;gap:14px;">
       <div class="pn">
         <div class="ph"><div class="pd p"></div><span class="pt">Upload Files</span></div>
         <div class="pb">
           <div class="info-box">
-            <strong>Supported formats:</strong><br>
-            📊 <strong>Excel (.xlsx, .xls)</strong> — each sheet becomes a KB entry<br>
-            📋 <strong>CSV (.csv)</strong> — imported as test cases<br>
-            📄 <strong>TXT / MD</strong> — split by headings or pasted whole<br>
-            📑 <strong>Multiple files</strong> — drag several at once
+            <strong>Supported:</strong><br>
+            📊 Excel (.xlsx) — each sheet = one KB entry<br>
+            📋 CSV — imported as test cases<br>
+            📄 TXT / MD — split by ## headings<br>
+            📑 Multiple files at once
           </div>
-          <div class="fi">
-            <div class="uz" id="iuz"
-              ondragover="idov(event)" ondragleave="idol()" ondrop="idop(event)"
-              onclick="document.getElementById('ifi').click()">
-              <span class="ui">📥</span>
-              <div class="ut">
-                <strong>Click to select files</strong> or drag & drop<br>
-                Excel, CSV, TXT, MD — multiple files OK
-              </div>
-            </div>
-            <input type="file" id="ifi" multiple accept=".xlsx,.xls,.csv,.txt,.md" onchange="importFiles(event)" style="display:none">
+          <div class="uz" id="iuz" ondragover="idov(event)" ondragleave="idol()" ondrop="idop(event)" onclick="document.getElementById('ifi').click()">
+            <span class="ui">📥</span>
+            <div class="ut"><strong>Click to select</strong> or drag & drop<br>Excel, CSV, TXT, MD — multiple OK</div>
           </div>
+          <input type="file" id="ifi" multiple accept=".xlsx,.xls,.csv,.txt,.md" onchange="importFiles(event)" style="display:none">
         </div>
       </div>
-
       <div class="pn">
-        <div class="ph"><div class="pd y"></div><span class="pt">Import Options</span></div>
+        <div class="ph"><div class="pd y"></div><span class="pt">Options</span></div>
         <div class="pb">
           <div class="fi">
-            <label>Default entry type</label>
+            <label>Default type</label>
             <select id="importType">
-              <option value="test_cases">Test Cases</option>
-              <option value="prd">PRD / Feature Spec</option>
-              <option value="note">QA Note</option>
-              <option value="code">Code Snippet</option>
+              <option value="test_cases">Test Cases</option><option value="prd">PRD</option>
+              <option value="note">QA Note</option><option value="code">Code</option>
             </select>
           </div>
-          <div class="fi">
-            <label>Default feature area (optional)</label>
-            <input type="text" id="importArea" placeholder="e.g. FTUE, Store, Match Engine">
-          </div>
+          <div class="fi"><label>Default area tag</label><input type="text" id="importArea" placeholder="e.g. FTUE, Store"></div>
           <div class="fi" style="display:flex;align-items:center;gap:10px;">
             <input type="checkbox" id="splitSheets" checked style="width:auto;accent-color:var(--b)">
-            <label style="margin:0;cursor:pointer;" for="splitSheets">Split Excel sheets into separate KB entries</label>
+            <label style="margin:0;cursor:pointer;" for="splitSheets">Split Excel sheets into separate entries</label>
           </div>
           <div class="fi" style="display:flex;align-items:center;gap:10px;">
             <input type="checkbox" id="splitHeadings" checked style="width:auto;accent-color:var(--b)">
-            <label style="margin:0;cursor:pointer;" for="splitHeadings">Split TXT/MD by headings (##, ###)</label>
+            <label style="margin:0;cursor:pointer;" for="splitHeadings">Split TXT/MD by headings</label>
           </div>
         </div>
       </div>
-
-      <!-- Progress -->
       <div class="pn" id="importProgPanel" style="display:none;">
-        <div class="ph"><div class="pd g"></div><span class="pt">Upload Progress</span></div>
+        <div class="ph"><div class="pd g"></div><span class="pt">Progress</span></div>
         <div class="pb">
           <div class="prog-wrap">
-            <div class="prog-bar-bg"><div class="prog-bar" id="progBar"></div></div>
-            <div class="prog-label" id="progLabel">0 / 0 saved</div>
+            <div class="prog-bg"><div class="prog-bar" id="progBar"></div></div>
+            <div class="prog-lbl" id="progLbl">0 / 0 saved</div>
           </div>
-          <div id="progDetail" style="margin-top:10px;font-size:11px;color:var(--m);line-height:1.7;"></div>
+          <div id="progDetail" style="margin-top:10px;font-size:11px;color:var(--m);line-height:1.7;max-height:140px;overflow-y:auto;"></div>
         </div>
       </div>
     </div>
 
-    <!-- RIGHT: Preview + save -->
     <div>
       <div id="importPreviewWrap" style="display:none;">
         <div class="import-preview">
           <div class="ip-head">
-            <div class="ip-stat">
-              <strong id="chunkCount">0</strong> chunks detected ·
-              <strong id="chunkSelected">0</strong> selected
-            </div>
+            <div class="ip-stat"><strong id="chunkCount">0</strong> chunks · <strong id="chunkSelected">0</strong> selected</div>
             <div style="display:flex;gap:7px;flex-wrap:wrap;">
-              <button class="btn btn-s bsm" onclick="selectAllChunks(true)">Select All</button>
-              <button class="btn btn-s bsm" onclick="selectAllChunks(false)">Deselect All</button>
-              <button class="btn btn-g bsm" id="saveChunksBtn" onclick="saveSelectedChunks()">☁️ Save Selected to KB</button>
+              <button class="btn btn-s bsm" onclick="selectAllChunks(true)">All</button>
+              <button class="btn btn-s bsm" onclick="selectAllChunks(false)">None</button>
+              <button class="btn btn-g bsm" id="saveChunksBtn" onclick="saveSelectedChunks()">☁️ Save to KB</button>
             </div>
           </div>
           <div class="chunk-list" id="chunkList"></div>
         </div>
       </div>
-      <div class="empty" id="importEmpty">
-        Upload files on the left to preview chunks before saving to KB
-      </div>
+      <div class="empty" id="importEmpty">Upload files on the left to preview before saving</div>
     </div>
-
   </div>
 </div>
 
-<!-- ══ TAB 4: KNOWLEDGE BASE ══ -->
+<!-- ══ TAB 4: KB ══ -->
 <div class="tp" id="p-kb">
   <div class="sh">
     <h2>Cloud <span>Knowledge Base</span></h2>
-    <p>Stored in Cloudflare KV · persists across devices & sessions · enriches every impact analysis</p>
+    <p>Stored in Cloudflare KV · persists across devices · enriches every impact analysis</p>
   </div>
   <div class="g2">
     <div class="pn">
-      <div class="ph"><div class="pd g"></div><span class="pt">Add Single Entry</span></div>
+      <div class="ph"><div class="pd g"></div><span class="pt">Add Entry</span></div>
       <div class="pb">
-        <div class="fi">
-          <label>Type</label>
+        <div class="fi"><label>Type</label>
           <select id="kbType">
-            <option value="test_cases">Test Cases</option><option value="code">Code Snippet</option>
-            <option value="prd">PRD / Feature Spec</option><option value="note">QA Note / Bug Pattern</option>
+            <option value="test_cases">Test Cases</option><option value="code">Code</option>
+            <option value="prd">PRD</option><option value="note">QA Note</option>
           </select>
         </div>
-        <div class="fi"><label>Title</label><input type="text" id="kbTitle" placeholder="e.g. SA Activation — Full Test Suite v2"></div>
-        <div class="fi"><label>Feature / Area</label><input type="text" id="kbArea" placeholder="e.g. Super Ability, FTUE, Store"></div>
-        <div class="fi">
-          <label>Content</label>
-          <textarea id="kbContent" style="min-height:180px;" placeholder="Paste test cases, code snippets, PRD sections, or QA notes…"></textarea>
-        </div>
+        <div class="fi"><label>Title</label><input type="text" id="kbTitle" placeholder="e.g. SA Activation — Test Suite v2"></div>
+        <div class="fi"><label>Area</label><input type="text" id="kbArea" placeholder="e.g. Super Ability, FTUE, Store"></div>
+        <div class="fi"><label>Content</label><textarea id="kbContent" style="min-height:180px;" placeholder="Paste test cases, code, PRD text, or QA notes…"></textarea></div>
         <button class="btn btn-g bsm" onclick="saveKB()" style="width:100%;" id="kbSaveBtn">☁️ Save to Cloud KB</button>
       </div>
     </div>
     <div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--m);">
-          Entries: <strong style="color:var(--t);" id="kbTotal">—</strong>
-        </div>
+        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--m);">Entries: <strong style="color:var(--t);" id="kbTotal">—</strong></div>
         <div style="display:flex;gap:7px;align-items:center;">
           <select id="kbFilter" onchange="renderKB()" style="padding:5px 9px;font-size:10px;width:auto;">
             <option value="all">All</option><option value="test_cases">Test Cases</option>
@@ -527,9 +515,9 @@ select option{background:var(--s2)}
 </div><!-- /wrap -->
 
 <script>
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
 // CONFIG
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
 const WORKER   = 'https://orange-waterfall-030e.kunal-249.workers.dev';
 const AUTH     = 'qabp_hw2024';
 const PASSWORD = 'qa123';
@@ -541,16 +529,23 @@ const FEATURES = [
   'Player Scout','Dashboard','Notifications','iOS/Game Center','Android','Network/Offline'
 ];
 
+// 14-column internal format
+const EXCEL_COLS = [
+  'TC ID','Feature','Test Title','Category','Preconditions',
+  'Steps','Expected Result','Break Point','Systems','Edge Case',
+  'Priority','Status','Dev Result','QA Result'
+];
+
 let kbEntries    = [];
 let prdFileData  = null;
 let lastAnalysis = null;
 let lastPRD      = null;
 let failCount    = 0;
-let importChunks = []; // [{title, area, type, content, selected}]
+let importChunks = [];
 
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
 // LOCK
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
 function doLogin() {
   const pwd = document.getElementById('pwIn').value;
   const err = document.getElementById('lerr');
@@ -568,59 +563,158 @@ function doLogin() {
   }
 }
 
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
 // NAV
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
 function tab(id) {
   ['impact','prd','import','kb'].forEach(t => {
-    document.getElementById('p-'+t).classList.toggle('on', t === id);
-    document.getElementById('t-'+t).classList.toggle('on', t === id);
+    document.getElementById('p-'+t).classList.toggle('on', t===id);
+    document.getElementById('t-'+t).classList.toggle('on', t===id);
   });
-  if (id === 'kb') renderKB();
+  if (id==='kb') renderKB();
 }
 
-// ═══════════════════════════════════════════════
-// WORKER API
-// ═══════════════════════════════════════════════
-async function wFetch(path, method = 'GET', body = null) {
-  const opts = { method, headers: { 'Content-Type': 'application/json', 'X-Auth-Token': AUTH } };
+// ═══════════════════════════════════════════
+// WORKER
+// ═══════════════════════════════════════════
+async function wFetch(path, method='GET', body=null) {
+  const opts = { method, headers: { 'Content-Type':'application/json','X-Auth-Token':AUTH } };
   if (body) opts.body = JSON.stringify(body);
   const res  = await fetch(WORKER + path, opts);
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
 }
-
 async function wAI(prompt) {
-  const data = await wFetch('/ai/analyze', 'POST', { prompt });
-  return data.text;
+  const d = await wFetch('/ai/analyze','POST',{prompt});
+  return d.text;
 }
 
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
 // CLOUD STATUS
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
 function setCloud(state, label) {
-  document.getElementById('cdot').className = 'cdot ' + (state || '');
+  document.getElementById('cdot').className = 'cdot '+(state||'');
   const l = document.getElementById('cst');
   l.textContent = label;
   l.style.color = state==='ok'?'var(--g)':state==='er'?'var(--r)':state==='sy'?'var(--y)':'var(--m)';
 }
 
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
+// EXCEL DOWNLOAD — 14 columns
+// ═══════════════════════════════════════════
+function tcToRow(tc) {
+  // Map AI-generated tc fields to 14-column format
+  return [
+    tc.id            || '',
+    tc.feature       || '',
+    tc.title         || tc.test_title || '',
+    tc.category      || '',
+    tc.preconditions || '',
+    tc.steps         || '',
+    tc.expected      || tc.expected_result || '',
+    tc.break_point   || '',   // Break Point — AI may or may not fill this
+    tc.systems       || '',   // Systems
+    tc.edge_case     || (tc.category==='Edge Case'?'Yes':''),  // Edge Case flag
+    tc.priority      || '',
+    tc.status        || '',   // Status — blank for new
+    tc.dev_result    || '',   // Dev Result — blank
+    tc.qa_result     || '',   // QA Result — blank
+  ];
+}
+
+function buildWorkbook(tcs, sheetName) {
+  const wb  = XLSX.utils.book_new();
+  const rows = [EXCEL_COLS, ...tcs.map(tcToRow)];
+  const ws  = XLSX.utils.aoa_to_sheet(rows);
+
+  // Column widths
+  ws['!cols'] = [
+    {wch:10},{wch:18},{wch:40},{wch:14},{wch:28},
+    {wch:40},{wch:40},{wch:20},{wch:16},{wch:10},
+    {wch:10},{wch:12},{wch:14},{wch:12}
+  ];
+
+  // Header row style (row 1)
+  const headerRange = XLSX.utils.decode_range(ws['!ref']);
+  for (let C = headerRange.s.c; C <= headerRange.e.c; C++) {
+    const cellAddr = XLSX.utils.encode_cell({r:0, c:C});
+    if (!ws[cellAddr]) continue;
+    ws[cellAddr].s = {
+      font:    { bold: true, color: { rgb: 'FFFFFF' } },
+      fill:    { fgColor: { rgb: '1a1a2e' } },
+      alignment: { horizontal: 'center' }
+    };
+  }
+
+  // Priority colour coding
+  const prioColors = { P0:'FF3B5C', P1:'FF8C42', P2:'3B8BFF', P3:'00E5A0' };
+  for (let R = 1; R <= tcs.length; R++) {
+    const prioCell = XLSX.utils.encode_cell({r:R, c:10}); // Priority col
+    const val = ws[prioCell]?.v || '';
+    const col = prioColors[val];
+    if (col && ws[prioCell]) {
+      ws[prioCell].s = { font: { color: { rgb: col }, bold: true } };
+    }
+  }
+
+  XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0,31));
+  return wb;
+}
+
+function downloadExcel(source) {
+  const tcs      = source==='impact' ? (lastAnalysis?.test_cases||[]) : (lastPRD?.test_cases||[]);
+  const feature  = source==='impact'
+    ? (document.getElementById('cd').value.substring(0,30)||'Impact Analysis')
+    : (lastPRD?.feature_name||'PRD Test Cases');
+  const filename = source==='impact'
+    ? `Impact_TCs_${new Date().toISOString().slice(0,10)}.xlsx`
+    : `PRD_TCs_${(lastPRD?.feature_name||'Feature').replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.xlsx`;
+
+  if (!tcs.length) { toast('No test cases to download','er'); return; }
+
+  const wb = buildWorkbook(tcs, feature.substring(0,31));
+  XLSX.writeFile(wb, filename);
+  toast(`Downloaded ${filename} (${tcs.length} TCs) ✓`,'ok');
+}
+
+// ═══════════════════════════════════════════
+// CLIPBOARD COPY — tab-separated (pastes into Excel perfectly)
+// ═══════════════════════════════════════════
+function copyClipboard(source) {
+  const tcs = source==='impact' ? (lastAnalysis?.test_cases||[]) : (lastPRD?.test_cases||[]);
+  if (!tcs.length) { toast('No test cases to copy','er'); return; }
+
+  const header = EXCEL_COLS.join('\t');
+  const rows   = tcs.map(tc => tcToRow(tc).map(v => (v||'').replace(/\t/g,' ')).join('\t'));
+  const text   = [header, ...rows].join('\n');
+
+  navigator.clipboard.writeText(text)
+    .then(() => toast(`Copied ${tcs.length} test cases (tab-separated — paste directly into Excel) ✓`,'ok'))
+    .catch(() => {
+      // Fallback: show in textarea
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      toast(`Copied ${tcs.length} test cases ✓`,'ok');
+    });
+}
+
+// ═══════════════════════════════════════════
 // KB
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
 async function loadKB() {
   setCloud('sy','syncing…');
   try {
     const d = await wFetch('/kb');
-    kbEntries = d.entries || [];
+    kbEntries = d.entries||[];
     updateKBUI(); renderKB();
-    setCloud('ok', `☁️ ${kbEntries.length} entries`);
+    setCloud('ok',`☁️ ${kbEntries.length} entries`);
   } catch(e) {
     setCloud('er','cloud error');
-    document.getElementById('kbList').innerHTML =
-      `<div class="empty" style="color:var(--r);">Cannot reach Worker.<br><small>${e.message}</small><br><br>
-      Check: AUTH_TOKEN variable + QA_KB binding + GROQ_API_KEY are all set in Cloudflare.</div>`;
+    document.getElementById('kbList').innerHTML=`<div class="empty" style="color:var(--r);">Cannot reach Worker.<br><small>${e.message}</small><br><br>Check: AUTH_TOKEN + QA_KB binding + GROQ_API_KEY in Cloudflare.</div>`;
     toast(e.message,'er');
   }
 }
@@ -630,12 +724,12 @@ function updateKBUI() {
   document.getElementById('kbCnt').textContent   = n;
   document.getElementById('kbTotal').textContent = n;
   const p = document.getElementById('kbCtxPanel');
-  if (!n) { p.innerHTML = 'Cloud KB is empty. Use <strong>Bulk Import</strong> to add your test cases.'; return; }
+  if (!n) { p.innerHTML='Cloud KB empty. Use <strong>Bulk Import</strong> to add your test cases.'; return; }
   const tc=kbEntries.filter(e=>e.type==='test_cases').length,
         co=kbEntries.filter(e=>e.type==='code').length,
         pr=kbEntries.filter(e=>e.type==='prd').length,
         no=kbEntries.filter(e=>e.type==='note').length;
-  p.innerHTML = `<div style="color:var(--g);margin-bottom:7px;">☁️ ${n} entries enriching analysis</div>
+  p.innerHTML=`<div style="color:var(--g);margin-bottom:7px;">☁️ ${n} entries enriching analysis</div>
     ${tc?`<div>📋 ${tc} test case set${tc>1?'s':''}</div>`:''}
     ${co?`<div>💻 ${co} code snippet${co>1?'s':''}</div>`:''}
     ${pr?`<div>📄 ${pr} PRD/spec</div>`:''}
@@ -644,64 +738,61 @@ function updateKBUI() {
 
 function getKBContext() {
   if (!kbEntries.length) return '';
-  let ctx = '\n\n=== CLOUD KNOWLEDGE BASE ===\n';
-  kbEntries.slice(0, 8).forEach((e, i) => {
-    ctx += `\n[KB#${i+1} | ${e.type.toUpperCase()} | ${e.title} | ${e.area}]\n`;
-    ctx += e.content.substring(0, 500) + (e.content.length > 500 ? '…' : '') + '\n';
+  let ctx='\n\n=== CLOUD KNOWLEDGE BASE ===\n';
+  kbEntries.slice(0,8).forEach((e,i)=>{
+    ctx+=`\n[KB#${i+1} | ${e.type.toUpperCase()} | ${e.title} | ${e.area}]\n`;
+    ctx+=e.content.substring(0,500)+(e.content.length>500?'…':'')+'\n';
   });
   return ctx;
 }
 
 async function saveKB() {
-  const title   = document.getElementById('kbTitle').value.trim();
-  const content = document.getElementById('kbContent').value.trim();
-  const area    = document.getElementById('kbArea').value.trim();
-  const type    = document.getElementById('kbType').value;
-  if (!title || !content) { toast('Fill in Title and Content','er'); return; }
-  const btn = document.getElementById('kbSaveBtn');
-  btn.disabled = true; btn.textContent = 'Saving…';
+  const title=document.getElementById('kbTitle').value.trim();
+  const content=document.getElementById('kbContent').value.trim();
+  const area=document.getElementById('kbArea').value.trim();
+  const type=document.getElementById('kbType').value;
+  if (!title||!content){toast('Fill in Title and Content','er');return;}
+  const btn=document.getElementById('kbSaveBtn');
+  btn.disabled=true;btn.textContent='Saving…';
   setCloud('sy','saving…');
-  try {
-    const d = await wFetch('/kb','POST',{type,title,area,content});
-    kbEntries.unshift(d.entry); updateKBUI(); renderKB();
+  try{
+    const d=await wFetch('/kb','POST',{type,title,area,content});
+    kbEntries.unshift(d.entry);updateKBUI();renderKB();
     setCloud('ok',`☁️ ${kbEntries.length} entries`);
-    document.getElementById('kbTitle').value = '';
-    document.getElementById('kbArea').value  = '';
-    document.getElementById('kbContent').value = '';
+    document.getElementById('kbTitle').value='';
+    document.getElementById('kbArea').value='';
+    document.getElementById('kbContent').value='';
     toast('Saved ✓','ok');
-  } catch(e) { setCloud('er','error'); toast(e.message,'er'); }
-  btn.disabled = false; btn.textContent = '☁️ Save to Cloud KB';
+  }catch(e){setCloud('er','error');toast(e.message,'er');}
+  btn.disabled=false;btn.textContent='☁️ Save to Cloud KB';
 }
 
-async function deleteKB(id) {
+async function deleteKB(id){
   setCloud('sy','deleting…');
-  try {
+  try{
     await wFetch(`/kb/${id}`,'DELETE');
-    kbEntries = kbEntries.filter(e => e.id !== id);
-    updateKBUI(); renderKB();
-    setCloud('ok',`☁️ ${kbEntries.length} entries`);
-    toast('Deleted ✓','ok');
-  } catch(e) { setCloud('er','error'); toast(e.message,'er'); }
+    kbEntries=kbEntries.filter(e=>e.id!==id);updateKBUI();renderKB();
+    setCloud('ok',`☁️ ${kbEntries.length} entries`);toast('Deleted ✓','ok');
+  }catch(e){setCloud('er','error');toast(e.message,'er');}
 }
 
-async function clearKB() {
-  if (!confirm('Delete ALL cloud KB entries?')) return;
+async function clearKB(){
+  if(!confirm('Delete ALL cloud KB entries?'))return;
   setCloud('sy','clearing…');
-  try {
-    await wFetch('/kb','DELETE');
-    kbEntries = []; updateKBUI(); renderKB();
-    setCloud('ok','☁️ 0 entries'); toast('Cleared ✓','ok');
-  } catch(e) { setCloud('er','error'); toast(e.message,'er'); }
+  try{
+    await wFetch('/kb','DELETE');kbEntries=[];updateKBUI();renderKB();
+    setCloud('ok','☁️ 0 entries');toast('Cleared ✓','ok');
+  }catch(e){setCloud('er','error');toast(e.message,'er');}
 }
 
-function renderKB() {
-  const filter  = document.getElementById('kbFilter').value;
-  const list    = document.getElementById('kbList');
-  const entries = filter==='all' ? kbEntries : kbEntries.filter(e=>e.type===filter);
-  if (!entries.length) { list.innerHTML = '<div class="empty">No entries'+(filter!=='all'?' for this type':'')+'.</div>'; return; }
+function renderKB(){
+  const filter=document.getElementById('kbFilter').value;
+  const list=document.getElementById('kbList');
+  const entries=filter==='all'?kbEntries:kbEntries.filter(e=>e.type===filter);
+  if(!entries.length){list.innerHTML='<div class="empty">No entries'+(filter!=='all'?' for this type':'')+'.</div>';return;}
   const tl={test_cases:'Test Cases',code:'Code',prd:'PRD',note:'Note'};
   const tc={test_cases:'ktc',code:'kco',prd:'kpr',note:'kno'};
-  list.innerHTML = entries.map(e=>`
+  list.innerHTML=entries.map(e=>`
     <div class="kbe">
       <span class="kbb ${tc[e.type]||''}">${tl[e.type]||e.type}</span>
       <div class="kbc">
@@ -713,346 +804,85 @@ function renderKB() {
     </div>`).join('');
 }
 
-// ═══════════════════════════════════════════════
-// BULK IMPORT
-// ═══════════════════════════════════════════════
-function idov(e){e.preventDefault();document.getElementById('iuz').classList.add('drag')}
-function idol(){document.getElementById('iuz').classList.remove('drag')}
-function idop(e){e.preventDefault();idol();if(e.dataTransfer.files.length)importFiles({target:{files:e.dataTransfer.files}})}
-
-async function importFiles(e) {
-  const files = Array.from(e.target.files);
-  if (!files.length) return;
-  importChunks = [];
-  document.getElementById('iuz').classList.add('ok');
-  document.getElementById('iuz').querySelector('.ut').innerHTML = `<strong>${files.length} file${files.length>1?'s':''} loaded</strong> — processing…`;
-
-  for (const file of files) {
-    const ext = file.name.split('.').pop().toLowerCase();
-    try {
-      if (ext === 'xlsx' || ext === 'xls') {
-        await parseExcel(file);
-      } else if (ext === 'csv') {
-        await parseCSV(file);
-      } else if (ext === 'txt' || ext === 'md') {
-        await parseTxt(file);
-      }
-    } catch(err) {
-      toast(`Error reading ${file.name}: ${err.message}`, 'er');
-    }
-  }
-
-  renderImportPreview();
-  document.getElementById('ifi').value = '';
-}
-
-async function parseExcel(file) {
-  const splitSheets = document.getElementById('splitSheets').checked;
-  const defaultType = document.getElementById('importType').value;
-  const defaultArea = document.getElementById('importArea').value.trim();
-
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const wb = XLSX.read(e.target.result, { type: 'array' });
-        if (splitSheets) {
-          wb.SheetNames.forEach(sheetName => {
-            const ws  = wb.Sheets[sheetName];
-            const csv = XLSX.utils.sheet_to_csv(ws);
-            if (csv.trim().length > 10) {
-              importChunks.push({
-                title:    `${file.name} — ${sheetName}`,
-                area:     defaultArea || sheetName,
-                type:     defaultType,
-                content:  csv,
-                selected: true,
-                source:   `Excel sheet: ${sheetName}`,
-                rows:     csv.split('\n').length - 1,
-              });
-            }
-          });
-        } else {
-          // Combine all sheets
-          let combined = '';
-          wb.SheetNames.forEach(sheetName => {
-            const ws  = wb.Sheets[sheetName];
-            const csv = XLSX.utils.sheet_to_csv(ws);
-            combined += `\n=== Sheet: ${sheetName} ===\n${csv}\n`;
-          });
-          importChunks.push({
-            title:    file.name,
-            area:     defaultArea,
-            type:     defaultType,
-            content:  combined.trim(),
-            selected: true,
-            source:   `Excel (${wb.SheetNames.length} sheets)`,
-            rows:     combined.split('\n').length,
-          });
-        }
-        resolve();
-      } catch(err) { reject(err); }
-    };
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(file);
-  });
-}
-
-async function parseCSV(file) {
-  const defaultType = document.getElementById('importType').value;
-  const defaultArea = document.getElementById('importArea').value.trim();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target.result;
-      const rows    = content.split('\n').filter(r => r.trim()).length;
-      importChunks.push({
-        title:    file.name.replace('.csv',''),
-        area:     defaultArea,
-        type:     defaultType,
-        content:  content,
-        selected: true,
-        source:   `CSV file`,
-        rows:     rows - 1,
-      });
-      resolve();
-    };
-    reader.onerror = reject;
-    reader.readAsText(file);
-  });
-}
-
-async function parseTxt(file) {
-  const splitHeadings = document.getElementById('splitHeadings').checked;
-  const defaultType   = document.getElementById('importType').value;
-  const defaultArea   = document.getElementById('importArea').value.trim();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target.result;
-      if (splitHeadings) {
-        // Split by ## or ### headings
-        const sections = content.split(/\n(?=#{1,3}\s)/);
-        sections.forEach((section, i) => {
-          if (section.trim().length < 20) return;
-          const firstLine = section.split('\n')[0].replace(/^#+\s*/, '').trim();
-          importChunks.push({
-            title:    firstLine || `${file.name} — Section ${i+1}`,
-            area:     defaultArea,
-            type:     defaultType,
-            content:  section.trim(),
-            selected: true,
-            source:   `${file.name} (section ${i+1})`,
-            rows:     section.split('\n').length,
-          });
-        });
-        // If no headings found, import as whole
-        if (importChunks.length === 0 || sections.length <= 1) {
-          importChunks.push({
-            title:    file.name.replace(/\.(txt|md)$/i,''),
-            area:     defaultArea,
-            type:     defaultType,
-            content:  content,
-            selected: true,
-            source:   file.name,
-            rows:     content.split('\n').length,
-          });
-        }
-      } else {
-        importChunks.push({
-          title:    file.name.replace(/\.(txt|md)$/i,''),
-          area:     defaultArea,
-          type:     defaultType,
-          content:  content,
-          selected: true,
-          source:   file.name,
-          rows:     content.split('\n').length,
-        });
-      }
-      resolve();
-    };
-    reader.onerror = reject;
-    reader.readAsText(file);
-  });
-}
-
-function renderImportPreview() {
-  const wrap  = document.getElementById('importPreviewWrap');
-  const empty = document.getElementById('importEmpty');
-  if (!importChunks.length) {
-    wrap.style.display  = 'none';
-    empty.style.display = 'block';
-    empty.textContent   = 'No chunks detected. Check your file format.';
-    return;
-  }
-  wrap.style.display  = 'block';
-  empty.style.display = 'none';
-  updateChunkCounts();
-
-  const tl={test_cases:'Test Cases',code:'Code',prd:'PRD',note:'Note'};
-  const tcls={test_cases:'ktc',code:'kco',prd:'kpr',note:'kno'};
-
-  document.getElementById('chunkList').innerHTML = importChunks.map((c, i) => `
-    <div class="chunk" id="chunk-${i}">
-      <input type="checkbox" class="chunk-check" ${c.selected?'checked':''} onchange="toggleChunk(${i},this.checked)">
-      <div class="chunk-info">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span class="chunk-title">${c.title}</span>
-          <span class="kbb ${tcls[c.type]||'kno'}" style="font-size:9px;">${tl[c.type]||c.type}</span>
-        </div>
-        <div class="chunk-meta">📁 ${c.source} · ${c.rows} rows · ${c.content.length} chars${c.area?' · 📍 '+c.area:''}</div>
-        <div class="chunk-preview">${c.content.substring(0,180).replace(/\n/g,' ')}…</div>
-        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
-          <input type="text" value="${c.title}" onchange="importChunks[${i}].title=this.value"
-            style="flex:1;min-width:140px;padding:4px 8px;font-size:11px;background:var(--s3);border:1px solid var(--bd2);color:var(--t);border-radius:2px;outline:none;" placeholder="Title">
-          <input type="text" value="${c.area||''}" onchange="importChunks[${i}].area=this.value"
-            style="width:130px;padding:4px 8px;font-size:11px;background:var(--s3);border:1px solid var(--bd2);color:var(--t);border-radius:2px;outline:none;" placeholder="Area tag">
-          <select onchange="importChunks[${i}].type=this.value" style="padding:4px 8px;font-size:11px;width:auto;background:var(--s3);border:1px solid var(--bd2);color:var(--t);border-radius:2px;outline:none;">
-            <option value="test_cases" ${c.type==='test_cases'?'selected':''}>Test Cases</option>
-            <option value="prd"        ${c.type==='prd'       ?'selected':''}>PRD</option>
-            <option value="code"       ${c.type==='code'      ?'selected':''}>Code</option>
-            <option value="note"       ${c.type==='note'      ?'selected':''}>Note</option>
-          </select>
-        </div>
-      </div>
-    </div>`).join('');
-
-  document.getElementById('chunkCount').textContent    = importChunks.length;
-  document.getElementById('chunkSelected').textContent = importChunks.filter(c=>c.selected).length;
-}
-
-function toggleChunk(i, val) {
-  importChunks[i].selected = val;
-  updateChunkCounts();
-}
-
-function updateChunkCounts() {
-  document.getElementById('chunkCount').textContent    = importChunks.length;
-  document.getElementById('chunkSelected').textContent = importChunks.filter(c=>c.selected).length;
-}
-
-function selectAllChunks(val) {
-  importChunks.forEach(c => c.selected = val);
-  renderImportPreview();
-}
-
-async function saveSelectedChunks() {
-  const selected = importChunks.filter(c => c.selected);
-  if (!selected.length) { toast('No chunks selected','er'); return; }
-
-  const btn = document.getElementById('saveChunksBtn');
-  btn.disabled = true;
-  document.getElementById('importProgPanel').style.display = 'block';
-  const bar   = document.getElementById('progBar');
-  const lbl   = document.getElementById('progLabel');
-  const detail= document.getElementById('progDetail');
-  let saved = 0, failed = 0;
-  detail.innerHTML = '';
-
-  for (let i = 0; i < selected.length; i++) {
-    const c = selected[i];
-    lbl.textContent = `${i+1} / ${selected.length} saving…`;
-    bar.style.width = `${Math.round(((i) / selected.length) * 100)}%`;
-    try {
-      const d = await wFetch('/kb','POST',{
-        type:    c.type,
-        title:   c.title || `Import ${i+1}`,
-        area:    c.area  || '',
-        content: c.content,
-      });
-      kbEntries.unshift(d.entry);
-      saved++;
-      detail.innerHTML += `<span style="color:var(--g);">✓</span> ${c.title}<br>`;
-    } catch(e) {
-      failed++;
-      detail.innerHTML += `<span style="color:var(--r);">✗</span> ${c.title}: ${e.message}<br>`;
-    }
-    // Small delay to avoid rate limiting
-    await new Promise(res => setTimeout(res, 200));
-  }
-
-  bar.style.width = '100%';
-  lbl.textContent = `Done — ${saved} saved${failed?`, ${failed} failed`:''}`;
-  updateKBUI();
-  setCloud('ok', `☁️ ${kbEntries.length} entries`);
-  btn.disabled = false;
-  toast(`${saved} entries saved to cloud KB ✓`, saved > 0 ? 'ok' : 'er');
-  // Clear processed chunks
-  importChunks = importChunks.filter(c => !c.selected);
-  setTimeout(renderImportPreview, 500);
-}
-
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
 // IMPACT ANALYZER
-// ═══════════════════════════════════════════════
-async function runAnalysis() {
-  const cd = document.getElementById('cd').value.trim();
-  if (!cd) { toast('Describe the change first','er'); return; }
-  const ct   = document.getElementById('ct').value;
-  const pl   = document.getElementById('pl').value;
-  const tags = Array.from(document.querySelectorAll('#ftags .tag.on')).map(t=>t.dataset.v);
-  const kbCtx = getKBContext();
+// ═══════════════════════════════════════════
+async function runAnalysis(){
+  const cd=document.getElementById('cd').value.trim();
+  if(!cd){toast('Describe the change first','er');return;}
+  const ct=document.getElementById('ct').value;
+  const pl=document.getElementById('pl').value;
+  const tags=Array.from(document.querySelectorAll('#ftags .tag.on')).map(t=>t.dataset.v);
+  const kbCtx=getKBContext();
 
-  document.getElementById('anBtn').disabled = true;
-  const panel = document.getElementById('arPanel');
-  panel.style.display = 'block';
+  document.getElementById('anBtn').disabled=true;
+  const panel=document.getElementById('arPanel');
+  panel.style.display='block';
   document.getElementById('aLdr').classList.add('on');
-  document.getElementById('aOut').style.display = 'none';
+  document.getElementById('aOut').style.display='none';
   panel.scrollIntoView({behavior:'smooth'});
 
   const lbls=['Scanning checklist items…','Mapping risk areas…','Generating test cases…','Finalizing report…'];
-  let li=0; const lbl=document.getElementById('aLbl');
+  let li=0;const lbl=document.getElementById('aLbl');
   const iv=setInterval(()=>{li=(li+1)%lbls.length;lbl.textContent=lbls[li];},2000);
 
-  const prompt=`You are a senior QA engineer for Hitwicket, a mobile cricket game (Android + iOS). You know all systems deeply: FTUE, Super Abilities (SA/mana/configurable thresholds), Match Engine, Store (chests/offers/scouting/EPB/SPB), Squad/Lineup, Player Detail/Training, League, PvP/Trophy Road, Auction, Alliance, HW TV, Season Pass, Player Scout, Dashboard, Notifications, Game Center (iOS), WhatsApp/Facebook/Google Play/Apple ID auth flows.
+  const prompt=`You are a senior QA engineer for Hitwicket, a mobile cricket game (Android + iOS). You know all systems: FTUE, Super Abilities (SA/mana/configurable threshold), Match Engine, Store (chests/offers/scouting/EPB/SPB), Squad/Lineup, Player Detail/Training, League, PvP/Trophy Road, Auction, Alliance, HW TV, Season Pass, Player Scout, Dashboard, Notifications, Game Center (iOS), auth flows.
 
 Developer change:
 TYPE: ${ct}
 PLATFORM: ${pl}
 TAGS: ${tags.length?tags.join(', '):'not specified'}
-DESCRIPTION:
-${cd}
+DESCRIPTION: ${cd}
 ${kbCtx}
 
-Respond ONLY with valid JSON, no markdown fences, no extra text:
-
+Respond ONLY with valid JSON, no markdown:
 {
-  "summary": "2-3 sentence risk summary",
-  "risk_score": "CRITICAL|HIGH|MEDIUM|LOW",
-  "impact_areas": [{"title":"area","severity":"critical|high|medium|low","items":["check1","check2"]}],
-  "test_cases": [{"id":"TC-001","feature":"area","title":"title","category":"Functional|Regression|Edge Case|UI|Performance","preconditions":"setup","steps":"1. Do X  2. Tap Y","expected":"outcome","priority":"P0|P1|P2|P3"}],
-  "edge_cases": ["case1"],
-  "downstream_risks": ["risk1"],
-  "regression_scope": ["area1"]
+  "summary":"2-3 sentence risk summary",
+  "risk_score":"CRITICAL|HIGH|MEDIUM|LOW",
+  "impact_areas":[{"title":"area","severity":"critical|high|medium|low","items":["check1","check2"]}],
+  "test_cases":[{
+    "id":"TC-001","feature":"area","title":"test title",
+    "category":"Functional|Regression|Edge Case|UI|Performance",
+    "preconditions":"setup required",
+    "steps":"1. Do X  2. Tap Y  3. Check Z",
+    "expected":"expected outcome",
+    "break_point":"what would cause failure",
+    "systems":"affected systems/modules",
+    "edge_case":"Yes|No",
+    "priority":"P0|P1|P2|P3",
+    "status":"","dev_result":"","qa_result":""
+  }],
+  "edge_cases":["case1"],
+  "downstream_risks":["risk1"],
+  "regression_scope":["area1"]
 }
+Rules: min 20 test cases, min 6 impact areas, min 8 edge cases. Be specific to Hitwicket. P0=blocker, P1=critical regression, P2=important, P3=low.`;
 
-Rules: min 20 test cases, min 6 impact areas, min 8 edge cases. Be specific to Hitwicket screens. P0=blocker, P1=critical regression, P2=important, P3=low.`;
-
-  try {
-    const raw = await wAI(prompt);
+  try{
+    const raw=await wAI(prompt);
     clearInterval(iv);
     let result;
-    try { result=JSON.parse(raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim()); }
-    catch { const m=raw.match(/\{[\s\S]*\}/); if(m) result=JSON.parse(m[0]); else throw new Error('Could not parse AI response'); }
-    lastAnalysis = result;
+    try{result=JSON.parse(raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim());}
+    catch{const m=raw.match(/\{[\s\S]*\}/);if(m)result=JSON.parse(m[0]);else throw new Error('Could not parse AI response');}
+    lastAnalysis=result;
     renderAnalysis(result);
-    document.getElementById('aTime').textContent = 'Analyzed '+new Date().toLocaleTimeString();
-  } catch(e) {
+    document.getElementById('aTime').textContent='Analyzed '+new Date().toLocaleTimeString();
+  }catch(e){
     clearInterval(iv);
     document.getElementById('aLdr').classList.remove('on');
-    document.getElementById('aOut').style.display = 'block';
-    document.getElementById('aCards').innerHTML = `<div style="color:var(--r);padding:10px;font-size:13px;">Error: ${e.message}</div>`;
+    document.getElementById('aOut').style.display='block';
+    document.getElementById('aCards').innerHTML=`<div style="color:var(--r);padding:10px;font-size:13px;">Error: ${e.message}</div>`;
     toast(e.message,'er');
   }
-  document.getElementById('anBtn').disabled = false;
+  document.getElementById('anBtn').disabled=false;
 }
 
-function renderAnalysis(r) {
+function renderAnalysis(r){
   document.getElementById('aLdr').classList.remove('on');
-  document.getElementById('aOut').style.display = 'block';
+  document.getElementById('aOut').style.display='block';
   const tcs=r.test_cases||[];
-  const p0=tcs.filter(t=>t.priority==='P0').length, p1=tcs.filter(t=>t.priority==='P1').length,
-        p2=tcs.filter(t=>t.priority==='P2').length, p3=tcs.filter(t=>t.priority==='P3').length;
+  const p0=tcs.filter(t=>t.priority==='P0').length,p1=tcs.filter(t=>t.priority==='P1').length,
+        p2=tcs.filter(t=>t.priority==='P2').length,p3=tcs.filter(t=>t.priority==='P3').length;
   const rc={CRITICAL:'nr',HIGH:'no',MEDIUM:'nb2',LOW:'ng'}[r.risk_score]||'nb2';
   document.getElementById('aSbar').innerHTML=`
     <div class="si"><span class="sn ${rc}">${r.risk_score||'—'}</span><span class="sl">Risk</span></div>
@@ -1082,41 +912,45 @@ function renderAnalysis(r) {
     document.getElementById('aTCs').innerHTML=`
       <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--g);margin-bottom:10px;">✅ Test Cases (${tcs.length})</div>
       <div style="overflow-x:auto;"><table class="tct">
-        <thead><tr><th>ID</th><th>Feature</th><th>Title</th><th>Category</th><th>Preconditions</th><th>Steps</th><th>Expected</th><th>Priority</th></tr></thead>
+        <thead><tr>
+          <th>TC ID</th><th>Feature</th><th>Test Title</th><th>Category</th>
+          <th>Preconditions</th><th>Steps</th><th>Expected Result</th>
+          <th>Break Point</th><th>Systems</th><th>Edge Case</th>
+          <th>Priority</th><th>Status</th><th>Dev Result</th><th>QA Result</th>
+        </tr></thead>
         <tbody>${tcs.map(tc=>`<tr>
-          <td class="tid">${tc.id||''}</td><td>${tc.feature||''}</td><td>${tc.title||''}</td><td>${tc.category||''}</td>
-          <td style="min-width:110px;">${tc.preconditions||''}</td>
+          <td class="tid">${tc.id||''}</td>
+          <td>${tc.feature||''}</td>
+          <td>${tc.title||''}</td>
+          <td>${tc.category||''}</td>
+          <td style="min-width:120px;">${tc.preconditions||''}</td>
           <td style="min-width:180px;">${tc.steps||''}</td>
           <td style="min-width:160px;">${tc.expected||''}</td>
+          <td>${tc.break_point||''}</td>
+          <td>${tc.systems||''}</td>
+          <td>${tc.edge_case||''}</td>
           <td><span class="pb2 ${pc[tc.priority]||'pp2'}">${tc.priority||'P2'}</span></td>
+          <td></td><td></td><td></td>
         </tr>`).join('')}</tbody>
       </table></div>`;
   }
 }
 
-async function saveAnalysisToKB() {
-  if (!lastAnalysis) { toast('No analysis to save','er'); return; }
-  const cd   = document.getElementById('cd').value.substring(0,60);
-  const tags = Array.from(document.querySelectorAll('#ftags .tag.on')).map(t=>t.dataset.v).join(', ');
+async function saveAnalysisToKB(){
+  if(!lastAnalysis){toast('No analysis to save','er');return;}
+  const cd=document.getElementById('cd').value.substring(0,60);
+  const tags=Array.from(document.querySelectorAll('#ftags .tag.on')).map(t=>t.dataset.v).join(', ');
   setCloud('sy','saving…');
-  try {
+  try{
     const d=await wFetch('/kb','POST',{type:'test_cases',title:'Impact: '+cd+'…',area:tags||'Impact Analysis',content:JSON.stringify(lastAnalysis,null,2)});
-    kbEntries.unshift(d.entry); updateKBUI();
-    setCloud('ok',`☁️ ${kbEntries.length} entries`);
-    toast('Saved to KB ✓','ok');
-  } catch(e){ setCloud('er','error'); toast(e.message,'er'); }
+    kbEntries.unshift(d.entry);updateKBUI();
+    setCloud('ok',`☁️ ${kbEntries.length} entries`);toast('Saved to KB ✓','ok');
+  }catch(e){setCloud('er','error');toast(e.message,'er');}
 }
 
-function copyAnalysisCSV(){
-  if(!lastAnalysis?.test_cases?.length){toast('No test cases','er');return;}
-  const h='TC ID,Feature,Title,Category,Preconditions,Steps,Expected,Priority';
-  const rows=lastAnalysis.test_cases.map(tc=>[tc.id,tc.feature,tc.title,tc.category,tc.preconditions,tc.steps,tc.expected,tc.priority].map(v=>'"'+(v||'').replace(/"/g,'""')+'"').join(','));
-  navigator.clipboard.writeText([h,...rows].join('\n')).then(()=>toast('CSV copied ✓','ok')).catch(()=>toast('Copy failed','er'));
-}
-
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
 // PRD → TEST CASES
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
 function pdov(e){e.preventDefault();document.getElementById('puz').classList.add('drag')}
 function pdol(){document.getElementById('puz').classList.remove('drag')}
 function pdop(e){e.preventDefault();pdol();if(e.dataTransfer.files[0])ppf(e.dataTransfer.files[0])}
@@ -1139,20 +973,31 @@ async function runPRD(){
   document.getElementById('pOut').style.display='none';
   document.getElementById('pEmpty').style.display='none';
   document.getElementById('prdBtn').disabled=true;
-  const lbls=['Reading document…','Understanding requirements…','Generating test cases…','Formatting output…'];
+  const lbls=['Reading document…','Understanding requirements…','Generating test cases…','Formatting…'];
   let li=0;const ll=document.getElementById('pLbl');
   const iv=setInterval(()=>{li=(li+1)%lbls.length;ll.textContent=lbls[li];},2000);
-
   const content=prdFileData?.type==='text'?prdFileData.data:txt;
+
   const prompt=`You are a senior QA engineer for Hitwicket, a mobile cricket game. Analyze this PRD and generate comprehensive test cases.
 
-PRD CONTENT:
+PRD:
 ${content}
-${focus?'\nSPECIAL FOCUS: '+focus:''}
+${focus?'\nFOCUS: '+focus:''}
 
 Respond ONLY with valid JSON (no markdown):
-{"feature_name":"name","test_cases":[{"id":"TC-001","feature":"sub-feature","title":"title","category":"Functional|UI|Regression|Edge Case|Performance","preconditions":"setup","steps":"1. X  2. Y","expected_result":"outcome","priority":"${prio==='P0-P3'?'P0|P1|P2|P3':'Critical|High|Medium|Low'}","platform":"Android|iOS|Both"}]}
-Generate 25-35 test cases. Format: ${fmt}. Be specific to Hitwicket.`;
+{"feature_name":"name","test_cases":[{
+  "id":"TC-001","feature":"sub-feature","title":"title",
+  "category":"Functional|UI|Regression|Edge Case|Performance",
+  "preconditions":"setup","steps":"1. X  2. Y",
+  "expected_result":"outcome",
+  "break_point":"what causes failure",
+  "systems":"affected modules",
+  "edge_case":"Yes|No",
+  "priority":"${prio==='P0-P3'?'P0|P1|P2|P3':'Critical|High|Medium|Low'}",
+  "platform":"Android|iOS|Both",
+  "status":"","dev_result":"","qa_result":""
+}]}
+Generate 25-35 test cases. Format: ${fmt}. Be specific to Hitwicket flows.`;
 
   try{
     const raw=await wAI(prompt);
@@ -1160,7 +1005,7 @@ Generate 25-35 test cases. Format: ${fmt}. Be specific to Hitwicket.`;
     let result;
     try{result=JSON.parse(raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim());}
     catch{const m=raw.match(/\{[\s\S]*\}/);if(m)result=JSON.parse(m[0]);else throw new Error('Parse failed');}
-    lastPRD=result; renderPRD(result);
+    lastPRD=result;renderPRD(result);
   }catch(e){
     clearInterval(iv);
     document.getElementById('pLdr').classList.remove('on');
@@ -1175,22 +1020,22 @@ function renderPRD(r){
   document.getElementById('pLdr').classList.remove('on');
   document.getElementById('pOut').style.display='block';
   const tcs=r.test_cases||[];
-  document.getElementById('pStats').textContent=`${r.feature_name||'Feature'} · ${tcs.length} test cases`;
+  document.getElementById('pStats').textContent=`${r.feature_name||'Feature'} · ${tcs.length} test cases generated`;
   const pc={P0:'pp0',P1:'pp1',P2:'pp2',P3:'pp3',Critical:'pp0',High:'pp1',Medium:'pp2',Low:'pp3'};
   document.getElementById('pTBody').innerHTML=tcs.map(tc=>`<tr>
-    <td class="tid">${tc.id||''}</td><td>${tc.feature||''}</td><td>${tc.title||''}</td><td>${tc.category||''}</td>
+    <td class="tid">${tc.id||''}</td>
+    <td>${tc.feature||''}</td>
+    <td>${tc.title||''}</td>
+    <td>${tc.category||''}</td>
     <td style="min-width:120px;">${tc.preconditions||''}</td>
     <td style="min-width:180px;">${tc.steps||''}</td>
     <td style="min-width:160px;">${tc.expected_result||tc.expected||''}</td>
+    <td>${tc.break_point||''}</td>
+    <td>${tc.systems||''}</td>
+    <td>${tc.edge_case||''}</td>
     <td><span class="pb2 ${pc[tc.priority]||'pp2'}">${tc.priority||''}</span></td>
+    <td></td><td></td><td></td>
   </tr>`).join('');
-}
-
-function copyPRDCSV(){
-  if(!lastPRD?.test_cases?.length){toast('No test cases','er');return;}
-  const h='TC ID,Feature,Title,Category,Preconditions,Steps,Expected,Priority,Platform';
-  const rows=lastPRD.test_cases.map(tc=>[tc.id,tc.feature,tc.title,tc.category,tc.preconditions,tc.steps,tc.expected_result||tc.expected,tc.priority,tc.platform||'Both'].map(v=>'"'+(v||'').replace(/"/g,'""')+'"').join(','));
-  navigator.clipboard.writeText([h,...rows].join('\n')).then(()=>toast('CSV copied ✓','ok')).catch(()=>toast('Copy failed','er'));
 }
 
 async function savePRDToKB(){
@@ -1199,23 +1044,192 @@ async function savePRDToKB(){
   try{
     const d=await wFetch('/kb','POST',{type:'prd',title:'PRD: '+(lastPRD.feature_name||'Feature'),area:lastPRD.feature_name||'',content:JSON.stringify(lastPRD,null,2)});
     kbEntries.unshift(d.entry);updateKBUI();
-    setCloud('ok',`☁️ ${kbEntries.length} entries`);toast('Saved ✓','ok');
+    setCloud('ok',`☁️ ${kbEntries.length} entries`);toast('Saved to KB ✓','ok');
   }catch(e){setCloud('er','error');toast(e.message,'er');}
 }
 
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
+// BULK IMPORT
+// ═══════════════════════════════════════════
+function idov(e){e.preventDefault();document.getElementById('iuz').classList.add('drag')}
+function idol(){document.getElementById('iuz').classList.remove('drag')}
+function idop(e){e.preventDefault();idol();if(e.dataTransfer.files.length)importFiles({target:{files:e.dataTransfer.files}})}
+
+async function importFiles(e){
+  const files=Array.from(e.target.files);
+  if(!files.length)return;
+  importChunks=[];
+  document.getElementById('iuz').classList.add('ok');
+  document.getElementById('iuz').querySelector('.ut').innerHTML=`<strong>${files.length} file${files.length>1?'s':''} loaded</strong> — processing…`;
+  for(const file of files){
+    const ext=file.name.split('.').pop().toLowerCase();
+    try{
+      if(ext==='xlsx'||ext==='xls') await parseExcel(file);
+      else if(ext==='csv') await parseCSV(file);
+      else if(ext==='txt'||ext==='md') await parseTxt(file);
+    }catch(err){toast(`Error reading ${file.name}: ${err.message}`,'er');}
+  }
+  renderImportPreview();
+  document.getElementById('ifi').value='';
+}
+
+async function parseExcel(file){
+  const split=document.getElementById('splitSheets').checked;
+  const defType=document.getElementById('importType').value;
+  const defArea=document.getElementById('importArea').value.trim();
+  return new Promise((res,rej)=>{
+    const rd=new FileReader();
+    rd.onload=e=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        if(split){
+          wb.SheetNames.forEach(sn=>{
+            const ws=wb.Sheets[sn];
+            const csv=XLSX.utils.sheet_to_csv(ws);
+            if(csv.trim().length>10) importChunks.push({title:`${file.name} — ${sn}`,area:defArea||sn,type:defType,content:csv,selected:true,source:`Excel: ${sn}`,rows:csv.split('\n').length-1});
+          });
+        } else {
+          let combined='';
+          wb.SheetNames.forEach(sn=>{combined+=`\n=== ${sn} ===\n${XLSX.utils.sheet_to_csv(wb.Sheets[sn])}\n`;});
+          importChunks.push({title:file.name,area:defArea,type:defType,content:combined.trim(),selected:true,source:`Excel (${wb.SheetNames.length} sheets)`,rows:combined.split('\n').length});
+        }
+        res();
+      }catch(err){rej(err);}
+    };
+    rd.onerror=rej;rd.readAsArrayBuffer(file);
+  });
+}
+
+async function parseCSV(file){
+  const defType=document.getElementById('importType').value;
+  const defArea=document.getElementById('importArea').value.trim();
+  return new Promise((res,rej)=>{
+    const rd=new FileReader();
+    rd.onload=e=>{
+      const content=e.target.result;
+      importChunks.push({title:file.name.replace('.csv',''),area:defArea,type:defType,content,selected:true,source:'CSV',rows:content.split('\n').filter(r=>r.trim()).length-1});
+      res();
+    };
+    rd.onerror=rej;rd.readAsText(file);
+  });
+}
+
+async function parseTxt(file){
+  const splitH=document.getElementById('splitHeadings').checked;
+  const defType=document.getElementById('importType').value;
+  const defArea=document.getElementById('importArea').value.trim();
+  return new Promise((res,rej)=>{
+    const rd=new FileReader();
+    rd.onload=e=>{
+      const content=e.target.result;
+      if(splitH){
+        const sections=content.split(/\n(?=#{1,3}\s)/);
+        let added=0;
+        sections.forEach((sec,i)=>{
+          if(sec.trim().length<20)return;
+          const fl=sec.split('\n')[0].replace(/^#+\s*/,'').trim();
+          importChunks.push({title:fl||`${file.name} §${i+1}`,area:defArea,type:defType,content:sec.trim(),selected:true,source:`${file.name} §${i+1}`,rows:sec.split('\n').length});
+          added++;
+        });
+        if(!added) importChunks.push({title:file.name.replace(/\.(txt|md)$/i,''),area:defArea,type:defType,content,selected:true,source:file.name,rows:content.split('\n').length});
+      } else {
+        importChunks.push({title:file.name.replace(/\.(txt|md)$/i,''),area:defArea,type:defType,content,selected:true,source:file.name,rows:content.split('\n').length});
+      }
+      res();
+    };
+    rd.onerror=rej;rd.readAsText(file);
+  });
+}
+
+function renderImportPreview(){
+  const wrap=document.getElementById('importPreviewWrap');
+  const empty=document.getElementById('importEmpty');
+  if(!importChunks.length){wrap.style.display='none';empty.style.display='block';empty.textContent='No chunks detected.';return;}
+  wrap.style.display='block';empty.style.display='none';
+  const tl={test_cases:'Test Cases',code:'Code',prd:'PRD',note:'Note'};
+  const tcls={test_cases:'ktc',code:'kco',prd:'kpr',note:'kno'};
+  document.getElementById('chunkList').innerHTML=importChunks.map((c,i)=>`
+    <div class="chunk">
+      <input type="checkbox" class="chunk-check" ${c.selected?'checked':''} onchange="importChunks[${i}].selected=this.checked;updateChunkCounts()">
+      <div class="chunk-info">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span class="chunk-title">${c.title}</span>
+          <span class="kbb ${tcls[c.type]||'kno'}" style="font-size:9px;">${tl[c.type]||c.type}</span>
+        </div>
+        <div class="chunk-meta">📁 ${c.source} · ${c.rows} rows · ${c.content.length} chars${c.area?' · 📍 '+c.area:''}</div>
+        <div class="chunk-preview">${c.content.substring(0,160).replace(/\n/g,' ')}…</div>
+        <div style="display:flex;gap:7px;margin-top:6px;flex-wrap:wrap;">
+          <input type="text" value="${c.title}" onchange="importChunks[${i}].title=this.value"
+            style="flex:1;min-width:130px;padding:4px 8px;font-size:11px;background:var(--s3);border:1px solid var(--bd2);color:var(--t);border-radius:2px;outline:none;" placeholder="Title">
+          <input type="text" value="${c.area||''}" onchange="importChunks[${i}].area=this.value"
+            style="width:120px;padding:4px 8px;font-size:11px;background:var(--s3);border:1px solid var(--bd2);color:var(--t);border-radius:2px;outline:none;" placeholder="Area tag">
+          <select onchange="importChunks[${i}].type=this.value" style="padding:4px 8px;font-size:11px;width:auto;background:var(--s3);border:1px solid var(--bd2);color:var(--t);border-radius:2px;outline:none;">
+            <option value="test_cases" ${c.type==='test_cases'?'selected':''}>Test Cases</option>
+            <option value="prd"        ${c.type==='prd'?'selected':''}>PRD</option>
+            <option value="code"       ${c.type==='code'?'selected':''}>Code</option>
+            <option value="note"       ${c.type==='note'?'selected':''}>Note</option>
+          </select>
+        </div>
+      </div>
+    </div>`).join('');
+  updateChunkCounts();
+}
+
+function updateChunkCounts(){
+  document.getElementById('chunkCount').textContent=importChunks.length;
+  document.getElementById('chunkSelected').textContent=importChunks.filter(c=>c.selected).length;
+}
+
+function selectAllChunks(val){importChunks.forEach(c=>c.selected=val);renderImportPreview();}
+
+async function saveSelectedChunks(){
+  const sel=importChunks.filter(c=>c.selected);
+  if(!sel.length){toast('No chunks selected','er');return;}
+  const btn=document.getElementById('saveChunksBtn');
+  btn.disabled=true;
+  document.getElementById('importProgPanel').style.display='block';
+  const bar=document.getElementById('progBar');
+  const lbl=document.getElementById('progLbl');
+  const det=document.getElementById('progDetail');
+  let saved=0,failed=0;det.innerHTML='';
+
+  for(let i=0;i<sel.length;i++){
+    const c=sel[i];
+    lbl.textContent=`${i+1} / ${sel.length} saving…`;
+    bar.style.width=`${Math.round((i/sel.length)*100)}%`;
+    try{
+      const d=await wFetch('/kb','POST',{type:c.type,title:c.title||`Import ${i+1}`,area:c.area||'',content:c.content});
+      kbEntries.unshift(d.entry);saved++;
+      det.innerHTML+=`<span style="color:var(--g);">✓</span> ${c.title}<br>`;
+    }catch(e){
+      failed++;
+      det.innerHTML+=`<span style="color:var(--r);">✗</span> ${c.title}: ${e.message}<br>`;
+    }
+    await new Promise(r=>setTimeout(r,200));
+  }
+
+  bar.style.width='100%';
+  lbl.textContent=`Done — ${saved} saved${failed?`, ${failed} failed`:''}`;
+  updateKBUI();setCloud('ok',`☁️ ${kbEntries.length} entries`);
+  btn.disabled=false;
+  toast(`${saved} entries saved to KB ✓`,saved>0?'ok':'er');
+  importChunks=importChunks.filter(c=>!c.selected);
+  setTimeout(renderImportPreview,400);
+}
+
+// ═══════════════════════════════════════════
 // TOAST
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
 let tT;
 function toast(msg,type='ok'){
   const el=document.getElementById('toast');
   el.textContent=msg;el.className='toast '+type+' on';
-  clearTimeout(tT);tT=setTimeout(()=>el.className='toast',3200);
+  clearTimeout(tT);tT=setTimeout(()=>el.className='toast',3500);
 }
 
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
 // INIT
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
 window.addEventListener('DOMContentLoaded',()=>{
   const w=document.getElementById('ftags');
   FEATURES.forEach(f=>{
