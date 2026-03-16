@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QA Blueprint v5</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -20,30 +21,44 @@ body::before{content:'';position:fixed;inset:0;
   background-image:linear-gradient(rgba(59,139,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(59,139,255,.02) 1px,transparent 1px);
   background-size:32px 32px;pointer-events:none;z-index:0}
 
-/* LOCK */
-#LS{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center}
-.lb{position:relative;background:var(--s1);border:1px solid var(--bd2);border-radius:4px;padding:48px 40px 40px;width:100%;max-width:380px;text-align:center}
-.li{font-size:36px;margin-bottom:14px;display:block}
-.lt{font-family:var(--dsp);font-size:34px;letter-spacing:5px;color:var(--t);margin-bottom:4px}
-.ls{font-size:10px;letter-spacing:3px;color:var(--m);text-transform:uppercase;margin-bottom:26px}
-.lr{display:flex;gap:8px;margin-bottom:8px}
-.lr input{flex:1;background:var(--bg);border:1px solid var(--bd2);color:var(--t);font-family:var(--mono);font-size:14px;padding:10px 12px;border-radius:2px;outline:none;letter-spacing:3px;transition:border-color .2s}
-.lr input:focus{border-color:var(--b)}
-.lbtn{background:var(--r);color:#fff;border:none;padding:10px 16px;font-family:var(--dsp);font-size:15px;letter-spacing:2px;cursor:pointer;border-radius:2px}
-.lbtn:hover{opacity:.85}
-.lerr{font-size:11px;color:var(--r);min-height:16px}
+/* LOGIN SCREEN */
+#loginScreen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center}
+#loginScreen::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 50% 40%,rgba(59,139,255,.07),transparent 70%)}
+.login-box{position:relative;background:var(--s1);border:1px solid var(--bd2);border-radius:4px;padding:48px 40px 44px;width:100%;max-width:400px;text-align:center}
+.login-icon{font-size:40px;margin-bottom:16px;display:block}
+.login-title{font-family:var(--dsp);font-size:34px;letter-spacing:5px;color:var(--t);margin-bottom:4px}
+.login-sub{font-size:10px;letter-spacing:3px;color:var(--m);text-transform:uppercase;margin-bottom:32px}
+.login-divider{font-size:10px;letter-spacing:2px;color:var(--m);text-transform:uppercase;margin:20px 0;display:flex;align-items:center;gap:10px}
+.login-divider::before,.login-divider::after{content:'';flex:1;border-top:1px solid var(--bd)}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;background:white;border:none;border-radius:3px;cursor:pointer;font-family:var(--mono);font-size:13px;font-weight:500;color:#333;transition:opacity .2s;margin-bottom:16px}
+.google-btn:hover{opacity:.9}
+.google-btn svg{width:18px;height:18px;flex-shrink:0}
+.login-note{font-size:10px;color:var(--m);line-height:1.6}
+.login-note strong{color:var(--b)}
+.login-err{font-size:11px;color:var(--r);min-height:16px;margin-top:8px}
+.login-loading{font-size:11px;color:var(--m);letter-spacing:2px;text-transform:uppercase;display:none}
+
+/* USER BADGE in nav */
+.user-badge{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:20px;cursor:pointer;transition:border-color .2s;flex-shrink:0}
+.user-badge:hover{border-color:var(--bd2)}
+.user-avatar{width:22px;height:22px;border-radius:50%;object-fit:cover}
+.user-avatar-fallback{width:22px;height:22px;border-radius:50%;background:var(--b);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+.user-name{font-size:10px;color:var(--t);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-role{font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:1px 5px;border-radius:2px}
+.role-admin{background:rgba(255,204,0,.12);color:var(--y);border:1px solid rgba(255,204,0,.25)}
+.role-viewer{background:rgba(59,139,255,.1);color:var(--b);border:1px solid rgba(59,139,255,.2)}
 
 /* NAV */
-.nav{position:relative;z-index:10;background:rgba(8,8,16,.97);border-bottom:1px solid var(--bd);padding:0 20px;display:flex;align-items:center;backdrop-filter:blur(8px)}
-.nb{font-family:var(--dsp);font-size:19px;letter-spacing:4px;color:var(--t);padding:14px 0;margin-right:14px;white-space:nowrap}
+.nav{position:relative;z-index:10;background:rgba(8,8,16,.97);border-bottom:1px solid var(--bd);padding:0 20px;display:flex;align-items:center;backdrop-filter:blur(8px);gap:8px}
+.nb{font-family:var(--dsp);font-size:19px;letter-spacing:4px;color:var(--t);padding:14px 0;margin-right:12px;white-space:nowrap;flex-shrink:0}
 .nb span{color:var(--r)}
 .ntabs{display:flex;flex:1;overflow-x:auto}
 .ntab{padding:15px 14px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--m);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;user-select:none;white-space:nowrap}
 .ntab:hover{color:var(--t)}
 .ntab.on{color:var(--b);border-bottom-color:var(--b)}
 .nbadge{display:inline-flex;align-items:center;justify-content:center;background:var(--r);color:#fff;font-size:9px;font-weight:700;width:14px;height:14px;border-radius:50%;margin-left:5px;vertical-align:middle}
-.cst{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:10px;padding-left:12px;flex-shrink:0}
-.cdot{width:6px;height:6px;border-radius:50%;background:var(--m);transition:background .3s}
+.cst{display:flex;align-items:center;gap:6px;font-size:10px;padding-left:8px;flex-shrink:0}
+.cdot{width:6px;height:6px;border-radius:50%;background:var(--m);transition:background .3s;flex-shrink:0}
 .cdot.ok{background:var(--g);animation:glow 2.5s ease-in-out infinite}
 .cdot.er{background:var(--r)}.cdot.sy{background:var(--y)}
 @keyframes glow{0%,100%{opacity:1}50%{opacity:.4}}
@@ -70,9 +85,7 @@ body::before{content:'';position:fixed;inset:0;
 /* FORMS */
 .fi{margin-bottom:12px}.fi:last-child{margin-bottom:0}
 label{display:block;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--m);margin-bottom:5px}
-textarea,input[type=text],input[type=password],select{
-  width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--t);
-  font-family:var(--mono);font-size:12px;padding:9px 11px;border-radius:2px;outline:none;transition:border-color .2s}
+textarea,input[type=text],select{width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--t);font-family:var(--mono);font-size:12px;padding:9px 11px;border-radius:2px;outline:none;transition:border-color .2s}
 textarea{min-height:90px;resize:vertical;line-height:1.6}
 textarea:focus,input:focus,select:focus{border-color:var(--b)}
 select option{background:var(--s2)}
@@ -96,6 +109,9 @@ select option{background:var(--s2)}
 .btn-cp{background:rgba(59,139,255,.1);color:var(--b);border:1px solid rgba(59,139,255,.2)}
 .btn-cp:hover{background:rgba(59,139,255,.2)}
 .bsm{padding:6px 11px;font-size:11px;letter-spacing:2px}
+
+/* ADMIN-ONLY elements — hidden for viewers */
+.admin-only{display:none}
 
 /* DOWNLOAD BAR */
 .dlbar{display:flex;gap:8px;flex-wrap:wrap;padding:11px 14px;background:var(--s2);border-top:1px solid var(--bd);align-items:center}
@@ -194,32 +210,45 @@ select option{background:var(--s2)}
 </head>
 <body>
 
-<div id="LS">
-  <div class="lb">
-    <span class="li">🔐</span>
-    <div class="lt">QA BLUEPRINT</div>
-    <div class="ls">v5 · Cloud</div>
-    <div class="lr">
-      <input type="password" id="pwIn" placeholder="Password..." onkeydown="if(event.key==='Enter')doLogin()">
-      <button class="lbtn" onclick="doLogin()">GO</button>
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <span class="login-icon">🏏</span>
+    <div class="login-title">QA BLUEPRINT</div>
+    <div class="login-sub">Hitwicket Internal Tool · v5</div>
+    <button class="google-btn" onclick="signInWithGoogle()">
+      <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.6 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 19 12 24 12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.6 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.3 35.3 26.8 36 24 36c-5.2 0-9.7-3.3-11.3-8H6.1C9.5 36.2 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.6l6.2 5.2C41.1 35.3 44 30 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>
+      Sign in with Google
+    </button>
+    <div class="login-note">
+      Access restricted to <strong>@hitwicket.com</strong> accounts only
     </div>
-    <div class="lerr" id="lerr"></div>
+    <div class="login-err" id="loginErr"></div>
+    <div class="login-loading" id="loginLoading">Verifying…</div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
+<!-- NAV -->
 <nav class="nav">
   <div class="nb">QA <span>BP</span></div>
   <div class="ntabs">
     <div class="ntab on"  onclick="tab('impact')" id="t-impact">⚡ Analyzer</div>
     <div class="ntab"     onclick="tab('prd')"    id="t-prd">📄 PRD → TCs</div>
-    <div class="ntab"     onclick="tab('import')" id="t-import">📥 Bulk Import</div>
+    <div class="ntab admin-only" onclick="tab('import')" id="t-import">📥 Bulk Import</div>
     <div class="ntab"     onclick="tab('kb')"     id="t-kb">☁️ KB <span class="nbadge" id="kbCnt">0</span></div>
   </div>
   <div class="cst">
     <div class="cdot" id="cdot"></div>
     <span id="cstlbl" style="color:var(--m);font-size:10px;">connecting…</span>
+  </div>
+  <!-- User badge -->
+  <div class="user-badge" id="userBadge" style="display:none;" onclick="signOut()">
+    <img class="user-avatar" id="userAvatar" src="" alt="" onerror="this.style.display='none';document.getElementById('userAvatarFb').style.display='flex'">
+    <div class="user-avatar-fallback" id="userAvatarFb" style="display:none;" id="userAvatarFb">K</div>
+    <span class="user-name" id="userName">—</span>
+    <span class="user-role" id="userRoleBadge">viewer</span>
   </div>
 </nav>
 
@@ -229,7 +258,7 @@ select option{background:var(--s2)}
 <div class="tp on" id="p-impact">
   <div class="sh">
     <h2>Impact <span>Analyzer</span></h2>
-    <p>Describe a dev change → AI generates impact report + 20+ test cases using your cloud KB as context</p>
+    <p>Describe a dev change → AI generates impact report + test cases using cloud KB as context</p>
   </div>
   <div class="g2">
     <div class="pn">
@@ -262,12 +291,10 @@ select option{background:var(--s2)}
         <button class="btn btn-r" id="anBtn" onclick="runAnalysis()">⚡ Analyze Impact</button>
       </div>
     </div>
-
     <div class="pn">
       <div class="ph"><div class="pd g"></div><span class="pt">KB Context</span></div>
       <div class="pb" id="kbCtxPanel" style="font-size:11px;color:var(--m);line-height:1.8;">Loading…</div>
     </div>
-
     <div class="pn c2" id="arPanel" style="display:none;">
       <div class="ph">
         <div class="pd r"></div><span class="pt">Report</span>
@@ -282,9 +309,9 @@ select option{background:var(--s2)}
         </div>
         <div class="dlbar">
           <span class="dllbl">Export:</span>
-          <button class="btn btn-xl bsm" onclick="downloadExcel('impact')">⬇️ Excel (.xlsx)</button>
-          <button class="btn btn-cp bsm" onclick="copyClipboard('impact')">📋 Copy (paste to Excel)</button>
-          <button class="btn btn-s bsm" onclick="saveAnalysisToKB()">☁️ Save to KB</button>
+          <button class="btn btn-xl bsm" onclick="downloadExcel('impact')">⬇️ Excel</button>
+          <button class="btn btn-cp bsm" onclick="copyClipboard('impact')">📋 Copy to Excel</button>
+          <button class="btn btn-s bsm admin-only" onclick="saveAnalysisToKB()">☁️ Save to KB</button>
         </div>
       </div>
     </div>
@@ -295,7 +322,7 @@ select option{background:var(--s2)}
 <div class="tp" id="p-prd">
   <div class="sh">
     <h2>PRD <span>→ Test Cases</span></h2>
-    <p>Upload or paste a feature spec → AI generates structured test suite in your 14-column format</p>
+    <p>Upload or paste a feature spec → AI generates structured test suite in 14-column format</p>
   </div>
   <div class="g2">
     <div style="display:flex;flex-direction:column;gap:14px;">
@@ -331,7 +358,6 @@ select option{background:var(--s2)}
         </div>
       </div>
     </div>
-
     <div class="pn">
       <div class="ph"><div class="pd g"></div><span class="pt">Generated Test Cases</span></div>
       <div class="ldr" id="pLdr"><div class="spin"></div><div class="ll" id="pLbl">Reading PRD…</div></div>
@@ -352,9 +378,9 @@ select option{background:var(--s2)}
         </div>
         <div class="dlbar" style="margin-top:10px;">
           <span class="dllbl">Export:</span>
-          <button class="btn btn-xl bsm" onclick="downloadExcel('prd')">⬇️ Excel (.xlsx)</button>
-          <button class="btn btn-cp bsm" onclick="copyClipboard('prd')">📋 Copy (paste to Excel)</button>
-          <button class="btn btn-s bsm" onclick="savePRDToKB()">☁️ Save to KB</button>
+          <button class="btn btn-xl bsm" onclick="downloadExcel('prd')">⬇️ Excel</button>
+          <button class="btn btn-cp bsm" onclick="copyClipboard('prd')">📋 Copy to Excel</button>
+          <button class="btn btn-s bsm admin-only" onclick="savePRDToKB()">☁️ Save to KB</button>
         </div>
       </div>
       <div class="empty" id="pEmpty">Upload or paste a PRD, then click Generate</div>
@@ -362,11 +388,11 @@ select option{background:var(--s2)}
   </div>
 </div>
 
-<!-- ══ BULK IMPORT ══ -->
+<!-- ══ BULK IMPORT (admin only) ══ -->
 <div class="tp" id="p-import">
   <div class="sh">
     <h2>Bulk <span>Import</span></h2>
-    <p>Upload Excel / CSV / TXT → preview → save to cloud KB in one click</p>
+    <p>Admin only · Upload Excel / CSV / TXT → preview → save to cloud KB</p>
   </div>
   <div class="g2">
     <div style="display:flex;flex-direction:column;gap:14px;">
@@ -410,7 +436,6 @@ select option{background:var(--s2)}
         </div>
       </div>
     </div>
-
     <div>
       <div id="importPreviewWrap" style="display:none;">
         <div class="ipreview">
@@ -434,10 +459,11 @@ select option{background:var(--s2)}
 <div class="tp" id="p-kb">
   <div class="sh">
     <h2>Cloud <span>KB</span></h2>
-    <p>Stored in Cloudflare KV · persists across devices · injected into every analysis</p>
+    <p>Stored in Cloudflare KV · injected into every analysis · admin-managed</p>
   </div>
   <div class="g2">
-    <div class="pn">
+    <!-- Add entry — admin only -->
+    <div class="pn admin-only" id="kbAddPanel">
       <div class="ph"><div class="pd g"></div><span class="pt">Add Entry</span></div>
       <div class="pb">
         <div class="fi"><label>Type</label>
@@ -452,6 +478,16 @@ select option{background:var(--s2)}
         <button class="btn btn-g bsm" onclick="saveKB()" style="width:100%;" id="kbSaveBtn">☁️ Save to KB</button>
       </div>
     </div>
+
+    <!-- Viewer placeholder when not admin -->
+    <div class="pn" id="kbViewerNote" style="display:none;">
+      <div class="ph"><div class="pd g"></div><span class="pt">KB Access</span></div>
+      <div class="pb" style="font-size:11px;color:var(--m);line-height:1.8;">
+        You have <span style="color:var(--b)">read-only</span> access to the KB.<br>
+        Only <strong style="color:var(--y)">kunal@hitwicket.com</strong> can add or delete entries.
+      </div>
+    </div>
+
     <div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:7px;">
         <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--m);">Entries: <strong style="color:var(--t);" id="kbTotal">—</strong></div>
@@ -461,7 +497,7 @@ select option{background:var(--s2)}
             <option value="code">Code</option><option value="prd">PRD</option><option value="note">Notes</option>
           </select>
           <button class="btn btn-s bsm" onclick="loadKB()">🔄</button>
-          <button class="btn btn-s bsm" onclick="clearKB()" style="color:var(--r);border-color:rgba(255,59,92,.3);">🗑 Clear All</button>
+          <button class="btn btn-s bsm admin-only" id="clearKBBtn" onclick="clearKB()" style="color:var(--r);border-color:rgba(255,59,92,.3);">🗑 Clear All</button>
         </div>
       </div>
       <div id="kbList"><div class="empty">Connecting…</div></div>
@@ -469,102 +505,220 @@ select option{background:var(--s2)}
   </div>
 </div>
 
-</div>
+</div><!-- /wrap -->
 
 <script>
-const WORKER   = 'https://orange-waterfall-030e.kunal-249.workers.dev';
-const AUTH     = 'qabp_hw2024';
-const PASSWORD = 'qa123';
+// ════════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════════
+const WORKER        = 'https://orange-waterfall-030e.kunal-249.workers.dev';
+const AUTH          = 'qabp_hw2024';
+const GOOGLE_CLIENT = '714484298488-ucn9blv0cr5ol2h0v9p6irbrj87murce.apps.googleusercontent.com';
+const ADMIN_EMAIL   = 'kunal@hitwicket.com';
+const ALLOWED_DOMAIN= 'hitwicket.com';
+
 const EXCEL_COLS = ['TC ID','Feature','Test Title','Category','Preconditions','Steps','Expected Result','Break Point','Systems','Edge Case','Priority','Status','Dev Result','QA Result'];
-const FEATURES = ['FTUE','Login/Auth','Super Ability','Match Engine','Store','Squad/Lineup','Player Detail','Training','League Mode','PvP','Auction','Alliance','HW TV','Trophy Road','Season Pass','Player Scout','Dashboard','Notifications','iOS/Game Center','Android','Network/Offline'];
+const FEATURES   = ['FTUE','Login/Auth','Super Ability','Match Engine','Store','Squad/Lineup','Player Detail','Training','League Mode','PvP','Auction','Alliance','HW TV','Trophy Road','Season Pass','Player Scout','Dashboard','Notifications','iOS/Game Center','Android','Network/Offline'];
 
-let kbEntries=[], prdFileData=null, lastAnalysis=null, lastPRD=null, failCount=0, importChunks=[];
+let currentUser  = null; // { email, name, picture, role, idToken }
+let kbEntries    = [];
+let prdFileData  = null;
+let lastAnalysis = null;
+let lastPRD      = null;
+let importChunks = [];
 
-// LOCK
-function doLogin(){
-  const pwd=document.getElementById('pwIn').value;
-  const err=document.getElementById('lerr');
-  if(failCount>=5){err.textContent='Too many attempts.';return;}
-  if(pwd===PASSWORD){
-    const ls=document.getElementById('LS');
-    ls.style.transition='opacity .4s';ls.style.opacity='0';
-    setTimeout(()=>ls.style.display='none',400);
-    document.getElementById('pwIn').value='';
-    loadKB();
-  }else{
-    failCount++;
-    err.textContent=`Wrong. ${5-failCount} left.`;
-    document.getElementById('pwIn').value='';
+// ════════════════════════════════════════════
+// GOOGLE SIGN IN
+// ════════════════════════════════════════════
+function signInWithGoogle() {
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT,
+    scope: 'openid email profile',
+    callback: () => {},
+  });
+
+  // Use One Tap / prompt
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT,
+    callback:  handleGoogleCredential,
+    auto_select: false,
+  });
+  google.accounts.id.prompt((notification) => {
+    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+      // Fallback: render button and click it
+      google.accounts.id.renderButton(
+        document.createElement('div'),
+        { theme: 'outline', size: 'large' }
+      );
+      // Use popup flow
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT}&redirect_uri=${encodeURIComponent(window.location.origin + window.location.pathname)}&response_type=id_token&scope=openid%20email%20profile&nonce=${Math.random().toString(36).slice(2)}`;
+      const popup = window.open(authUrl, 'google-login', 'width=500,height=600');
+      // Listen for redirect
+      const timer = setInterval(() => {
+        try {
+          const hash = popup?.location?.hash || '';
+          if (hash.includes('id_token')) {
+            clearInterval(timer);
+            popup.close();
+            const params = new URLSearchParams(hash.slice(1));
+            handleGoogleCredential({ credential: params.get('id_token') });
+          }
+        } catch(e) {}
+        if (!popup || popup.closed) clearInterval(timer);
+      }, 500);
+    }
+  });
+}
+
+async function handleGoogleCredential(response) {
+  const idToken = response.credential;
+  if (!idToken) { showLoginError('No credential received. Try again.'); return; }
+
+  document.getElementById('loginLoading').style.display = 'block';
+  document.getElementById('loginErr').textContent = '';
+
+  try {
+    const res = await fetch(WORKER + '/auth/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id_token: idToken }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Auth failed');
+
+    currentUser = { ...data, idToken };
+    onLoginSuccess();
+  } catch(e) {
+    showLoginError(e.message);
+    document.getElementById('loginLoading').style.display = 'none';
   }
 }
 
-// NAV
-function tab(id){
-  ['impact','prd','import','kb'].forEach(t=>{
-    document.getElementById('p-'+t).classList.toggle('on',t===id);
-    document.getElementById('t-'+t).classList.toggle('on',t===id);
-  });
-  if(id==='kb')renderKB();
+function showLoginError(msg) {
+  document.getElementById('loginErr').textContent = msg;
+  document.getElementById('loginLoading').style.display = 'none';
 }
 
-// WORKER
-async function wFetch(path,method='GET',body=null){
-  const opts={method,headers:{'Content-Type':'application/json','X-Auth-Token':AUTH}};
-  if(body)opts.body=JSON.stringify(body);
-  const res=await fetch(WORKER+path,opts);
-  const data=await res.json();
-  if(!res.ok)throw new Error(data.error||`HTTP ${res.status}`);
+function onLoginSuccess() {
+  // Hide login screen
+  const ls = document.getElementById('loginScreen');
+  ls.style.transition = 'opacity .4s';
+  ls.style.opacity = '0';
+  setTimeout(() => ls.style.display = 'none', 400);
+
+  // Apply role-based UI
+  applyRole(currentUser.role);
+
+  // Show user badge
+  const badge = document.getElementById('userBadge');
+  badge.style.display = 'flex';
+  document.getElementById('userName').textContent = currentUser.name.split(' ')[0];
+  document.getElementById('userAvatar').src = currentUser.picture || '';
+  document.getElementById('userAvatarFb').textContent = currentUser.name[0]?.toUpperCase() || 'U';
+  const roleBadge = document.getElementById('userRoleBadge');
+  roleBadge.textContent = currentUser.role;
+  roleBadge.className = `user-role role-${currentUser.role}`;
+
+  loadKB();
+  toast(`Welcome, ${currentUser.name.split(' ')[0]} 👋`, 'ok');
+}
+
+function applyRole(role) {
+  const isAdmin = role === 'admin';
+  // Show/hide admin-only elements
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = isAdmin ? (el.classList.contains('ntab') ? 'block' : 'flex') : 'none';
+  });
+  // KB add panel vs viewer note
+  if (document.getElementById('kbAddPanel'))   document.getElementById('kbAddPanel').style.display   = isAdmin ? 'block' : 'none';
+  if (document.getElementById('kbViewerNote')) document.getElementById('kbViewerNote').style.display = isAdmin ? 'none'  : 'block';
+}
+
+function signOut() {
+  if (!confirm('Sign out?')) return;
+  google.accounts.id.disableAutoSelect();
+  currentUser = null;
+  kbEntries   = [];
+  location.reload();
+}
+
+// ════════════════════════════════════════════
+// NAV
+// ════════════════════════════════════════════
+function tab(id) {
+  ['impact','prd','import','kb'].forEach(t => {
+    document.getElementById('p-'+t).classList.toggle('on', t===id);
+    document.getElementById('t-'+t).classList.toggle('on', t===id);
+  });
+  if (id==='kb') renderKB();
+}
+
+// ════════════════════════════════════════════
+// WORKER CALLS
+// ════════════════════════════════════════════
+async function wFetch(path, method='GET', body=null) {
+  if (!currentUser) throw new Error('Not logged in');
+  const opts = {
+    method,
+    headers: {
+      'Content-Type':   'application/json',
+      'X-Auth-Token':   AUTH,
+      'X-Google-Token': currentUser.idToken,
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res  = await fetch(WORKER + path, opts);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
 }
-async function wAI(prompt){
-  const d=await wFetch('/ai/analyze','POST',{prompt});
+
+async function wAI(prompt) {
+  const d = await wFetch('/ai/analyze', 'POST', { prompt });
   return d.text;
 }
 
+// ════════════════════════════════════════════
 // CLOUD STATUS
-function setCloud(state,label){
-  document.getElementById('cdot').className='cdot '+(state||'');
-  const l=document.getElementById('cstlbl');
-  l.textContent=label;
-  l.style.color=state==='ok'?'var(--g)':state==='er'?'var(--r)':state==='sy'?'var(--y)':'var(--m)';
+// ════════════════════════════════════════════
+function setCloud(state, label) {
+  document.getElementById('cdot').className = 'cdot '+(state||'');
+  const l = document.getElementById('cstlbl');
+  l.textContent = label;
+  l.style.color = state==='ok'?'var(--g)':state==='er'?'var(--r)':state==='sy'?'var(--y)':'var(--m)';
 }
 
-// EXCEL 14-COL
-function tcToRow(tc){
+// ════════════════════════════════════════════
+// EXCEL 14-COL DOWNLOAD
+// ════════════════════════════════════════════
+function tcToRow(tc) {
   return [
-    tc.id||'', tc.feature||'',
-    tc.title||tc.test_title||'',
-    tc.category||'',
-    tc.preconditions||'',
-    tc.steps||'',
-    tc.expected||tc.expected_result||'',
-    tc.break_point||'',
-    tc.systems||'',
-    tc.edge_case||'',
-    tc.priority||'',
-    '','',''
+    tc.id||'', tc.feature||'', tc.title||tc.test_title||'', tc.category||'',
+    tc.preconditions||'', tc.steps||'', tc.expected||tc.expected_result||'',
+    tc.break_point||'', tc.systems||'', tc.edge_case||'',
+    tc.priority||'', '', '', ''
   ];
 }
 
-function downloadExcel(src){
-  const tcs=src==='impact'?(lastAnalysis?.test_cases||[]):(lastPRD?.test_cases||[]);
-  if(!tcs.length){toast('No test cases to download','er');return;}
-  const feature=src==='impact'
-    ?(document.getElementById('cd').value.substring(0,28)||'Impact')
-    :(lastPRD?.feature_name||'PRD');
-  const fname=`${feature.replace(/\s+/g,'_')}_TCs_${new Date().toISOString().slice(0,10)}.xlsx`;
-  const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.aoa_to_sheet([EXCEL_COLS,...tcs.map(tcToRow)]);
-  ws['!cols']=[{wch:9},{wch:16},{wch:38},{wch:13},{wch:26},{wch:38},{wch:38},{wch:18},{wch:14},{wch:9},{wch:9},{wch:10},{wch:12},{wch:10}];
-  XLSX.utils.book_append_sheet(wb,ws,feature.substring(0,31));
-  XLSX.writeFile(wb,fname);
-  toast(`Downloaded ${fname} ✓`,'ok');
+function downloadExcel(src) {
+  const tcs = src==='impact'?(lastAnalysis?.test_cases||[]):(lastPRD?.test_cases||[]);
+  if (!tcs.length) { toast('No test cases to download', 'er'); return; }
+  const feature = src==='impact'
+    ? (document.getElementById('cd').value.substring(0,28)||'Impact')
+    : (lastPRD?.feature_name||'PRD');
+  const fname = `${feature.replace(/\s+/g,'_')}_TCs_${new Date().toISOString().slice(0,10)}.xlsx`;
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([EXCEL_COLS,...tcs.map(tcToRow)]);
+  ws['!cols'] = [{wch:9},{wch:16},{wch:38},{wch:13},{wch:26},{wch:38},{wch:38},{wch:18},{wch:14},{wch:9},{wch:9},{wch:10},{wch:12},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, ws, feature.substring(0,31));
+  XLSX.writeFile(wb, fname);
+  toast(`Downloaded ${fname} ✓`, 'ok');
 }
 
-function copyClipboard(src){
-  const tcs=src==='impact'?(lastAnalysis?.test_cases||[]):(lastPRD?.test_cases||[]);
-  if(!tcs.length){toast('No test cases','er');return;}
-  const text=[EXCEL_COLS.join('\t'),...tcs.map(tc=>tcToRow(tc).map(v=>(v||'').replace(/\t/g,' ')).join('\t'))].join('\n');
+function copyClipboard(src) {
+  const tcs = src==='impact'?(lastAnalysis?.test_cases||[]):(lastPRD?.test_cases||[]);
+  if (!tcs.length) { toast('No test cases', 'er'); return; }
+  const text = [EXCEL_COLS.join('\t'),...tcs.map(tc=>tcToRow(tc).map(v=>(v||'').replace(/\t/g,' ')).join('\t'))].join('\n');
   navigator.clipboard.writeText(text)
     .then(()=>toast(`${tcs.length} rows copied — paste into Excel ✓`,'ok'))
     .catch(()=>{
@@ -574,37 +728,40 @@ function copyClipboard(src){
     });
 }
 
+// ════════════════════════════════════════════
 // KB
-async function loadKB(){
+// ════════════════════════════════════════════
+async function loadKB() {
   setCloud('sy','syncing…');
-  try{
-    const d=await wFetch('/kb');
-    kbEntries=d.entries||[];updateKBUI();renderKB();
+  try {
+    const d = await wFetch('/kb');
+    kbEntries = d.entries||[];
+    updateKBUI(); renderKB();
     setCloud('ok',`☁️ ${kbEntries.length}`);
-  }catch(e){
+  } catch(e) {
     setCloud('er','error');
-    document.getElementById('kbList').innerHTML=`<div class="empty" style="color:var(--r);">${e.message}<br><small>Check AUTH_TOKEN + QA_KB binding in Cloudflare</small></div>`;
+    document.getElementById('kbList').innerHTML=`<div class="empty" style="color:var(--r);">${e.message}</div>`;
     toast(e.message,'er');
   }
 }
 
-function updateKBUI(){
-  const n=kbEntries.length;
-  document.getElementById('kbCnt').textContent=n;
-  document.getElementById('kbTotal').textContent=n;
-  const p=document.getElementById('kbCtxPanel');
-  if(!n){p.innerHTML='KB empty. Use Bulk Import to add your test cases.';return;}
+function updateKBUI() {
+  const n = kbEntries.length;
+  document.getElementById('kbCnt').textContent   = n;
+  document.getElementById('kbTotal').textContent = n;
+  const p = document.getElementById('kbCtxPanel');
+  if (!n) { p.innerHTML='KB empty.'; return; }
   const tc=kbEntries.filter(e=>e.type==='test_cases').length,
         co=kbEntries.filter(e=>e.type==='code').length,
         pr=kbEntries.filter(e=>e.type==='prd').length,
         no=kbEntries.filter(e=>e.type==='note').length;
   p.innerHTML=`<span style="color:var(--g)">☁️ ${n} entries in context</span><br>
-    ${tc?`📋 ${tc} test case set${tc>1?'s':''}<br>`:''}${co?`💻 ${co} code snippet${co>1?'s':''}<br>`:''}
+    ${tc?`📋 ${tc} test set${tc>1?'s':''}<br>`:''}${co?`💻 ${co} snippet${co>1?'s':''}<br>`:''}
     ${pr?`📄 ${pr} PRD<br>`:''}${no?`📝 ${no} note${no>1?'s':''}`:''}`;
 }
 
-function getKBContext(){
-  if(!kbEntries.length)return'';
+function getKBContext() {
+  if (!kbEntries.length) return '';
   let ctx='\n\n=== KB CONTEXT ===\n';
   kbEntries.slice(0,6).forEach((e,i)=>{
     ctx+=`\n[#${i+1} ${e.type} | ${e.title} | ${e.area}]\n`;
@@ -613,7 +770,7 @@ function getKBContext(){
   return ctx;
 }
 
-async function saveKB(){
+async function saveKB() {
   const title=document.getElementById('kbTitle').value.trim();
   const content=document.getElementById('kbContent').value.trim();
   const area=document.getElementById('kbArea').value.trim();
@@ -633,7 +790,7 @@ async function saveKB(){
   btn.disabled=false;btn.textContent='☁️ Save to KB';
 }
 
-async function deleteKB(id){
+async function deleteKB(id) {
   try{
     await wFetch(`/kb/${id}`,'DELETE');
     kbEntries=kbEntries.filter(e=>e.id!==id);updateKBUI();renderKB();
@@ -641,7 +798,7 @@ async function deleteKB(id){
   }catch(e){toast(e.message,'er');}
 }
 
-async function clearKB(){
+async function clearKB() {
   if(!confirm('Delete ALL KB entries?'))return;
   try{
     await wFetch('/kb','DELETE');kbEntries=[];updateKBUI();renderKB();
@@ -649,13 +806,14 @@ async function clearKB(){
   }catch(e){toast(e.message,'er');}
 }
 
-function renderKB(){
+function renderKB() {
   const filter=document.getElementById('kbFilter').value;
   const list=document.getElementById('kbList');
   const entries=filter==='all'?kbEntries:kbEntries.filter(e=>e.type===filter);
   if(!entries.length){list.innerHTML='<div class="empty">No entries.</div>';return;}
   const tl={test_cases:'TC',code:'Code',prd:'PRD',note:'Note'};
   const tc={test_cases:'ktc',code:'kco',prd:'kpr',note:'kno'};
+  const isAdmin = currentUser?.role === 'admin';
   list.innerHTML=entries.map(e=>`
     <div class="kbe">
       <span class="kbb ${tc[e.type]||''}">${tl[e.type]||e.type}</span>
@@ -663,12 +821,32 @@ function renderKB(){
         <div class="kbt">${e.title}</div>
         <div class="kbm">${e.area?'📍 '+e.area+' · ':''}${e.addedAt}</div>
         <div class="kbs">${e.content.substring(0,200)}${e.content.length>200?'…':''}</div>
-        <button class="kdel" onclick="deleteKB(${e.id})">Delete</button>
+        ${isAdmin?`<button class="kdel" onclick="deleteKB(${e.id})">Delete</button>`:''}
       </div>
     </div>`).join('');
 }
 
+async function saveAnalysisToKB() {
+  if(!lastAnalysis){toast('No analysis','er');return;}
+  try{
+    const d=await wFetch('/kb','POST',{type:'test_cases',title:'Impact: '+document.getElementById('cd').value.substring(0,50),area:Array.from(document.querySelectorAll('#ftags .tag.on')).map(t=>t.dataset.v).join(', ')||'',content:JSON.stringify(lastAnalysis,null,2)});
+    kbEntries.unshift(d.entry);updateKBUI();
+    setCloud('ok',`☁️ ${kbEntries.length}`);toast('Saved ✓','ok');
+  }catch(e){toast(e.message,'er');}
+}
+
+async function savePRDToKB() {
+  if(!lastPRD){toast('No results','er');return;}
+  try{
+    const d=await wFetch('/kb','POST',{type:'prd',title:'PRD: '+(lastPRD.feature_name||'Feature'),area:lastPRD.feature_name||'',content:JSON.stringify(lastPRD,null,2)});
+    kbEntries.unshift(d.entry);updateKBUI();
+    setCloud('ok',`☁️ ${kbEntries.length}`);toast('Saved ✓','ok');
+  }catch(e){toast(e.message,'er');}
+}
+
+// ════════════════════════════════════════════
 // IMPACT ANALYZER
+// ════════════════════════════════════════════
 async function runAnalysis(){
   const cd=document.getElementById('cd').value.trim();
   if(!cd){toast('Describe the change','er');return;}
@@ -681,30 +859,21 @@ async function runAnalysis(){
   document.getElementById('aLdr').classList.add('on');
   document.getElementById('aOut').style.display='none';
   panel.scrollIntoView({behavior:'smooth'});
-  const lbls=['Scanning items…','Mapping risks…','Generating test cases…','Finalizing…'];
+  const lbls=['Scanning…','Mapping risks…','Generating TCs…','Finalizing…'];
   let li=0;const lbl=document.getElementById('aLbl');
   const iv=setInterval(()=>{li=(li+1)%lbls.length;lbl.textContent=lbls[li];},2200);
 
   const prompt=`You are a senior QA engineer for Hitwicket mobile cricket game (Android + iOS). Systems: FTUE, SA/mana/threshold, Match Engine, Store/chests/EPB/SPB, Squad, Training, League, PvP, Auction, Alliance, HW TV, Trophy Road, Season Pass, Player Scout, Game Center iOS, auth flows.
 
-Change:
-TYPE: ${ct} | PLATFORM: ${pl} | TAGS: ${tags.join(', ')||'n/a'}
+Change: TYPE:${ct} PLATFORM:${pl} TAGS:${tags.join(',')||'n/a'}
 ${cd}
 ${getKBContext()}
 
-Return ONLY valid JSON. No markdown. No explanation. Start with { and end with }
+Return ONLY valid JSON. Start { end }
 
-{
-  "summary":"brief risk summary",
-  "risk_score":"CRITICAL|HIGH|MEDIUM|LOW",
-  "impact_areas":[{"title":"name","severity":"critical|high|medium|low","items":["item"]}],
-  "test_cases":[{"id":"TC-001","feature":"area","title":"title","category":"Functional|Regression|Edge Case|UI|Performance","preconditions":"setup","steps":"1. X 2. Y","expected":"outcome","break_point":"failure cause","systems":"modules","edge_case":"Yes|No","priority":"P0|P1|P2|P3"}],
-  "edge_cases":["case"],
-  "downstream_risks":["risk"],
-  "regression_scope":["area"]
-}
+{"summary":"brief risk summary","risk_score":"CRITICAL|HIGH|MEDIUM|LOW","impact_areas":[{"title":"name","severity":"critical|high|medium|low","items":["item"]}],"test_cases":[{"id":"TC-001","feature":"area","title":"title","category":"Functional|Regression|Edge Case|UI|Performance","preconditions":"setup","steps":"1.X 2.Y","expected":"outcome","break_point":"failure","systems":"modules","edge_case":"Yes|No","priority":"P0|P1|P2|P3"}],"edge_cases":["case"],"downstream_risks":["risk"],"regression_scope":["area"]}
 
-Generate exactly 15 test cases. Keep each field brief. P0=blocker,P1=critical,P2=important,P3=low.`;
+Generate exactly 15 test cases. Keep fields brief. P0=blocker,P1=critical,P2=important,P3=low.`;
 
   try{
     const raw=await wAI(prompt);
@@ -712,11 +881,7 @@ Generate exactly 15 test cases. Keep each field brief. P0=blocker,P1=critical,P2
     const clean=raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
     let result;
     try{result=JSON.parse(clean);}
-    catch{
-      const m=clean.match(/\{[\s\S]*\}/);
-      if(m){try{result=JSON.parse(m[0]);}catch(e2){throw new Error('JSON parse failed: '+e2.message);}}
-      else throw new Error('No JSON found in response');
-    }
+    catch{const m=clean.match(/\{[\s\S]*\}/);if(m){try{result=JSON.parse(m[0]);}catch(e2){throw new Error('Parse failed: '+e2.message);}}else throw new Error('No JSON in response');}
     lastAnalysis=result;
     renderAnalysis(result);
     document.getElementById('aTime').textContent=new Date().toLocaleTimeString();
@@ -744,7 +909,6 @@ function renderAnalysis(r){
     <div class="si"><span class="sn nb2">${p2}</span><span class="sl">P2</span></div>
     <div class="si"><span class="sn ng">${p3}</span><span class="sl">P3</span></div>
     <div class="si" style="margin-left:auto"><span class="sn">${tcs.length}</span><span class="sl">TCs</span></div>`;
-
   let html=`<div class="ic c2" style="grid-column:1/-1;border-color:rgba(59,139,255,.2);">
     <div class="ich"><span class="ict">Summary</span></div>
     <p style="font-size:12px;line-height:1.7;color:#c0c0d8;">${r.summary||''}</p>
@@ -758,7 +922,6 @@ function renderAnalysis(r){
   if(r.edge_cases?.length) html+=`<div class="ic"><div class="ich"><span>⚠️</span><span class="ict">Edge Cases</span></div><ul>${r.edge_cases.map(e=>`<li>${e}</li>`).join('')}</ul></div>`;
   if(r.downstream_risks?.length) html+=`<div class="ic"><div class="ich"><span>🔗</span><span class="ict">Downstream</span></div><ul>${r.downstream_risks.map(d=>`<li>${d}</li>`).join('')}</ul></div>`;
   document.getElementById('aCards').innerHTML=html;
-
   const pc={P0:'pp0',P1:'pp1',P2:'pp2',P3:'pp3'};
   document.getElementById('aTCs').innerHTML=tcs.length?`
     <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g);margin-bottom:8px;">TEST CASES (${tcs.length})</div>
@@ -776,16 +939,9 @@ function renderAnalysis(r){
     </tr>`).join('')}</tbody></table>`:'';
 }
 
-async function saveAnalysisToKB(){
-  if(!lastAnalysis){toast('No analysis','er');return;}
-  try{
-    const d=await wFetch('/kb','POST',{type:'test_cases',title:'Impact: '+document.getElementById('cd').value.substring(0,50),area:Array.from(document.querySelectorAll('#ftags .tag.on')).map(t=>t.dataset.v).join(', ')||'',content:JSON.stringify(lastAnalysis,null,2)});
-    kbEntries.unshift(d.entry);updateKBUI();
-    setCloud('ok',`☁️ ${kbEntries.length}`);toast('Saved ✓','ok');
-  }catch(e){toast(e.message,'er');}
-}
-
-// PRD
+// ════════════════════════════════════════════
+// PRD → TEST CASES
+// ════════════════════════════════════════════
 function pdov(e){e.preventDefault();document.getElementById('puz').classList.add('drag')}
 function pdol(){document.getElementById('puz').classList.remove('drag')}
 function pdop(e){e.preventDefault();pdol();if(e.dataTransfer.files[0])ppf(e.dataTransfer.files[0])}
@@ -797,7 +953,6 @@ function ppf(file){
   if(file.type==='application/pdf'){rd.onload=e=>{prdFileData={type:'pdf',data:e.target.result.split(',')[1]};};rd.readAsDataURL(file);}
   else{rd.onload=e=>{prdFileData={type:'text',data:e.target.result};};rd.readAsText(file);}
 }
-
 async function runPRD(){
   const txt=document.getElementById('prdTxt').value.trim();
   if(!prdFileData&&!txt){toast('Upload or paste PRD','er');return;}
@@ -807,41 +962,31 @@ async function runPRD(){
   document.getElementById('pOut').style.display='none';
   document.getElementById('pEmpty').style.display='none';
   document.getElementById('prdBtn').disabled=true;
-  const lbls=['Reading…','Analyzing…','Generating TCs…','Done…'];
+  const lbls=['Reading…','Analyzing…','Generating…','Done…'];
   let li=0;const ll=document.getElementById('pLbl');
   const iv=setInterval(()=>{li=(li+1)%lbls.length;ll.textContent=lbls[li];},2000);
   const content=prdFileData?.type==='text'?prdFileData.data:txt;
-
-  const prompt=`Senior QA engineer for Hitwicket. Analyze PRD and generate test cases.
-
-PRD:
-${content}
+  const prompt=`Senior QA engineer for Hitwicket. Analyze PRD, generate test cases.
+PRD: ${content}
 ${focus?'FOCUS: '+focus:''}
-
-Return ONLY valid JSON. Start with { end with }
-
-{"feature_name":"name","test_cases":[{"id":"TC-001","feature":"area","title":"title","category":"Functional|UI|Regression|Edge Case|Performance","preconditions":"setup","steps":"1. X 2. Y","expected_result":"outcome","break_point":"failure","systems":"modules","edge_case":"Yes|No","priority":"${prio==='P0-P3'?'P0|P1|P2|P3':'Critical|High|Medium|Low'}","platform":"Android|iOS|Both"}]}
-
-Generate 20-25 test cases. Keep fields brief. Cover happy path, negative, edge cases.`;
-
+Return ONLY valid JSON. Start { end }
+{"feature_name":"name","test_cases":[{"id":"TC-001","feature":"area","title":"title","category":"Functional|UI|Regression|Edge Case|Performance","preconditions":"setup","steps":"1.X 2.Y","expected_result":"outcome","break_point":"failure","systems":"modules","edge_case":"Yes|No","priority":"${prio==='P0-P3'?'P0|P1|P2|P3':'Critical|High|Medium|Low'}","platform":"Android|iOS|Both"}]}
+Generate 20 test cases. Brief fields. Cover happy path, negative, edge cases.`;
   try{
     const raw=await wAI(prompt);
     clearInterval(iv);
     const clean=raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
     let result;
-    try{result=JSON.parse(clean);}
-    catch{const m=clean.match(/\{[\s\S]*\}/);if(m)result=JSON.parse(m[0]);else throw new Error('Parse failed');}
+    try{result=JSON.parse(clean);}catch{const m=clean.match(/\{[\s\S]*\}/);if(m)result=JSON.parse(m[0]);else throw new Error('Parse failed');}
     lastPRD=result;renderPRD(result);
   }catch(e){
-    clearInterval(iv);
-    document.getElementById('pLdr').classList.remove('on');
+    clearInterval(iv);document.getElementById('pLdr').classList.remove('on');
     document.getElementById('pEmpty').style.display='block';
     document.getElementById('pEmpty').textContent='Error: '+e.message;
     toast(e.message,'er');
   }
   document.getElementById('prdBtn').disabled=false;
 }
-
 function renderPRD(r){
   document.getElementById('pLdr').classList.remove('on');
   document.getElementById('pOut').style.display='block';
@@ -850,31 +995,21 @@ function renderPRD(r){
   const pc={P0:'pp0',P1:'pp1',P2:'pp2',P3:'pp3',Critical:'pp0',High:'pp1',Medium:'pp2',Low:'pp3'};
   document.getElementById('pTBody').innerHTML=tcs.map(tc=>`<tr>
     <td class="tid">${tc.id||''}</td><td>${tc.feature||''}</td><td>${tc.title||''}</td><td>${tc.category||''}</td>
-    <td>${tc.preconditions||''}</td><td>${tc.steps||''}</td>
-    <td>${tc.expected_result||tc.expected||''}</td>
+    <td>${tc.preconditions||''}</td><td>${tc.steps||''}</td><td>${tc.expected_result||tc.expected||''}</td>
     <td>${tc.break_point||''}</td><td>${tc.systems||''}</td><td>${tc.edge_case||''}</td>
     <td><span class="pb2 ${pc[tc.priority]||'pp2'}">${tc.priority||''}</span></td>
     <td></td><td></td><td></td>
   </tr>`).join('');
 }
 
-async function savePRDToKB(){
-  if(!lastPRD){toast('No results','er');return;}
-  try{
-    const d=await wFetch('/kb','POST',{type:'prd',title:'PRD: '+(lastPRD.feature_name||'Feature'),area:lastPRD.feature_name||'',content:JSON.stringify(lastPRD,null,2)});
-    kbEntries.unshift(d.entry);updateKBUI();
-    setCloud('ok',`☁️ ${kbEntries.length}`);toast('Saved ✓','ok');
-  }catch(e){toast(e.message,'er');}
-}
-
+// ════════════════════════════════════════════
 // BULK IMPORT
+// ════════════════════════════════════════════
 function idov(e){e.preventDefault();document.getElementById('iuz').classList.add('drag')}
 function idol(){document.getElementById('iuz').classList.remove('drag')}
 function idop(e){e.preventDefault();idol();if(e.dataTransfer.files.length)importFiles({target:{files:e.dataTransfer.files}})}
-
 async function importFiles(e){
-  const files=Array.from(e.target.files);
-  if(!files.length)return;
+  const files=Array.from(e.target.files);if(!files.length)return;
   importChunks=[];
   document.getElementById('iuz').classList.add('ok');
   document.getElementById('iuz').querySelector('.ut').innerHTML=`<strong>${files.length} file${files.length>1?'s':''}</strong> loaded`;
@@ -886,97 +1021,60 @@ async function importFiles(e){
       else if(ext==='txt'||ext==='md')await parseTxt(file);
     }catch(err){toast(`${file.name}: ${err.message}`,'er');}
   }
-  renderImportPreview();
-  document.getElementById('ifi').value='';
+  renderImportPreview();document.getElementById('ifi').value='';
 }
-
 async function parseExcel(file){
   const split=document.getElementById('splitSheets').checked;
-  const dt=document.getElementById('importType').value;
-  const da=document.getElementById('importArea').value.trim();
+  const dt=document.getElementById('importType').value,da=document.getElementById('importArea').value.trim();
   return new Promise((res,rej)=>{
     const rd=new FileReader();
     rd.onload=e=>{
       try{
         const wb=XLSX.read(e.target.result,{type:'array'});
-        if(split){
-          wb.SheetNames.forEach(sn=>{
-            const csv=XLSX.utils.sheet_to_csv(wb.Sheets[sn]);
-            if(csv.trim().length>10)importChunks.push({title:`${file.name} — ${sn}`,area:da||sn,type:dt,content:csv,selected:true,rows:csv.split('\n').length-1});
-          });
-        }else{
-          let c='';wb.SheetNames.forEach(sn=>{c+=`\n=== ${sn} ===\n${XLSX.utils.sheet_to_csv(wb.Sheets[sn])}\n`;});
-          importChunks.push({title:file.name,area:da,type:dt,content:c.trim(),selected:true,rows:c.split('\n').length});
-        }
+        if(split){wb.SheetNames.forEach(sn=>{const csv=XLSX.utils.sheet_to_csv(wb.Sheets[sn]);if(csv.trim().length>10)importChunks.push({title:`${file.name} — ${sn}`,area:da||sn,type:dt,content:csv,selected:true,rows:csv.split('\n').length-1});});}
+        else{let c='';wb.SheetNames.forEach(sn=>{c+=`\n=== ${sn} ===\n${XLSX.utils.sheet_to_csv(wb.Sheets[sn])}\n`;});importChunks.push({title:file.name,area:da,type:dt,content:c.trim(),selected:true,rows:c.split('\n').length});}
         res();
       }catch(err){rej(err);}
-    };
-    rd.onerror=rej;rd.readAsArrayBuffer(file);
+    };rd.onerror=rej;rd.readAsArrayBuffer(file);
   });
 }
-
 async function parseCSV(file){
-  const dt=document.getElementById('importType').value;
-  const da=document.getElementById('importArea').value.trim();
-  return new Promise((res,rej)=>{
-    const rd=new FileReader();
-    rd.onload=e=>{
-      importChunks.push({title:file.name.replace('.csv',''),area:da,type:dt,content:e.target.result,selected:true,rows:e.target.result.split('\n').filter(r=>r.trim()).length-1});
-      res();
-    };
-    rd.onerror=rej;rd.readAsText(file);
-  });
+  const dt=document.getElementById('importType').value,da=document.getElementById('importArea').value.trim();
+  return new Promise((res,rej)=>{const rd=new FileReader();rd.onload=e=>{importChunks.push({title:file.name.replace('.csv',''),area:da,type:dt,content:e.target.result,selected:true,rows:e.target.result.split('\n').filter(r=>r.trim()).length-1});res();};rd.onerror=rej;rd.readAsText(file);});
 }
-
 async function parseTxt(file){
   const splitH=document.getElementById('splitHeadings').checked;
-  const dt=document.getElementById('importType').value;
-  const da=document.getElementById('importArea').value.trim();
+  const dt=document.getElementById('importType').value,da=document.getElementById('importArea').value.trim();
   return new Promise((res,rej)=>{
     const rd=new FileReader();
     rd.onload=e=>{
       const content=e.target.result;
       if(splitH){
-        const secs=content.split(/\n(?=#{1,3}\s)/);
-        let added=0;
-        secs.forEach((sec,i)=>{
-          if(sec.trim().length<20)return;
-          const fl=sec.split('\n')[0].replace(/^#+\s*/,'').trim();
-          importChunks.push({title:fl||`${file.name} §${i+1}`,area:da,type:dt,content:sec.trim(),selected:true,rows:sec.split('\n').length});
-          added++;
-        });
+        const secs=content.split(/\n(?=#{1,3}\s)/);let added=0;
+        secs.forEach((sec,i)=>{if(sec.trim().length<20)return;const fl=sec.split('\n')[0].replace(/^#+\s*/,'').trim();importChunks.push({title:fl||`${file.name} §${i+1}`,area:da,type:dt,content:sec.trim(),selected:true,rows:sec.split('\n').length});added++;});
         if(!added)importChunks.push({title:file.name.replace(/\.(txt|md)$/i,''),area:da,type:dt,content,selected:true,rows:content.split('\n').length});
-      }else{
-        importChunks.push({title:file.name.replace(/\.(txt|md)$/i,''),area:da,type:dt,content,selected:true,rows:content.split('\n').length});
-      }
+      }else{importChunks.push({title:file.name.replace(/\.(txt|md)$/i,''),area:da,type:dt,content,selected:true,rows:content.split('\n').length});}
       res();
-    };
-    rd.onerror=rej;rd.readAsText(file);
+    };rd.onerror=rej;rd.readAsText(file);
   });
 }
-
 function renderImportPreview(){
-  const wrap=document.getElementById('importPreviewWrap');
-  const empty=document.getElementById('importEmpty');
+  const wrap=document.getElementById('importPreviewWrap'),empty=document.getElementById('importEmpty');
   if(!importChunks.length){wrap.style.display='none';empty.style.display='block';empty.textContent='No chunks detected.';return;}
   wrap.style.display='block';empty.style.display='none';
-  const tl={test_cases:'TC',code:'Code',prd:'PRD',note:'Note'};
-  const tcls={test_cases:'ktc',code:'kco',prd:'kpr',note:'kno'};
+  const tl={test_cases:'TC',code:'Code',prd:'PRD',note:'Note'},tcls={test_cases:'ktc',code:'kco',prd:'kpr',note:'kno'};
   document.getElementById('chunkList').innerHTML=importChunks.map((c,i)=>`
     <div class="chunk">
       <input type="checkbox" class="cc" ${c.selected?'checked':''} onchange="importChunks[${i}].selected=this.checked;updateChunkCounts()">
       <div class="ci">
         <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
-          <span class="ct2">${c.title}</span>
-          <span class="kbb ${tcls[c.type]||'kno'}">${tl[c.type]||c.type}</span>
+          <span class="ct2">${c.title}</span><span class="kbb ${tcls[c.type]||'kno'}">${tl[c.type]||c.type}</span>
         </div>
         <div class="cm">${c.rows} rows · ${c.content.length} chars${c.area?' · '+c.area:''}</div>
         <div class="cp2">${c.content.substring(0,140).replace(/\n/g,' ')}…</div>
         <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;">
-          <input type="text" value="${c.title}" onchange="importChunks[${i}].title=this.value"
-            style="flex:1;min-width:120px;padding:3px 7px;font-size:10px;background:var(--s3);border:1px solid var(--bd2);color:var(--t);border-radius:2px;outline:none;" placeholder="Title">
-          <input type="text" value="${c.area||''}" onchange="importChunks[${i}].area=this.value"
-            style="width:110px;padding:3px 7px;font-size:10px;background:var(--s3);border:1px solid var(--bd2);color:var(--t);border-radius:2px;outline:none;" placeholder="Area">
+          <input type="text" value="${c.title}" onchange="importChunks[${i}].title=this.value" style="flex:1;min-width:120px;padding:3px 7px;font-size:10px;background:var(--s3);border:1px solid var(--bd2);color:var(--t);border-radius:2px;outline:none;" placeholder="Title">
+          <input type="text" value="${c.area||''}" onchange="importChunks[${i}].area=this.value" style="width:110px;padding:3px 7px;font-size:10px;background:var(--s3);border:1px solid var(--bd2);color:var(--t);border-radius:2px;outline:none;" placeholder="Area">
           <select onchange="importChunks[${i}].type=this.value" style="padding:3px 7px;font-size:10px;width:auto;background:var(--s3);border:1px solid var(--bd2);color:var(--t);border-radius:2px;outline:none;">
             <option value="test_cases" ${c.type==='test_cases'?'selected':''}>Test Cases</option>
             <option value="prd" ${c.type==='prd'?'selected':''}>PRD</option>
@@ -988,65 +1086,55 @@ function renderImportPreview(){
     </div>`).join('');
   updateChunkCounts();
 }
-
-function updateChunkCounts(){
-  document.getElementById('chunkCount').textContent=importChunks.length;
-  document.getElementById('chunkSelected').textContent=importChunks.filter(c=>c.selected).length;
-}
-
+function updateChunkCounts(){document.getElementById('chunkCount').textContent=importChunks.length;document.getElementById('chunkSelected').textContent=importChunks.filter(c=>c.selected).length;}
 function selectAllChunks(val){importChunks.forEach(c=>c.selected=val);renderImportPreview();}
-
 async function saveSelectedChunks(){
-  const sel=importChunks.filter(c=>c.selected);
-  if(!sel.length){toast('Nothing selected','er');return;}
-  const btn=document.getElementById('saveChunksBtn');
-  btn.disabled=true;
+  const sel=importChunks.filter(c=>c.selected);if(!sel.length){toast('Nothing selected','er');return;}
+  const btn=document.getElementById('saveChunksBtn');btn.disabled=true;
   document.getElementById('importProgPanel').style.display='block';
-  const bar=document.getElementById('progBar');
-  const lbl=document.getElementById('progLbl');
-  const det=document.getElementById('progDetail');
+  const bar=document.getElementById('progBar'),lbl=document.getElementById('progLbl'),det=document.getElementById('progDetail');
   let saved=0,failed=0;det.innerHTML='';
-
   for(let i=0;i<sel.length;i++){
-    const c=sel[i];
-    lbl.textContent=`${i+1}/${sel.length}`;
-    bar.style.width=`${Math.round((i/sel.length)*100)}%`;
-    try{
-      const d=await wFetch('/kb','POST',{type:c.type,title:c.title||`Import ${i+1}`,area:c.area||'',content:c.content});
-      kbEntries.unshift(d.entry);saved++;
-      det.innerHTML+=`<span style="color:var(--g)">✓</span> ${c.title}<br>`;
-    }catch(e){
-      failed++;
-      det.innerHTML+=`<span style="color:var(--r)">✗</span> ${c.title}: ${e.message}<br>`;
-    }
+    const c=sel[i];lbl.textContent=`${i+1}/${sel.length}`;bar.style.width=`${Math.round((i/sel.length)*100)}%`;
+    try{const d=await wFetch('/kb','POST',{type:c.type,title:c.title||`Import ${i+1}`,area:c.area||'',content:c.content});kbEntries.unshift(d.entry);saved++;det.innerHTML+=`<span style="color:var(--g)">✓</span> ${c.title}<br>`;}
+    catch(e){failed++;det.innerHTML+=`<span style="color:var(--r)">✗</span> ${c.title}: ${e.message}<br>`;}
     await new Promise(r=>setTimeout(r,200));
   }
-
-  bar.style.width='100%';
-  lbl.textContent=`${saved} saved${failed?`, ${failed} failed`:''}`;
-  updateKBUI();setCloud('ok',`☁️ ${kbEntries.length}`);
-  btn.disabled=false;
+  bar.style.width='100%';lbl.textContent=`${saved} saved${failed?`, ${failed} failed`:''}`;
+  updateKBUI();setCloud('ok',`☁️ ${kbEntries.length}`);btn.disabled=false;
   toast(`${saved} entries saved ✓`,saved>0?'ok':'er');
-  importChunks=importChunks.filter(c=>!c.selected);
-  setTimeout(renderImportPreview,400);
+  importChunks=importChunks.filter(c=>!c.selected);setTimeout(renderImportPreview,400);
 }
 
+// ════════════════════════════════════════════
 // TOAST
+// ════════════════════════════════════════════
 let tT;
 function toast(msg,type='ok'){
-  const el=document.getElementById('toast');
-  el.textContent=msg;el.className='toast '+type+' on';
+  const el=document.getElementById('toast');el.textContent=msg;el.className='toast '+type+' on';
   clearTimeout(tT);tT=setTimeout(()=>el.className='toast',3500);
 }
 
+// ════════════════════════════════════════════
 // INIT
+// ════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded',()=>{
+  // Feature tags
   const w=document.getElementById('ftags');
   FEATURES.forEach(f=>{
-    const s=document.createElement('span');
-    s.className='tag';s.textContent=f;s.dataset.v=f;
-    s.onclick=()=>s.classList.toggle('on');
-    w.appendChild(s);
+    const s=document.createElement('span');s.className='tag';s.textContent=f;s.dataset.v=f;
+    s.onclick=()=>s.classList.toggle('on');w.appendChild(s);
+  });
+  // Init Google One Tap
+  window.addEventListener('load',()=>{
+    if(typeof google !== 'undefined'){
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT,
+        callback:  handleGoogleCredential,
+        auto_select: false,
+        cancel_on_tap_outside: false,
+      });
+    }
   });
 });
 </script>
