@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Bebas+Neue&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-:root {
+:root{
   --bg:#080810;--s1:#0e0e1a;--s2:#141422;--s3:#1c1c2e;
   --bd:#252538;--bd2:#2e2e48;
   --r:#ff3b5c;--g:#00e5a0;--b:#3b8bff;--y:#ffcc00;--p:#b87fff;
@@ -15,199 +15,190 @@
   --mono:'IBM Plex Mono',monospace;--dsp:'Bebas Neue',sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--t);font-family:var(--mono);min-height:100vh;overflow-x:hidden}
 body::before{content:'';position:fixed;inset:0;
-  background-image:linear-gradient(rgba(59,139,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(59,139,255,.025) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(59,139,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(59,139,255,.02) 1px,transparent 1px);
   background-size:32px 32px;pointer-events:none;z-index:0}
 
 /* LOCK */
 #LS{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center}
-#LS::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 40%,rgba(59,139,255,.07),transparent 70%)}
-.lb{position:relative;background:var(--s1);border:1px solid var(--bd2);border-radius:4px;padding:48px 40px 40px;width:100%;max-width:400px;text-align:center}
-.li{font-size:38px;margin-bottom:16px;display:block}
-.lt{font-family:var(--dsp);font-size:36px;letter-spacing:5px;color:var(--t);margin-bottom:4px}
-.ls{font-size:10px;letter-spacing:3px;color:var(--m);text-transform:uppercase;margin-bottom:28px}
+.lb{position:relative;background:var(--s1);border:1px solid var(--bd2);border-radius:4px;padding:48px 40px 40px;width:100%;max-width:380px;text-align:center}
+.li{font-size:36px;margin-bottom:14px;display:block}
+.lt{font-family:var(--dsp);font-size:34px;letter-spacing:5px;color:var(--t);margin-bottom:4px}
+.ls{font-size:10px;letter-spacing:3px;color:var(--m);text-transform:uppercase;margin-bottom:26px}
 .lr{display:flex;gap:8px;margin-bottom:8px}
-.lr input{flex:1;background:var(--bg);border:1px solid var(--bd2);color:var(--t);font-family:var(--mono);font-size:14px;padding:11px 13px;border-radius:2px;outline:none;letter-spacing:3px;transition:border-color .2s}
+.lr input{flex:1;background:var(--bg);border:1px solid var(--bd2);color:var(--t);font-family:var(--mono);font-size:14px;padding:10px 12px;border-radius:2px;outline:none;letter-spacing:3px;transition:border-color .2s}
 .lr input:focus{border-color:var(--b)}
-.lbtn{background:var(--r);color:#fff;border:none;padding:11px 18px;font-family:var(--dsp);font-size:16px;letter-spacing:2px;cursor:pointer;border-radius:2px;transition:opacity .2s}
+.lbtn{background:var(--r);color:#fff;border:none;padding:10px 16px;font-family:var(--dsp);font-size:15px;letter-spacing:2px;cursor:pointer;border-radius:2px}
 .lbtn:hover{opacity:.85}
 .lerr{font-size:11px;color:var(--r);min-height:16px}
 
 /* NAV */
-.nav{position:relative;z-index:10;background:rgba(8,8,16,.96);border-bottom:1px solid var(--bd);padding:0 20px;display:flex;align-items:center;backdrop-filter:blur(8px)}
-.nb{font-family:var(--dsp);font-size:20px;letter-spacing:4px;color:var(--t);padding:15px 0;margin-right:16px;white-space:nowrap}
+.nav{position:relative;z-index:10;background:rgba(8,8,16,.97);border-bottom:1px solid var(--bd);padding:0 20px;display:flex;align-items:center;backdrop-filter:blur(8px)}
+.nb{font-family:var(--dsp);font-size:19px;letter-spacing:4px;color:var(--t);padding:14px 0;margin-right:14px;white-space:nowrap}
 .nb span{color:var(--r)}
 .ntabs{display:flex;flex:1;overflow-x:auto}
-.ntab{padding:16px 15px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--m);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;user-select:none;white-space:nowrap}
+.ntab{padding:15px 14px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--m);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;user-select:none;white-space:nowrap}
 .ntab:hover{color:var(--t)}
 .ntab.on{color:var(--b);border-bottom-color:var(--b)}
-.nbadge{display:inline-flex;align-items:center;justify-content:center;background:var(--r);color:#fff;font-size:9px;font-weight:700;width:15px;height:15px;border-radius:50%;margin-left:5px;vertical-align:middle}
-.cst{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding-left:12px;flex-shrink:0}
-.cdot{width:7px;height:7px;border-radius:50%;background:var(--m);transition:background .3s;flex-shrink:0}
+.nbadge{display:inline-flex;align-items:center;justify-content:center;background:var(--r);color:#fff;font-size:9px;font-weight:700;width:14px;height:14px;border-radius:50%;margin-left:5px;vertical-align:middle}
+.cst{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:10px;padding-left:12px;flex-shrink:0}
+.cdot{width:6px;height:6px;border-radius:50%;background:var(--m);transition:background .3s}
 .cdot.ok{background:var(--g);animation:glow 2.5s ease-in-out infinite}
 .cdot.er{background:var(--r)}.cdot.sy{background:var(--y)}
 @keyframes glow{0%,100%{opacity:1}50%{opacity:.4}}
 
-/* WRAP */
-.wrap{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:28px 20px 80px}
+/* LAYOUT */
+.wrap{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:24px 18px 80px}
 .tp{display:none}.tp.on{display:block}
-.sh{margin-bottom:24px}
-.sh h2{font-family:var(--dsp);font-size:30px;letter-spacing:4px;color:var(--t)}
+.sh{margin-bottom:20px}
+.sh h2{font-family:var(--dsp);font-size:28px;letter-spacing:4px;color:var(--t)}
 .sh h2 span{color:var(--r)}
-.sh p{font-size:11px;color:var(--m);margin-top:5px;line-height:1.7}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.sh p{font-size:11px;color:var(--m);margin-top:4px;line-height:1.6}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .c2{grid-column:1/-1}
-@media(max-width:860px){.g2{grid-template-columns:1fr}}
+@media(max-width:820px){.g2{grid-template-columns:1fr}}
 
 /* PANELS */
 .pn{background:var(--s1);border:1px solid var(--bd);border-radius:3px;overflow:hidden}
-.ph{padding:12px 16px;border-bottom:1px solid var(--bd);background:var(--s2);display:flex;align-items:center;gap:9px}
-.pd{width:6px;height:6px;border-radius:50%;background:var(--b)}
-.pd.r{background:var(--r)}.pd.g{background:var(--g)}.pd.y{background:var(--y)}.pd.p{background:var(--p)}
+.ph{padding:11px 15px;border-bottom:1px solid var(--bd);background:var(--s2);display:flex;align-items:center;gap:8px}
+.pd{width:5px;height:5px;border-radius:50%;background:var(--b)}
+.pd.r{background:var(--r)}.pd.g{background:var(--g)}.pd.y{background:var(--y)}
 .pt{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t);font-weight:700}
-.pb{padding:16px}
+.pb{padding:14px}
 
 /* FORMS */
-.fi{margin-bottom:14px}.fi:last-child{margin-bottom:0}
-label{display:block;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--m);margin-bottom:6px}
+.fi{margin-bottom:12px}.fi:last-child{margin-bottom:0}
+label{display:block;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--m);margin-bottom:5px}
 textarea,input[type=text],input[type=password],select{
   width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--t);
-  font-family:var(--mono);font-size:13px;padding:10px 12px;border-radius:2px;outline:none;transition:border-color .2s}
-textarea{min-height:100px;resize:vertical;line-height:1.6}
+  font-family:var(--mono);font-size:12px;padding:9px 11px;border-radius:2px;outline:none;transition:border-color .2s}
+textarea{min-height:90px;resize:vertical;line-height:1.6}
 textarea:focus,input:focus,select:focus{border-color:var(--b)}
 select option{background:var(--s2)}
 
 /* TAGS */
-.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
-.tag{padding:3px 9px;background:var(--s3);border:1px solid var(--bd2);border-radius:2px;font-size:10px;cursor:pointer;transition:all .15s;color:var(--m);user-select:none}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.tag{padding:3px 8px;background:var(--s3);border:1px solid var(--bd2);border-radius:2px;font-size:10px;cursor:pointer;transition:all .15s;color:var(--m);user-select:none}
 .tag:hover{border-color:var(--b);color:var(--b)}
 .tag.on{background:rgba(59,139,255,.12);border-color:var(--b);color:var(--b);font-weight:700}
 
 /* BUTTONS */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 18px;font-family:var(--dsp);letter-spacing:3px;font-size:14px;border:none;border-radius:2px;cursor:pointer;transition:all .2s;text-transform:uppercase;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;font-family:var(--dsp);letter-spacing:2px;font-size:13px;border:none;border-radius:2px;cursor:pointer;transition:all .2s;text-transform:uppercase;white-space:nowrap}
 .btn-r{background:var(--r);color:#fff;width:100%;margin-top:6px}
 .btn-r:hover{opacity:.88;transform:translateY(-1px)}
 .btn-r:disabled{opacity:.4;cursor:not-allowed;transform:none}
 .btn-s{background:var(--s3);color:var(--t);border:1px solid var(--bd2)}
 .btn-s:hover{border-color:var(--b);color:var(--b)}
 .btn-g{background:var(--g);color:#000}
-.btn-g:hover{opacity:.88}
-.btn-xl{background:rgba(0,229,160,.15);color:var(--g);border:1px solid rgba(0,229,160,.3)}
-.btn-xl:hover{background:rgba(0,229,160,.25)}
-.btn-cp{background:rgba(59,139,255,.12);color:var(--b);border:1px solid rgba(59,139,255,.25)}
-.btn-cp:hover{background:rgba(59,139,255,.22)}
-.bsm{padding:6px 12px;font-size:11px;letter-spacing:2px}
+.btn-xl{background:rgba(0,229,160,.12);color:var(--g);border:1px solid rgba(0,229,160,.3)}
+.btn-xl:hover{background:rgba(0,229,160,.22)}
+.btn-cp{background:rgba(59,139,255,.1);color:var(--b);border:1px solid rgba(59,139,255,.2)}
+.btn-cp:hover{background:rgba(59,139,255,.2)}
+.bsm{padding:6px 11px;font-size:11px;letter-spacing:2px}
 
 /* DOWNLOAD BAR */
-.dl-bar{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;background:var(--s3);border-top:1px solid var(--bd);align-items:center}
-.dl-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--m);margin-right:4px}
-
-/* UPLOAD */
-.uz{border:2px dashed var(--bd2);border-radius:3px;padding:26px 16px;text-align:center;cursor:pointer;transition:all .2s}
-.uz:hover,.uz.drag{border-color:var(--b);background:rgba(59,139,255,.04)}
-.uz.ok{border-color:var(--g);background:rgba(0,229,160,.04)}
-.ui{font-size:28px;margin-bottom:8px;display:block}
-.ut{font-size:12px;color:var(--m);line-height:1.7}
-.ut strong{color:var(--t)}
-
-/* IMPACT CARDS */
-.igrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
-.ic{background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:15px}
-.ich{display:flex;align-items:center;gap:8px;margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--bd)}
-.sv{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:2px 6px;border-radius:2px;font-weight:700}
-.sv-critical{background:rgba(255,59,92,.15);color:var(--r);border:1px solid rgba(255,59,92,.3)}
-.sv-high{background:rgba(255,179,71,.15);color:#ffb347;border:1px solid rgba(255,179,71,.3)}
-.sv-medium{background:rgba(59,139,255,.12);color:var(--b);border:1px solid rgba(59,139,255,.25)}
-.sv-low{background:rgba(0,229,160,.1);color:var(--g);border:1px solid rgba(0,229,160,.2)}
-.ict{font-size:13px;font-weight:700;flex:1;color:var(--t)}
-.ic ul{list-style:none;display:flex;flex-direction:column;gap:6px}
-.ic li{font-size:12px;line-height:1.6;color:#b8b8d0;padding-left:13px;position:relative}
-.ic li::before{content:'→';position:absolute;left:0;color:var(--b)}
+.dlbar{display:flex;gap:8px;flex-wrap:wrap;padding:11px 14px;background:var(--s2);border-top:1px solid var(--bd);align-items:center}
+.dllbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--m)}
 
 /* STATS */
-.sbar{display:flex;gap:18px;flex-wrap:wrap;padding:13px 16px;background:var(--s2);border-top:1px solid var(--bd)}
-.si{display:flex;flex-direction:column;gap:2px}
-.sn{font-family:var(--dsp);font-size:24px}
+.sbar{display:flex;gap:16px;flex-wrap:wrap;padding:12px 15px;background:var(--s2)}
+.si{display:flex;flex-direction:column;gap:1px}
+.sn{font-family:var(--dsp);font-size:22px}
 .sl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--m)}
 .nr{color:var(--r)}.no{color:#ffb347}.nb2{color:var(--b)}.ng{color:var(--g)}
 
+/* IMPACT CARDS */
+.igrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.ic{background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:13px}
+.ich{display:flex;align-items:center;gap:7px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--bd)}
+.sv{font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:2px 5px;border-radius:2px;font-weight:700}
+.sv-critical{background:rgba(255,59,92,.15);color:var(--r);border:1px solid rgba(255,59,92,.3)}
+.sv-high{background:rgba(255,179,71,.12);color:#ffb347;border:1px solid rgba(255,179,71,.3)}
+.sv-medium{background:rgba(59,139,255,.1);color:var(--b);border:1px solid rgba(59,139,255,.2)}
+.sv-low{background:rgba(0,229,160,.08);color:var(--g);border:1px solid rgba(0,229,160,.2)}
+.ict{font-size:12px;font-weight:700;flex:1;color:var(--t)}
+.ic ul{list-style:none;display:flex;flex-direction:column;gap:5px}
+.ic li{font-size:11px;line-height:1.6;color:#b0b0cc;padding-left:12px;position:relative}
+.ic li::before{content:'→';position:absolute;left:0;color:var(--b);font-size:10px}
+
 /* TC TABLE */
-.tct{width:100%;border-collapse:collapse;font-size:12px}
-.tct th{background:var(--s3);padding:7px 9px;text-align:left;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--m);border-bottom:1px solid var(--bd);white-space:nowrap}
-.tct td{padding:7px 9px;border-bottom:1px solid rgba(255,255,255,.04);color:#c8c8e0;vertical-align:top;line-height:1.5}
-.tct tr:hover td{background:rgba(59,139,255,.04)}
-.tid{color:var(--b);font-size:10px;white-space:nowrap}
-.pb2{font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:2px 5px;border-radius:2px;white-space:nowrap}
+.tct{width:100%;border-collapse:collapse;font-size:11px}
+.tct th{background:var(--s3);padding:6px 8px;text-align:left;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--m);border-bottom:1px solid var(--bd);white-space:nowrap}
+.tct td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.03);color:#c0c0dc;vertical-align:top;line-height:1.5}
+.tct tr:hover td{background:rgba(59,139,255,.03)}
+.tid{color:var(--b);font-size:9px;white-space:nowrap}
+.pb2{font-size:9px;padding:1px 5px;border-radius:2px;white-space:nowrap}
 .pp0{background:rgba(255,59,92,.15);color:var(--r)}
-.pp1{background:rgba(255,179,71,.12);color:#ffb347}
+.pp1{background:rgba(255,179,71,.1);color:#ffb347}
 .pp2{background:rgba(59,139,255,.1);color:var(--b)}
 .pp3{background:rgba(0,229,160,.08);color:var(--g)}
 
-/* KB */
-.kbl{display:flex;flex-direction:column;gap:9px}
-.kbe{background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:13px 15px;display:flex;align-items:flex-start;gap:12px}
-.kbb{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:3px 7px;border-radius:2px;white-space:nowrap;font-weight:700;margin-top:2px}
+/* UPLOAD */
+.uz{border:2px dashed var(--bd2);border-radius:3px;padding:22px 14px;text-align:center;cursor:pointer;transition:all .2s}
+.uz:hover,.uz.drag{border-color:var(--b);background:rgba(59,139,255,.03)}
+.uz.ok{border-color:var(--g)}
+.ui{font-size:26px;margin-bottom:6px;display:block}
+.ut{font-size:11px;color:var(--m);line-height:1.6}
+.ut strong{color:var(--t)}
+
+/* IMPORT */
+.ipreview{background:var(--bg);border:1px solid var(--bd);border-radius:3px;overflow:hidden}
+.iph{padding:9px 13px;background:var(--s2);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px}
+.ist{font-size:11px;color:var(--m)}
+.ist strong{color:var(--t)}
+.chunk{padding:11px 13px;border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:flex-start;gap:10px}
+.chunk:last-child{border-bottom:none}
+.cc{width:14px;height:14px;accent-color:var(--b);cursor:pointer;margin-top:2px;flex-shrink:0}
+.ci{flex:1}
+.ct2{font-size:11px;color:var(--t);margin-bottom:2px}
+.cm{font-size:10px;color:var(--m);margin-bottom:3px}
+.cp2{font-size:10px;color:#707080;line-height:1.4}
+.kbb{font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:2px 6px;border-radius:2px;font-weight:700}
 .ktc{background:rgba(59,139,255,.12);color:var(--b);border:1px solid rgba(59,139,255,.2)}
 .kco{background:rgba(184,127,255,.1);color:var(--p);border:1px solid rgba(184,127,255,.2)}
 .kpr{background:rgba(0,229,160,.08);color:var(--g);border:1px solid rgba(0,229,160,.2)}
 .kno{background:rgba(255,204,0,.08);color:var(--y);border:1px solid rgba(255,204,0,.2)}
+.prog-bg{background:var(--s3);border-radius:2px;height:5px;overflow:hidden;margin-top:10px}
+.prog-bar{background:var(--g);height:100%;border-radius:2px;transition:width .3s;width:0%}
+.prog-lbl{font-size:10px;color:var(--m);margin-top:4px;text-align:center}
+
+/* KB */
+.kbe{background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:11px 13px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
 .kbc{flex:1}
-.kbt{font-size:13px;color:var(--t);margin-bottom:3px;font-weight:500}
-.kbm{font-size:10px;color:var(--m);margin-bottom:5px}
-.kbs{font-size:11px;color:#909090;line-height:1.5;white-space:pre-wrap;word-break:break-word}
-.kdel{background:none;border:1px solid rgba(255,59,92,.3);color:var(--r);font-family:var(--mono);font-size:9px;letter-spacing:1px;padding:3px 7px;border-radius:2px;cursor:pointer;margin-top:7px;transition:all .2s}
+.kbt{font-size:12px;color:var(--t);margin-bottom:2px;font-weight:500}
+.kbm{font-size:10px;color:var(--m);margin-bottom:4px}
+.kbs{font-size:10px;color:#808090;line-height:1.4;white-space:pre-wrap;word-break:break-word}
+.kdel{background:none;border:1px solid rgba(255,59,92,.3);color:var(--r);font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:2px;cursor:pointer;margin-top:6px;transition:all .2s}
 .kdel:hover{background:rgba(255,59,92,.1)}
 
-/* IMPORT */
-.info-box{background:rgba(59,139,255,.06);border:1px solid rgba(59,139,255,.15);border-radius:3px;padding:12px 14px;font-size:12px;color:#b0b8d0;line-height:1.7;margin-bottom:14px}
-.info-box strong{color:var(--b)}
-.import-preview{background:var(--bg);border:1px solid var(--bd);border-radius:3px;overflow:hidden;margin-top:14px}
-.ip-head{padding:10px 14px;background:var(--s2);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
-.ip-stat{font-size:11px;color:var(--m)}
-.ip-stat strong{color:var(--t)}
-.chunk-list{display:flex;flex-direction:column}
-.chunk{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:flex-start;gap:12px}
-.chunk:last-child{border-bottom:none}
-.chunk-check{width:16px;height:16px;accent-color:var(--b);cursor:pointer;margin-top:2px;flex-shrink:0}
-.chunk-info{flex:1}
-.chunk-title{font-size:12px;color:var(--t);margin-bottom:3px;font-weight:500}
-.chunk-meta{font-size:10px;color:var(--m);margin-bottom:4px}
-.chunk-preview{font-size:11px;color:#808090;line-height:1.5}
-.prog-wrap{margin-top:12px}
-.prog-bg{background:var(--s3);border-radius:2px;height:6px;overflow:hidden}
-.prog-bar{background:var(--g);height:100%;border-radius:2px;transition:width .3s;width:0%}
-.prog-lbl{font-size:10px;color:var(--m);margin-top:5px;text-align:center;letter-spacing:1px}
-
 /* LOADER */
-.spin{width:34px;height:34px;border:2px solid var(--bd);border-top-color:var(--r);border-radius:50%;animation:sp .7s linear infinite;margin:0 auto}
+.spin{width:30px;height:30px;border:2px solid var(--bd);border-top-color:var(--r);border-radius:50%;animation:sp .7s linear infinite;margin:0 auto}
 @keyframes sp{to{transform:rotate(360deg)}}
-.ldr{display:none;flex-direction:column;align-items:center;gap:12px;padding:44px 20px;text-align:center}
+.ldr{display:none;flex-direction:column;align-items:center;gap:10px;padding:40px 16px;text-align:center}
 .ldr.on{display:flex}
-.ll{font-size:11px;letter-spacing:2px;color:var(--m);text-transform:uppercase}
+.ll{font-size:10px;letter-spacing:2px;color:var(--m);text-transform:uppercase}
 
 /* TOAST */
-.toast{position:fixed;bottom:22px;right:22px;z-index:9999;background:var(--s2);border:1px solid var(--bd2);border-radius:3px;padding:11px 16px;font-size:12px;color:var(--t);transform:translateY(70px);opacity:0;transition:all .3s;pointer-events:none;max-width:340px;line-height:1.5}
+.toast{position:fixed;bottom:20px;right:20px;z-index:9999;background:var(--s2);border:1px solid var(--bd2);border-radius:3px;padding:10px 14px;font-size:11px;color:var(--t);transform:translateY(60px);opacity:0;transition:all .3s;pointer-events:none;max-width:320px;line-height:1.5}
 .toast.on{transform:translateY(0);opacity:1}
 .toast.ok{border-left:3px solid var(--g)}
 .toast.er{border-left:3px solid var(--r)}
 .toast.in{border-left:3px solid var(--b)}
 
-.empty{padding:36px 16px;text-align:center;font-size:12px;color:var(--m);line-height:1.7}
-::-webkit-scrollbar{width:5px;height:5px}
+.empty{padding:32px 14px;text-align:center;font-size:11px;color:var(--m);line-height:1.7}
+::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
 </style>
 </head>
 <body>
 
-<!-- LOCK -->
 <div id="LS">
   <div class="lb">
     <span class="li">🔐</span>
     <div class="lt">QA BLUEPRINT</div>
-    <div class="ls">Intelligence Suite v5</div>
+    <div class="ls">v5 · Cloud</div>
     <div class="lr">
       <input type="password" id="pwIn" placeholder="Password..." onkeydown="if(event.key==='Enter')doLogin()">
       <button class="lbtn" onclick="doLogin()">GO</button>
@@ -218,7 +209,6 @@ select option{background:var(--s2)}
 
 <div class="toast" id="toast"></div>
 
-<!-- NAV -->
 <nav class="nav">
   <div class="nb">QA <span>BP</span></div>
   <div class="ntabs">
@@ -229,28 +219,28 @@ select option{background:var(--s2)}
   </div>
   <div class="cst">
     <div class="cdot" id="cdot"></div>
-    <span id="cst" style="color:var(--m)">connecting…</span>
+    <span id="cstlbl" style="color:var(--m);font-size:10px;">connecting…</span>
   </div>
 </nav>
 
 <div class="wrap">
 
-<!-- ══ TAB 1: IMPACT ANALYZER ══ -->
+<!-- ══ IMPACT ANALYZER ══ -->
 <div class="tp on" id="p-impact">
   <div class="sh">
     <h2>Impact <span>Analyzer</span></h2>
-    <p>Describe a change → AI cross-references 1,200+ items + cloud KB → Deep report + 20+ test cases</p>
+    <p>Describe a dev change → AI generates impact report + 20+ test cases using your cloud KB as context</p>
   </div>
   <div class="g2">
     <div class="pn">
-      <div class="ph"><div class="pd r"></div><span class="pt">Change Description</span></div>
+      <div class="ph"><div class="pd r"></div><span class="pt">Change Input</span></div>
       <div class="pb">
         <div class="fi">
           <label>What was changed?</label>
-          <textarea id="cd" placeholder="e.g. Dev refactored SA (Super Ability) activation flow. Mana calc moved from GameplayController.cs to SAManager.cs. Trigger changed from mana >= 100 to configurable threshold per player..."></textarea>
+          <textarea id="cd" placeholder="e.g. SA mana calc moved from GameplayController to SAManager. Threshold now configurable per player instead of fixed 100..."></textarea>
         </div>
         <div class="fi">
-          <label>Feature area tags</label>
+          <label>Feature tags</label>
           <div class="tags" id="ftags"></div>
         </div>
         <div class="fi">
@@ -259,7 +249,6 @@ select option{background:var(--s2)}
             <option>Bug Fix</option><option>New Feature</option>
             <option>Refactor / Code Restructure</option><option>UI / UX Change</option>
             <option>API / Backend Change</option><option>Performance Optimization</option>
-            <option>Dependency Update</option>
           </select>
         </div>
         <div class="fi">
@@ -274,39 +263,27 @@ select option{background:var(--s2)}
       </div>
     </div>
 
-    <div style="display:flex;flex-direction:column;gap:14px;">
-      <div class="pn">
-        <div class="ph"><div class="pd g"></div><span class="pt">Cloud KB Context</span></div>
-        <div class="pb" id="kbCtxPanel" style="font-size:12px;color:var(--m);line-height:1.8;">Loading…</div>
-      </div>
-      <div class="pn">
-        <div class="ph"><div class="pd"></div><span class="pt">Info</span></div>
-        <div class="pb" style="font-size:12px;color:#b0b0c8;line-height:1.9;">
-          ✓ 20+ test cases per analysis<br>✓ P0/P1/P2/P3 priority levels<br>
-          ✓ Platform-specific checks<br>✓ Edge cases + downstream risks<br>
-          ✓ Cloud KB injected as context<br>✓ Download as 14-col Excel
-        </div>
-      </div>
+    <div class="pn">
+      <div class="ph"><div class="pd g"></div><span class="pt">KB Context</span></div>
+      <div class="pb" id="kbCtxPanel" style="font-size:11px;color:var(--m);line-height:1.8;">Loading…</div>
     </div>
 
-    <!-- RESULTS -->
     <div class="pn c2" id="arPanel" style="display:none;">
       <div class="ph">
-        <div class="pd r"></div><span class="pt">Impact Analysis Report</span>
+        <div class="pd r"></div><span class="pt">Report</span>
         <span id="aTime" style="margin-left:auto;font-size:10px;color:var(--m);"></span>
       </div>
       <div class="ldr" id="aLdr"><div class="spin"></div><div class="ll" id="aLbl">Analyzing…</div></div>
       <div id="aOut" style="display:none;">
         <div class="sbar" id="aSbar"></div>
-        <div style="padding:16px;">
+        <div style="padding:14px;">
           <div class="igrid" id="aCards"></div>
-          <div id="aTCs" style="margin-top:18px;"></div>
+          <div id="aTCs" style="margin-top:16px;overflow-x:auto;"></div>
         </div>
-        <!-- DOWNLOAD BAR -->
-        <div class="dl-bar">
-          <span class="dl-label">Download:</span>
+        <div class="dlbar">
+          <span class="dllbl">Export:</span>
           <button class="btn btn-xl bsm" onclick="downloadExcel('impact')">⬇️ Excel (.xlsx)</button>
-          <button class="btn btn-cp bsm" onclick="copyClipboard('impact')">📋 Copy to Clipboard</button>
+          <button class="btn btn-cp bsm" onclick="copyClipboard('impact')">📋 Copy (paste to Excel)</button>
           <button class="btn btn-s bsm" onclick="saveAnalysisToKB()">☁️ Save to KB</button>
         </div>
       </div>
@@ -314,11 +291,11 @@ select option{background:var(--s2)}
   </div>
 </div>
 
-<!-- ══ TAB 2: PRD → TEST CASES ══ -->
+<!-- ══ PRD → TEST CASES ══ -->
 <div class="tp" id="p-prd">
   <div class="sh">
     <h2>PRD <span>→ Test Cases</span></h2>
-    <p>Upload or paste a PRD / feature spec → AI generates a full structured test suite</p>
+    <p>Upload or paste a feature spec → AI generates structured test suite in your 14-column format</p>
   </div>
   <div class="g2">
     <div style="display:flex;flex-direction:column;gap:14px;">
@@ -326,18 +303,16 @@ select option{background:var(--s2)}
         <div class="ph"><div class="pd"></div><span class="pt">PRD Input</span></div>
         <div class="pb">
           <div class="fi">
-            <label>Upload file (PDF, TXT, MD)</label>
             <div class="uz" id="puz" onclick="document.getElementById('pfi').click()" ondragover="pdov(event)" ondragleave="pdol()" ondrop="pdop(event)">
               <span class="ui">📂</span>
-              <div class="ut"><strong>Click to upload</strong> or drag & drop<br>PDF, TXT, MD supported</div>
+              <div class="ut"><strong>Upload file</strong> or drag & drop · PDF, TXT, MD</div>
             </div>
             <input type="file" id="pfi" accept=".pdf,.txt,.md" onchange="ppfs(event)" style="display:none">
-            <div id="pfbadge" style="display:none;margin-top:8px;font-size:11px;color:var(--g);"></div>
+            <div id="pfbadge" style="display:none;margin-top:7px;font-size:11px;color:var(--g);"></div>
           </div>
-          <div style="text-align:center;font-size:10px;color:var(--m);letter-spacing:2px;text-transform:uppercase;margin:4px 0;">— or paste —</div>
+          <div style="text-align:center;font-size:9px;color:var(--m);letter-spacing:2px;text-transform:uppercase;margin:6px 0;">— or paste —</div>
           <div class="fi">
-            <label>Paste PRD text</label>
-            <textarea id="prdTxt" style="min-height:140px;" placeholder="Paste your PRD, feature spec, acceptance criteria…"></textarea>
+            <textarea id="prdTxt" style="min-height:130px;" placeholder="Paste PRD, feature spec, acceptance criteria…"></textarea>
           </div>
         </div>
       </div>
@@ -345,20 +320,12 @@ select option{background:var(--s2)}
         <div class="ph"><div class="pd y"></div><span class="pt">Options</span></div>
         <div class="pb">
           <div class="fi">
-            <label>Format</label>
-            <select id="tcFmt">
-              <option value="detailed">Detailed (preconditions + steps + expected)</option>
-              <option value="concise">Concise (title + expected only)</option>
-              <option value="gherkin">Gherkin (Given / When / Then)</option>
-            </select>
-          </div>
-          <div class="fi">
             <label>Priority system</label>
             <select id="prio"><option value="P0-P3">P0 / P1 / P2 / P3</option><option value="Critical-Low">Critical / High / Medium / Low</option></select>
           </div>
           <div class="fi">
-            <label>Special focus (optional)</label>
-            <textarea id="prdFocus" style="min-height:60px;" placeholder="e.g. Focus on edge cases, Android-specific, negative tests…"></textarea>
+            <label>Special focus</label>
+            <textarea id="prdFocus" style="min-height:55px;" placeholder="e.g. Focus on edge cases, Android-specific, negative tests…"></textarea>
           </div>
           <button class="btn btn-r" id="prdBtn" onclick="runPRD()">📋 Generate Test Cases</button>
         </div>
@@ -369,8 +336,8 @@ select option{background:var(--s2)}
       <div class="ph"><div class="pd g"></div><span class="pt">Generated Test Cases</span></div>
       <div class="ldr" id="pLdr"><div class="spin"></div><div class="ll" id="pLbl">Reading PRD…</div></div>
       <div id="pOut" style="display:none;">
-        <div style="padding:16px 16px 0;">
-          <div id="pStats" style="font-size:12px;color:var(--m);margin-bottom:12px;"></div>
+        <div style="padding:14px 14px 0;">
+          <div id="pStats" style="font-size:11px;color:var(--m);margin-bottom:10px;"></div>
           <div style="overflow-x:auto;">
             <table class="tct">
               <thead><tr>
@@ -383,40 +350,32 @@ select option{background:var(--s2)}
             </table>
           </div>
         </div>
-        <!-- DOWNLOAD BAR -->
-        <div class="dl-bar" style="margin-top:12px;">
-          <span class="dl-label">Download:</span>
+        <div class="dlbar" style="margin-top:10px;">
+          <span class="dllbl">Export:</span>
           <button class="btn btn-xl bsm" onclick="downloadExcel('prd')">⬇️ Excel (.xlsx)</button>
-          <button class="btn btn-cp bsm" onclick="copyClipboard('prd')">📋 Copy to Clipboard</button>
+          <button class="btn btn-cp bsm" onclick="copyClipboard('prd')">📋 Copy (paste to Excel)</button>
           <button class="btn btn-s bsm" onclick="savePRDToKB()">☁️ Save to KB</button>
         </div>
       </div>
-      <div class="empty" id="pEmpty">Upload or paste a PRD on the left, then click Generate</div>
+      <div class="empty" id="pEmpty">Upload or paste a PRD, then click Generate</div>
     </div>
   </div>
 </div>
 
-<!-- ══ TAB 3: BULK IMPORT ══ -->
+<!-- ══ BULK IMPORT ══ -->
 <div class="tp" id="p-import">
   <div class="sh">
     <h2>Bulk <span>Import</span></h2>
-    <p>Upload Excel / CSV / TXT → preview chunks → save all to cloud KB in one click</p>
+    <p>Upload Excel / CSV / TXT → preview → save to cloud KB in one click</p>
   </div>
   <div class="g2">
     <div style="display:flex;flex-direction:column;gap:14px;">
       <div class="pn">
-        <div class="ph"><div class="pd p"></div><span class="pt">Upload Files</span></div>
+        <div class="ph"><div class="pd p" style="background:var(--p)"></div><span class="pt">Upload</span></div>
         <div class="pb">
-          <div class="info-box">
-            <strong>Supported:</strong><br>
-            📊 Excel (.xlsx) — each sheet = one KB entry<br>
-            📋 CSV — imported as test cases<br>
-            📄 TXT / MD — split by ## headings<br>
-            📑 Multiple files at once
-          </div>
           <div class="uz" id="iuz" ondragover="idov(event)" ondragleave="idol()" ondrop="idop(event)" onclick="document.getElementById('ifi').click()">
             <span class="ui">📥</span>
-            <div class="ut"><strong>Click to select</strong> or drag & drop<br>Excel, CSV, TXT, MD — multiple OK</div>
+            <div class="ut"><strong>Click or drag & drop</strong><br>Excel, CSV, TXT, MD — multiple files OK</div>
           </div>
           <input type="file" id="ifi" multiple accept=".xlsx,.xls,.csv,.txt,.md" onchange="importFiles(event)" style="display:none">
         </div>
@@ -431,53 +390,51 @@ select option{background:var(--s2)}
               <option value="note">QA Note</option><option value="code">Code</option>
             </select>
           </div>
-          <div class="fi"><label>Default area tag</label><input type="text" id="importArea" placeholder="e.g. FTUE, Store"></div>
-          <div class="fi" style="display:flex;align-items:center;gap:10px;">
+          <div class="fi"><label>Default area tag</label><input type="text" id="importArea" placeholder="e.g. FTUE, Store, SA"></div>
+          <div class="fi" style="display:flex;align-items:center;gap:8px;">
             <input type="checkbox" id="splitSheets" checked style="width:auto;accent-color:var(--b)">
-            <label style="margin:0;cursor:pointer;" for="splitSheets">Split Excel sheets into separate entries</label>
+            <label style="margin:0;cursor:pointer;font-size:10px;" for="splitSheets">Split Excel sheets into separate entries</label>
           </div>
-          <div class="fi" style="display:flex;align-items:center;gap:10px;">
+          <div class="fi" style="display:flex;align-items:center;gap:8px;">
             <input type="checkbox" id="splitHeadings" checked style="width:auto;accent-color:var(--b)">
-            <label style="margin:0;cursor:pointer;" for="splitHeadings">Split TXT/MD by headings</label>
+            <label style="margin:0;cursor:pointer;font-size:10px;" for="splitHeadings">Split TXT/MD by ## headings</label>
           </div>
         </div>
       </div>
       <div class="pn" id="importProgPanel" style="display:none;">
         <div class="ph"><div class="pd g"></div><span class="pt">Progress</span></div>
         <div class="pb">
-          <div class="prog-wrap">
-            <div class="prog-bg"><div class="prog-bar" id="progBar"></div></div>
-            <div class="prog-lbl" id="progLbl">0 / 0 saved</div>
-          </div>
-          <div id="progDetail" style="margin-top:10px;font-size:11px;color:var(--m);line-height:1.7;max-height:140px;overflow-y:auto;"></div>
+          <div class="prog-bg"><div class="prog-bar" id="progBar"></div></div>
+          <div class="prog-lbl" id="progLbl">0 / 0</div>
+          <div id="progDetail" style="margin-top:8px;font-size:10px;color:var(--m);line-height:1.6;max-height:120px;overflow-y:auto;"></div>
         </div>
       </div>
     </div>
 
     <div>
       <div id="importPreviewWrap" style="display:none;">
-        <div class="import-preview">
-          <div class="ip-head">
-            <div class="ip-stat"><strong id="chunkCount">0</strong> chunks · <strong id="chunkSelected">0</strong> selected</div>
-            <div style="display:flex;gap:7px;flex-wrap:wrap;">
+        <div class="ipreview">
+          <div class="iph">
+            <div class="ist"><strong id="chunkCount">0</strong> chunks · <strong id="chunkSelected">0</strong> selected</div>
+            <div style="display:flex;gap:6px;">
               <button class="btn btn-s bsm" onclick="selectAllChunks(true)">All</button>
               <button class="btn btn-s bsm" onclick="selectAllChunks(false)">None</button>
               <button class="btn btn-g bsm" id="saveChunksBtn" onclick="saveSelectedChunks()">☁️ Save to KB</button>
             </div>
           </div>
-          <div class="chunk-list" id="chunkList"></div>
+          <div id="chunkList"></div>
         </div>
       </div>
-      <div class="empty" id="importEmpty">Upload files on the left to preview before saving</div>
+      <div class="empty" id="importEmpty">Upload files on the left to preview chunks</div>
     </div>
   </div>
 </div>
 
-<!-- ══ TAB 4: KB ══ -->
+<!-- ══ KNOWLEDGE BASE ══ -->
 <div class="tp" id="p-kb">
   <div class="sh">
-    <h2>Cloud <span>Knowledge Base</span></h2>
-    <p>Stored in Cloudflare KV · persists across devices · enriches every impact analysis</p>
+    <h2>Cloud <span>KB</span></h2>
+    <p>Stored in Cloudflare KV · persists across devices · injected into every analysis</p>
   </div>
   <div class="g2">
     <div class="pn">
@@ -485,393 +442,289 @@ select option{background:var(--s2)}
       <div class="pb">
         <div class="fi"><label>Type</label>
           <select id="kbType">
-            <option value="test_cases">Test Cases</option><option value="code">Code</option>
-            <option value="prd">PRD</option><option value="note">QA Note</option>
+            <option value="test_cases">Test Cases</option><option value="prd">PRD</option>
+            <option value="code">Code</option><option value="note">QA Note</option>
           </select>
         </div>
-        <div class="fi"><label>Title</label><input type="text" id="kbTitle" placeholder="e.g. SA Activation — Test Suite v2"></div>
+        <div class="fi"><label>Title</label><input type="text" id="kbTitle" placeholder="e.g. SA Activation Test Suite"></div>
         <div class="fi"><label>Area</label><input type="text" id="kbArea" placeholder="e.g. Super Ability, FTUE, Store"></div>
-        <div class="fi"><label>Content</label><textarea id="kbContent" style="min-height:180px;" placeholder="Paste test cases, code, PRD text, or QA notes…"></textarea></div>
-        <button class="btn btn-g bsm" onclick="saveKB()" style="width:100%;" id="kbSaveBtn">☁️ Save to Cloud KB</button>
+        <div class="fi"><label>Content</label><textarea id="kbContent" style="min-height:160px;" placeholder="Paste test cases, code, PRD, or notes…"></textarea></div>
+        <button class="btn btn-g bsm" onclick="saveKB()" style="width:100%;" id="kbSaveBtn">☁️ Save to KB</button>
       </div>
     </div>
     <div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:7px;">
         <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--m);">Entries: <strong style="color:var(--t);" id="kbTotal">—</strong></div>
-        <div style="display:flex;gap:7px;align-items:center;">
-          <select id="kbFilter" onchange="renderKB()" style="padding:5px 9px;font-size:10px;width:auto;">
+        <div style="display:flex;gap:6px;align-items:center;">
+          <select id="kbFilter" onchange="renderKB()" style="padding:4px 8px;font-size:10px;width:auto;">
             <option value="all">All</option><option value="test_cases">Test Cases</option>
             <option value="code">Code</option><option value="prd">PRD</option><option value="note">Notes</option>
           </select>
-          <button class="btn btn-s bsm" onclick="loadKB()">🔄 Refresh</button>
+          <button class="btn btn-s bsm" onclick="loadKB()">🔄</button>
           <button class="btn btn-s bsm" onclick="clearKB()" style="color:var(--r);border-color:rgba(255,59,92,.3);">🗑 Clear All</button>
         </div>
       </div>
-      <div class="kbl" id="kbList"><div class="empty">Connecting to cloud…</div></div>
+      <div id="kbList"><div class="empty">Connecting…</div></div>
     </div>
   </div>
 </div>
 
-</div><!-- /wrap -->
+</div>
 
 <script>
-// ═══════════════════════════════════════════
-// CONFIG
-// ═══════════════════════════════════════════
 const WORKER   = 'https://orange-waterfall-030e.kunal-249.workers.dev';
 const AUTH     = 'qabp_hw2024';
 const PASSWORD = 'qa123';
+const EXCEL_COLS = ['TC ID','Feature','Test Title','Category','Preconditions','Steps','Expected Result','Break Point','Systems','Edge Case','Priority','Status','Dev Result','QA Result'];
+const FEATURES = ['FTUE','Login/Auth','Super Ability','Match Engine','Store','Squad/Lineup','Player Detail','Training','League Mode','PvP','Auction','Alliance','HW TV','Trophy Road','Season Pass','Player Scout','Dashboard','Notifications','iOS/Game Center','Android','Network/Offline'];
 
-const FEATURES = [
-  'FTUE','Login/Auth','Super Ability','Match Engine','Store',
-  'Squad/Lineup','Player Detail','Training','League Mode','PvP',
-  'Auction','Alliance','HW TV','Trophy Road','Season Pass',
-  'Player Scout','Dashboard','Notifications','iOS/Game Center','Android','Network/Offline'
-];
+let kbEntries=[], prdFileData=null, lastAnalysis=null, lastPRD=null, failCount=0, importChunks=[];
 
-// 14-column internal format
-const EXCEL_COLS = [
-  'TC ID','Feature','Test Title','Category','Preconditions',
-  'Steps','Expected Result','Break Point','Systems','Edge Case',
-  'Priority','Status','Dev Result','QA Result'
-];
-
-let kbEntries    = [];
-let prdFileData  = null;
-let lastAnalysis = null;
-let lastPRD      = null;
-let failCount    = 0;
-let importChunks = [];
-
-// ═══════════════════════════════════════════
 // LOCK
-// ═══════════════════════════════════════════
-function doLogin() {
-  const pwd = document.getElementById('pwIn').value;
-  const err = document.getElementById('lerr');
-  if (failCount >= 5) { err.textContent = 'Too many attempts.'; return; }
-  if (pwd === PASSWORD) {
-    const ls = document.getElementById('LS');
-    ls.style.transition = 'opacity .4s'; ls.style.opacity = '0';
-    setTimeout(() => ls.style.display = 'none', 400);
-    document.getElementById('pwIn').value = '';
+function doLogin(){
+  const pwd=document.getElementById('pwIn').value;
+  const err=document.getElementById('lerr');
+  if(failCount>=5){err.textContent='Too many attempts.';return;}
+  if(pwd===PASSWORD){
+    const ls=document.getElementById('LS');
+    ls.style.transition='opacity .4s';ls.style.opacity='0';
+    setTimeout(()=>ls.style.display='none',400);
+    document.getElementById('pwIn').value='';
     loadKB();
-  } else {
+  }else{
     failCount++;
-    err.textContent = `Wrong password. ${5 - failCount} left.`;
-    document.getElementById('pwIn').value = '';
+    err.textContent=`Wrong. ${5-failCount} left.`;
+    document.getElementById('pwIn').value='';
   }
 }
 
-// ═══════════════════════════════════════════
 // NAV
-// ═══════════════════════════════════════════
-function tab(id) {
-  ['impact','prd','import','kb'].forEach(t => {
-    document.getElementById('p-'+t).classList.toggle('on', t===id);
-    document.getElementById('t-'+t).classList.toggle('on', t===id);
+function tab(id){
+  ['impact','prd','import','kb'].forEach(t=>{
+    document.getElementById('p-'+t).classList.toggle('on',t===id);
+    document.getElementById('t-'+t).classList.toggle('on',t===id);
   });
-  if (id==='kb') renderKB();
+  if(id==='kb')renderKB();
 }
 
-// ═══════════════════════════════════════════
 // WORKER
-// ═══════════════════════════════════════════
-async function wFetch(path, method='GET', body=null) {
-  const opts = { method, headers: { 'Content-Type':'application/json','X-Auth-Token':AUTH } };
-  if (body) opts.body = JSON.stringify(body);
-  const res  = await fetch(WORKER + path, opts);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+async function wFetch(path,method='GET',body=null){
+  const opts={method,headers:{'Content-Type':'application/json','X-Auth-Token':AUTH}};
+  if(body)opts.body=JSON.stringify(body);
+  const res=await fetch(WORKER+path,opts);
+  const data=await res.json();
+  if(!res.ok)throw new Error(data.error||`HTTP ${res.status}`);
   return data;
 }
-async function wAI(prompt) {
-  const d = await wFetch('/ai/analyze','POST',{prompt});
+async function wAI(prompt){
+  const d=await wFetch('/ai/analyze','POST',{prompt});
   return d.text;
 }
 
-// ═══════════════════════════════════════════
 // CLOUD STATUS
-// ═══════════════════════════════════════════
-function setCloud(state, label) {
-  document.getElementById('cdot').className = 'cdot '+(state||'');
-  const l = document.getElementById('cst');
-  l.textContent = label;
-  l.style.color = state==='ok'?'var(--g)':state==='er'?'var(--r)':state==='sy'?'var(--y)':'var(--m)';
+function setCloud(state,label){
+  document.getElementById('cdot').className='cdot '+(state||'');
+  const l=document.getElementById('cstlbl');
+  l.textContent=label;
+  l.style.color=state==='ok'?'var(--g)':state==='er'?'var(--r)':state==='sy'?'var(--y)':'var(--m)';
 }
 
-// ═══════════════════════════════════════════
-// EXCEL DOWNLOAD — 14 columns
-// ═══════════════════════════════════════════
-function tcToRow(tc) {
-  // Map AI-generated tc fields to 14-column format
+// EXCEL 14-COL
+function tcToRow(tc){
   return [
-    tc.id            || '',
-    tc.feature       || '',
-    tc.title         || tc.test_title || '',
-    tc.category      || '',
-    tc.preconditions || '',
-    tc.steps         || '',
-    tc.expected      || tc.expected_result || '',
-    tc.break_point   || '',   // Break Point — AI may or may not fill this
-    tc.systems       || '',   // Systems
-    tc.edge_case     || (tc.category==='Edge Case'?'Yes':''),  // Edge Case flag
-    tc.priority      || '',
-    tc.status        || '',   // Status — blank for new
-    tc.dev_result    || '',   // Dev Result — blank
-    tc.qa_result     || '',   // QA Result — blank
+    tc.id||'', tc.feature||'',
+    tc.title||tc.test_title||'',
+    tc.category||'',
+    tc.preconditions||'',
+    tc.steps||'',
+    tc.expected||tc.expected_result||'',
+    tc.break_point||'',
+    tc.systems||'',
+    tc.edge_case||'',
+    tc.priority||'',
+    '','',''
   ];
 }
 
-function buildWorkbook(tcs, sheetName) {
-  const wb  = XLSX.utils.book_new();
-  const rows = [EXCEL_COLS, ...tcs.map(tcToRow)];
-  const ws  = XLSX.utils.aoa_to_sheet(rows);
-
-  // Column widths
-  ws['!cols'] = [
-    {wch:10},{wch:18},{wch:40},{wch:14},{wch:28},
-    {wch:40},{wch:40},{wch:20},{wch:16},{wch:10},
-    {wch:10},{wch:12},{wch:14},{wch:12}
-  ];
-
-  // Header row style (row 1)
-  const headerRange = XLSX.utils.decode_range(ws['!ref']);
-  for (let C = headerRange.s.c; C <= headerRange.e.c; C++) {
-    const cellAddr = XLSX.utils.encode_cell({r:0, c:C});
-    if (!ws[cellAddr]) continue;
-    ws[cellAddr].s = {
-      font:    { bold: true, color: { rgb: 'FFFFFF' } },
-      fill:    { fgColor: { rgb: '1a1a2e' } },
-      alignment: { horizontal: 'center' }
-    };
-  }
-
-  // Priority colour coding
-  const prioColors = { P0:'FF3B5C', P1:'FF8C42', P2:'3B8BFF', P3:'00E5A0' };
-  for (let R = 1; R <= tcs.length; R++) {
-    const prioCell = XLSX.utils.encode_cell({r:R, c:10}); // Priority col
-    const val = ws[prioCell]?.v || '';
-    const col = prioColors[val];
-    if (col && ws[prioCell]) {
-      ws[prioCell].s = { font: { color: { rgb: col }, bold: true } };
-    }
-  }
-
-  XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0,31));
-  return wb;
+function downloadExcel(src){
+  const tcs=src==='impact'?(lastAnalysis?.test_cases||[]):(lastPRD?.test_cases||[]);
+  if(!tcs.length){toast('No test cases to download','er');return;}
+  const feature=src==='impact'
+    ?(document.getElementById('cd').value.substring(0,28)||'Impact')
+    :(lastPRD?.feature_name||'PRD');
+  const fname=`${feature.replace(/\s+/g,'_')}_TCs_${new Date().toISOString().slice(0,10)}.xlsx`;
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([EXCEL_COLS,...tcs.map(tcToRow)]);
+  ws['!cols']=[{wch:9},{wch:16},{wch:38},{wch:13},{wch:26},{wch:38},{wch:38},{wch:18},{wch:14},{wch:9},{wch:9},{wch:10},{wch:12},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws,feature.substring(0,31));
+  XLSX.writeFile(wb,fname);
+  toast(`Downloaded ${fname} ✓`,'ok');
 }
 
-function downloadExcel(source) {
-  const tcs      = source==='impact' ? (lastAnalysis?.test_cases||[]) : (lastPRD?.test_cases||[]);
-  const feature  = source==='impact'
-    ? (document.getElementById('cd').value.substring(0,30)||'Impact Analysis')
-    : (lastPRD?.feature_name||'PRD Test Cases');
-  const filename = source==='impact'
-    ? `Impact_TCs_${new Date().toISOString().slice(0,10)}.xlsx`
-    : `PRD_TCs_${(lastPRD?.feature_name||'Feature').replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.xlsx`;
-
-  if (!tcs.length) { toast('No test cases to download','er'); return; }
-
-  const wb = buildWorkbook(tcs, feature.substring(0,31));
-  XLSX.writeFile(wb, filename);
-  toast(`Downloaded ${filename} (${tcs.length} TCs) ✓`,'ok');
-}
-
-// ═══════════════════════════════════════════
-// CLIPBOARD COPY — tab-separated (pastes into Excel perfectly)
-// ═══════════════════════════════════════════
-function copyClipboard(source) {
-  const tcs = source==='impact' ? (lastAnalysis?.test_cases||[]) : (lastPRD?.test_cases||[]);
-  if (!tcs.length) { toast('No test cases to copy','er'); return; }
-
-  const header = EXCEL_COLS.join('\t');
-  const rows   = tcs.map(tc => tcToRow(tc).map(v => (v||'').replace(/\t/g,' ')).join('\t'));
-  const text   = [header, ...rows].join('\n');
-
+function copyClipboard(src){
+  const tcs=src==='impact'?(lastAnalysis?.test_cases||[]):(lastPRD?.test_cases||[]);
+  if(!tcs.length){toast('No test cases','er');return;}
+  const text=[EXCEL_COLS.join('\t'),...tcs.map(tc=>tcToRow(tc).map(v=>(v||'').replace(/\t/g,' ')).join('\t'))].join('\n');
   navigator.clipboard.writeText(text)
-    .then(() => toast(`Copied ${tcs.length} test cases (tab-separated — paste directly into Excel) ✓`,'ok'))
-    .catch(() => {
-      // Fallback: show in textarea
-      const ta = document.createElement('textarea');
-      ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
-      document.body.appendChild(ta); ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      toast(`Copied ${tcs.length} test cases ✓`,'ok');
+    .then(()=>toast(`${tcs.length} rows copied — paste into Excel ✓`,'ok'))
+    .catch(()=>{
+      const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0';
+      document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+      toast(`${tcs.length} rows copied ✓`,'ok');
     });
 }
 
-// ═══════════════════════════════════════════
 // KB
-// ═══════════════════════════════════════════
-async function loadKB() {
+async function loadKB(){
   setCloud('sy','syncing…');
-  try {
-    const d = await wFetch('/kb');
-    kbEntries = d.entries||[];
-    updateKBUI(); renderKB();
-    setCloud('ok',`☁️ ${kbEntries.length} entries`);
-  } catch(e) {
-    setCloud('er','cloud error');
-    document.getElementById('kbList').innerHTML=`<div class="empty" style="color:var(--r);">Cannot reach Worker.<br><small>${e.message}</small><br><br>Check: AUTH_TOKEN + QA_KB binding + GROQ_API_KEY in Cloudflare.</div>`;
+  try{
+    const d=await wFetch('/kb');
+    kbEntries=d.entries||[];updateKBUI();renderKB();
+    setCloud('ok',`☁️ ${kbEntries.length}`);
+  }catch(e){
+    setCloud('er','error');
+    document.getElementById('kbList').innerHTML=`<div class="empty" style="color:var(--r);">${e.message}<br><small>Check AUTH_TOKEN + QA_KB binding in Cloudflare</small></div>`;
     toast(e.message,'er');
   }
 }
 
-function updateKBUI() {
-  const n = kbEntries.length;
-  document.getElementById('kbCnt').textContent   = n;
-  document.getElementById('kbTotal').textContent = n;
-  const p = document.getElementById('kbCtxPanel');
-  if (!n) { p.innerHTML='Cloud KB empty. Use <strong>Bulk Import</strong> to add your test cases.'; return; }
+function updateKBUI(){
+  const n=kbEntries.length;
+  document.getElementById('kbCnt').textContent=n;
+  document.getElementById('kbTotal').textContent=n;
+  const p=document.getElementById('kbCtxPanel');
+  if(!n){p.innerHTML='KB empty. Use Bulk Import to add your test cases.';return;}
   const tc=kbEntries.filter(e=>e.type==='test_cases').length,
         co=kbEntries.filter(e=>e.type==='code').length,
         pr=kbEntries.filter(e=>e.type==='prd').length,
         no=kbEntries.filter(e=>e.type==='note').length;
-  p.innerHTML=`<div style="color:var(--g);margin-bottom:7px;">☁️ ${n} entries enriching analysis</div>
-    ${tc?`<div>📋 ${tc} test case set${tc>1?'s':''}</div>`:''}
-    ${co?`<div>💻 ${co} code snippet${co>1?'s':''}</div>`:''}
-    ${pr?`<div>📄 ${pr} PRD/spec</div>`:''}
-    ${no?`<div>📝 ${no} note${no>1?'s':''}</div>`:''}`;
+  p.innerHTML=`<span style="color:var(--g)">☁️ ${n} entries in context</span><br>
+    ${tc?`📋 ${tc} test case set${tc>1?'s':''}<br>`:''}${co?`💻 ${co} code snippet${co>1?'s':''}<br>`:''}
+    ${pr?`📄 ${pr} PRD<br>`:''}${no?`📝 ${no} note${no>1?'s':''}`:''}`;
 }
 
-function getKBContext() {
-  if (!kbEntries.length) return '';
-  let ctx='\n\n=== CLOUD KNOWLEDGE BASE ===\n';
-  kbEntries.slice(0,8).forEach((e,i)=>{
-    ctx+=`\n[KB#${i+1} | ${e.type.toUpperCase()} | ${e.title} | ${e.area}]\n`;
-    ctx+=e.content.substring(0,500)+(e.content.length>500?'…':'')+'\n';
+function getKBContext(){
+  if(!kbEntries.length)return'';
+  let ctx='\n\n=== KB CONTEXT ===\n';
+  kbEntries.slice(0,6).forEach((e,i)=>{
+    ctx+=`\n[#${i+1} ${e.type} | ${e.title} | ${e.area}]\n`;
+    ctx+=e.content.substring(0,400)+(e.content.length>400?'…':'')+'\n';
   });
   return ctx;
 }
 
-async function saveKB() {
+async function saveKB(){
   const title=document.getElementById('kbTitle').value.trim();
   const content=document.getElementById('kbContent').value.trim();
   const area=document.getElementById('kbArea').value.trim();
   const type=document.getElementById('kbType').value;
-  if (!title||!content){toast('Fill in Title and Content','er');return;}
+  if(!title||!content){toast('Title and Content required','er');return;}
   const btn=document.getElementById('kbSaveBtn');
-  btn.disabled=true;btn.textContent='Saving…';
-  setCloud('sy','saving…');
+  btn.disabled=true;btn.textContent='Saving…';setCloud('sy','saving…');
   try{
     const d=await wFetch('/kb','POST',{type,title,area,content});
     kbEntries.unshift(d.entry);updateKBUI();renderKB();
-    setCloud('ok',`☁️ ${kbEntries.length} entries`);
+    setCloud('ok',`☁️ ${kbEntries.length}`);
     document.getElementById('kbTitle').value='';
     document.getElementById('kbArea').value='';
     document.getElementById('kbContent').value='';
     toast('Saved ✓','ok');
   }catch(e){setCloud('er','error');toast(e.message,'er');}
-  btn.disabled=false;btn.textContent='☁️ Save to Cloud KB';
+  btn.disabled=false;btn.textContent='☁️ Save to KB';
 }
 
 async function deleteKB(id){
-  setCloud('sy','deleting…');
   try{
     await wFetch(`/kb/${id}`,'DELETE');
     kbEntries=kbEntries.filter(e=>e.id!==id);updateKBUI();renderKB();
-    setCloud('ok',`☁️ ${kbEntries.length} entries`);toast('Deleted ✓','ok');
-  }catch(e){setCloud('er','error');toast(e.message,'er');}
+    setCloud('ok',`☁️ ${kbEntries.length}`);toast('Deleted','ok');
+  }catch(e){toast(e.message,'er');}
 }
 
 async function clearKB(){
-  if(!confirm('Delete ALL cloud KB entries?'))return;
-  setCloud('sy','clearing…');
+  if(!confirm('Delete ALL KB entries?'))return;
   try{
     await wFetch('/kb','DELETE');kbEntries=[];updateKBUI();renderKB();
-    setCloud('ok','☁️ 0 entries');toast('Cleared ✓','ok');
-  }catch(e){setCloud('er','error');toast(e.message,'er');}
+    setCloud('ok','☁️ 0');toast('Cleared','ok');
+  }catch(e){toast(e.message,'er');}
 }
 
 function renderKB(){
   const filter=document.getElementById('kbFilter').value;
   const list=document.getElementById('kbList');
   const entries=filter==='all'?kbEntries:kbEntries.filter(e=>e.type===filter);
-  if(!entries.length){list.innerHTML='<div class="empty">No entries'+(filter!=='all'?' for this type':'')+'.</div>';return;}
-  const tl={test_cases:'Test Cases',code:'Code',prd:'PRD',note:'Note'};
+  if(!entries.length){list.innerHTML='<div class="empty">No entries.</div>';return;}
+  const tl={test_cases:'TC',code:'Code',prd:'PRD',note:'Note'};
   const tc={test_cases:'ktc',code:'kco',prd:'kpr',note:'kno'};
   list.innerHTML=entries.map(e=>`
     <div class="kbe">
       <span class="kbb ${tc[e.type]||''}">${tl[e.type]||e.type}</span>
       <div class="kbc">
         <div class="kbt">${e.title}</div>
-        <div class="kbm">${e.area?'📍 '+e.area+' · ':''}🕐 ${e.addedAt}</div>
-        <div class="kbs">${e.content.substring(0,260)}${e.content.length>260?'…':''}</div>
-        <button class="kdel" onclick="deleteKB(${e.id})">🗑 Delete</button>
+        <div class="kbm">${e.area?'📍 '+e.area+' · ':''}${e.addedAt}</div>
+        <div class="kbs">${e.content.substring(0,200)}${e.content.length>200?'…':''}</div>
+        <button class="kdel" onclick="deleteKB(${e.id})">Delete</button>
       </div>
     </div>`).join('');
 }
 
-// ═══════════════════════════════════════════
 // IMPACT ANALYZER
-// ═══════════════════════════════════════════
 async function runAnalysis(){
   const cd=document.getElementById('cd').value.trim();
-  if(!cd){toast('Describe the change first','er');return;}
+  if(!cd){toast('Describe the change','er');return;}
   const ct=document.getElementById('ct').value;
   const pl=document.getElementById('pl').value;
   const tags=Array.from(document.querySelectorAll('#ftags .tag.on')).map(t=>t.dataset.v);
-  const kbCtx=getKBContext();
-
   document.getElementById('anBtn').disabled=true;
   const panel=document.getElementById('arPanel');
   panel.style.display='block';
   document.getElementById('aLdr').classList.add('on');
   document.getElementById('aOut').style.display='none';
   panel.scrollIntoView({behavior:'smooth'});
-
-  const lbls=['Scanning checklist items…','Mapping risk areas…','Generating test cases…','Finalizing report…'];
+  const lbls=['Scanning items…','Mapping risks…','Generating test cases…','Finalizing…'];
   let li=0;const lbl=document.getElementById('aLbl');
-  const iv=setInterval(()=>{li=(li+1)%lbls.length;lbl.textContent=lbls[li];},2000);
+  const iv=setInterval(()=>{li=(li+1)%lbls.length;lbl.textContent=lbls[li];},2200);
 
-  const prompt=`You are a senior QA engineer for Hitwicket, a mobile cricket game (Android + iOS). You know all systems: FTUE, Super Abilities (SA/mana/configurable threshold), Match Engine, Store (chests/offers/scouting/EPB/SPB), Squad/Lineup, Player Detail/Training, League, PvP/Trophy Road, Auction, Alliance, HW TV, Season Pass, Player Scout, Dashboard, Notifications, Game Center (iOS), auth flows.
+  const prompt=`You are a senior QA engineer for Hitwicket mobile cricket game (Android + iOS). Systems: FTUE, SA/mana/threshold, Match Engine, Store/chests/EPB/SPB, Squad, Training, League, PvP, Auction, Alliance, HW TV, Trophy Road, Season Pass, Player Scout, Game Center iOS, auth flows.
 
-Developer change:
-TYPE: ${ct}
-PLATFORM: ${pl}
-TAGS: ${tags.length?tags.join(', '):'not specified'}
-DESCRIPTION: ${cd}
-${kbCtx}
+Change:
+TYPE: ${ct} | PLATFORM: ${pl} | TAGS: ${tags.join(', ')||'n/a'}
+${cd}
+${getKBContext()}
 
-Respond ONLY with valid JSON, no markdown:
+Return ONLY valid JSON. No markdown. No explanation. Start with { and end with }
+
 {
-  "summary":"2-3 sentence risk summary",
+  "summary":"brief risk summary",
   "risk_score":"CRITICAL|HIGH|MEDIUM|LOW",
-  "impact_areas":[{"title":"area","severity":"critical|high|medium|low","items":["check1","check2"]}],
-  "test_cases":[{
-    "id":"TC-001","feature":"area","title":"test title",
-    "category":"Functional|Regression|Edge Case|UI|Performance",
-    "preconditions":"setup required",
-    "steps":"1. Do X  2. Tap Y  3. Check Z",
-    "expected":"expected outcome",
-    "break_point":"what would cause failure",
-    "systems":"affected systems/modules",
-    "edge_case":"Yes|No",
-    "priority":"P0|P1|P2|P3",
-    "status":"","dev_result":"","qa_result":""
-  }],
-  "edge_cases":["case1"],
-  "downstream_risks":["risk1"],
-  "regression_scope":["area1"]
+  "impact_areas":[{"title":"name","severity":"critical|high|medium|low","items":["item"]}],
+  "test_cases":[{"id":"TC-001","feature":"area","title":"title","category":"Functional|Regression|Edge Case|UI|Performance","preconditions":"setup","steps":"1. X 2. Y","expected":"outcome","break_point":"failure cause","systems":"modules","edge_case":"Yes|No","priority":"P0|P1|P2|P3"}],
+  "edge_cases":["case"],
+  "downstream_risks":["risk"],
+  "regression_scope":["area"]
 }
-Rules: min 20 test cases, min 6 impact areas, min 8 edge cases. Be specific to Hitwicket. P0=blocker, P1=critical regression, P2=important, P3=low.`;
+
+Generate exactly 15 test cases. Keep each field brief. P0=blocker,P1=critical,P2=important,P3=low.`;
 
   try{
     const raw=await wAI(prompt);
     clearInterval(iv);
+    const clean=raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
     let result;
-    try{result=JSON.parse(raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim());}
-    catch{const m=raw.match(/\{[\s\S]*\}/);if(m)result=JSON.parse(m[0]);else throw new Error('Could not parse AI response');}
+    try{result=JSON.parse(clean);}
+    catch{
+      const m=clean.match(/\{[\s\S]*\}/);
+      if(m){try{result=JSON.parse(m[0]);}catch(e2){throw new Error('JSON parse failed: '+e2.message);}}
+      else throw new Error('No JSON found in response');
+    }
     lastAnalysis=result;
     renderAnalysis(result);
-    document.getElementById('aTime').textContent='Analyzed '+new Date().toLocaleTimeString();
+    document.getElementById('aTime').textContent=new Date().toLocaleTimeString();
   }catch(e){
     clearInterval(iv);
     document.getElementById('aLdr').classList.remove('on');
     document.getElementById('aOut').style.display='block';
-    document.getElementById('aCards').innerHTML=`<div style="color:var(--r);padding:10px;font-size:13px;">Error: ${e.message}</div>`;
+    document.getElementById('aCards').innerHTML=`<div style="color:var(--r);padding:10px;font-size:12px;">Error: ${e.message}</div>`;
     toast(e.message,'er');
   }
   document.getElementById('anBtn').disabled=false;
@@ -890,67 +743,49 @@ function renderAnalysis(r){
     <div class="si"><span class="sn no">${p1}</span><span class="sl">P1</span></div>
     <div class="si"><span class="sn nb2">${p2}</span><span class="sl">P2</span></div>
     <div class="si"><span class="sn ng">${p3}</span><span class="sl">P3</span></div>
-    <div class="si" style="margin-left:auto;"><span class="sn">${tcs.length}</span><span class="sl">Total TCs</span></div>`;
+    <div class="si" style="margin-left:auto"><span class="sn">${tcs.length}</span><span class="sl">TCs</span></div>`;
 
-  let html=`<div class="ic c2" style="grid-column:1/-1;border-color:rgba(59,139,255,.25);">
-    <div class="ich"><span style="font-size:15px;">📋</span><span class="ict">Summary</span></div>
-    <p style="font-size:13px;line-height:1.8;color:#c0c0d8;">${r.summary||''}</p>
-    ${r.regression_scope?.length?`<div style="margin-top:10px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--m);margin-bottom:5px;">Regression Scope</div>
-    <div style="display:flex;flex-wrap:wrap;gap:5px;">${r.regression_scope.map(s=>`<span style="background:rgba(59,139,255,.1);border:1px solid rgba(59,139,255,.2);color:var(--b);font-size:10px;padding:2px 7px;border-radius:2px;">${s}</span>`).join('')}</div>`:''}
+  let html=`<div class="ic c2" style="grid-column:1/-1;border-color:rgba(59,139,255,.2);">
+    <div class="ich"><span class="ict">Summary</span></div>
+    <p style="font-size:12px;line-height:1.7;color:#c0c0d8;">${r.summary||''}</p>
+    ${r.regression_scope?.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;">${r.regression_scope.map(s=>`<span style="background:rgba(59,139,255,.1);border:1px solid rgba(59,139,255,.2);color:var(--b);font-size:9px;padding:1px 6px;border-radius:2px;">${s}</span>`).join('')}</div>`:''}
   </div>`;
   (r.impact_areas||[]).forEach(a=>{
     const icon={critical:'🔴',high:'🟠',medium:'🔵',low:'🟢'}[a.severity]||'⚪';
     html+=`<div class="ic"><div class="ich"><span>${icon}</span><span class="ict">${a.title}</span><span class="sv sv-${a.severity||'medium'}">${a.severity}</span></div>
     <ul>${(a.items||[]).map(i=>`<li>${i}</li>`).join('')}</ul></div>`;
   });
-  if(r.edge_cases?.length) html+=`<div class="ic"><div class="ich"><span>⚠️</span><span class="ict">Edge Cases</span><span class="sv sv-high">watch</span></div><ul>${r.edge_cases.map(e=>`<li>${e}</li>`).join('')}</ul></div>`;
-  if(r.downstream_risks?.length) html+=`<div class="ic"><div class="ich"><span>🔗</span><span class="ict">Downstream Risks</span><span class="sv sv-medium">deps</span></div><ul>${r.downstream_risks.map(d=>`<li>${d}</li>`).join('')}</ul></div>`;
+  if(r.edge_cases?.length) html+=`<div class="ic"><div class="ich"><span>⚠️</span><span class="ict">Edge Cases</span></div><ul>${r.edge_cases.map(e=>`<li>${e}</li>`).join('')}</ul></div>`;
+  if(r.downstream_risks?.length) html+=`<div class="ic"><div class="ich"><span>🔗</span><span class="ict">Downstream</span></div><ul>${r.downstream_risks.map(d=>`<li>${d}</li>`).join('')}</ul></div>`;
   document.getElementById('aCards').innerHTML=html;
 
   const pc={P0:'pp0',P1:'pp1',P2:'pp2',P3:'pp3'};
-  if(tcs.length){
-    document.getElementById('aTCs').innerHTML=`
-      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--g);margin-bottom:10px;">✅ Test Cases (${tcs.length})</div>
-      <div style="overflow-x:auto;"><table class="tct">
-        <thead><tr>
-          <th>TC ID</th><th>Feature</th><th>Test Title</th><th>Category</th>
-          <th>Preconditions</th><th>Steps</th><th>Expected Result</th>
-          <th>Break Point</th><th>Systems</th><th>Edge Case</th>
-          <th>Priority</th><th>Status</th><th>Dev Result</th><th>QA Result</th>
-        </tr></thead>
-        <tbody>${tcs.map(tc=>`<tr>
-          <td class="tid">${tc.id||''}</td>
-          <td>${tc.feature||''}</td>
-          <td>${tc.title||''}</td>
-          <td>${tc.category||''}</td>
-          <td style="min-width:120px;">${tc.preconditions||''}</td>
-          <td style="min-width:180px;">${tc.steps||''}</td>
-          <td style="min-width:160px;">${tc.expected||''}</td>
-          <td>${tc.break_point||''}</td>
-          <td>${tc.systems||''}</td>
-          <td>${tc.edge_case||''}</td>
-          <td><span class="pb2 ${pc[tc.priority]||'pp2'}">${tc.priority||'P2'}</span></td>
-          <td></td><td></td><td></td>
-        </tr>`).join('')}</tbody>
-      </table></div>`;
-  }
+  document.getElementById('aTCs').innerHTML=tcs.length?`
+    <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g);margin-bottom:8px;">TEST CASES (${tcs.length})</div>
+    <table class="tct"><thead><tr>
+      <th>TC ID</th><th>Feature</th><th>Test Title</th><th>Category</th>
+      <th>Preconditions</th><th>Steps</th><th>Expected</th>
+      <th>Break Point</th><th>Systems</th><th>Edge Case</th>
+      <th>Priority</th><th>Status</th><th>Dev</th><th>QA</th>
+    </tr></thead><tbody>${tcs.map(tc=>`<tr>
+      <td class="tid">${tc.id||''}</td><td>${tc.feature||''}</td><td>${tc.title||''}</td><td>${tc.category||''}</td>
+      <td>${tc.preconditions||''}</td><td>${tc.steps||''}</td><td>${tc.expected||''}</td>
+      <td>${tc.break_point||''}</td><td>${tc.systems||''}</td><td>${tc.edge_case||''}</td>
+      <td><span class="pb2 ${pc[tc.priority]||'pp2'}">${tc.priority||''}</span></td>
+      <td></td><td></td><td></td>
+    </tr>`).join('')}</tbody></table>`:'';
 }
 
 async function saveAnalysisToKB(){
-  if(!lastAnalysis){toast('No analysis to save','er');return;}
-  const cd=document.getElementById('cd').value.substring(0,60);
-  const tags=Array.from(document.querySelectorAll('#ftags .tag.on')).map(t=>t.dataset.v).join(', ');
-  setCloud('sy','saving…');
+  if(!lastAnalysis){toast('No analysis','er');return;}
   try{
-    const d=await wFetch('/kb','POST',{type:'test_cases',title:'Impact: '+cd+'…',area:tags||'Impact Analysis',content:JSON.stringify(lastAnalysis,null,2)});
+    const d=await wFetch('/kb','POST',{type:'test_cases',title:'Impact: '+document.getElementById('cd').value.substring(0,50),area:Array.from(document.querySelectorAll('#ftags .tag.on')).map(t=>t.dataset.v).join(', ')||'',content:JSON.stringify(lastAnalysis,null,2)});
     kbEntries.unshift(d.entry);updateKBUI();
-    setCloud('ok',`☁️ ${kbEntries.length} entries`);toast('Saved to KB ✓','ok');
-  }catch(e){setCloud('er','error');toast(e.message,'er');}
+    setCloud('ok',`☁️ ${kbEntries.length}`);toast('Saved ✓','ok');
+  }catch(e){toast(e.message,'er');}
 }
 
-// ═══════════════════════════════════════════
-// PRD → TEST CASES
-// ═══════════════════════════════════════════
+// PRD
 function pdov(e){e.preventDefault();document.getElementById('puz').classList.add('drag')}
 function pdol(){document.getElementById('puz').classList.remove('drag')}
 function pdop(e){e.preventDefault();pdol();if(e.dataTransfer.files[0])ppf(e.dataTransfer.files[0])}
@@ -965,46 +800,37 @@ function ppf(file){
 
 async function runPRD(){
   const txt=document.getElementById('prdTxt').value.trim();
-  if(!prdFileData&&!txt){toast('Upload or paste a PRD','er');return;}
-  const fmt=document.getElementById('tcFmt').value;
+  if(!prdFileData&&!txt){toast('Upload or paste PRD','er');return;}
   const prio=document.getElementById('prio').value;
   const focus=document.getElementById('prdFocus').value.trim();
   document.getElementById('pLdr').classList.add('on');
   document.getElementById('pOut').style.display='none';
   document.getElementById('pEmpty').style.display='none';
   document.getElementById('prdBtn').disabled=true;
-  const lbls=['Reading document…','Understanding requirements…','Generating test cases…','Formatting…'];
+  const lbls=['Reading…','Analyzing…','Generating TCs…','Done…'];
   let li=0;const ll=document.getElementById('pLbl');
   const iv=setInterval(()=>{li=(li+1)%lbls.length;ll.textContent=lbls[li];},2000);
   const content=prdFileData?.type==='text'?prdFileData.data:txt;
 
-  const prompt=`You are a senior QA engineer for Hitwicket, a mobile cricket game. Analyze this PRD and generate comprehensive test cases.
+  const prompt=`Senior QA engineer for Hitwicket. Analyze PRD and generate test cases.
 
 PRD:
 ${content}
-${focus?'\nFOCUS: '+focus:''}
+${focus?'FOCUS: '+focus:''}
 
-Respond ONLY with valid JSON (no markdown):
-{"feature_name":"name","test_cases":[{
-  "id":"TC-001","feature":"sub-feature","title":"title",
-  "category":"Functional|UI|Regression|Edge Case|Performance",
-  "preconditions":"setup","steps":"1. X  2. Y",
-  "expected_result":"outcome",
-  "break_point":"what causes failure",
-  "systems":"affected modules",
-  "edge_case":"Yes|No",
-  "priority":"${prio==='P0-P3'?'P0|P1|P2|P3':'Critical|High|Medium|Low'}",
-  "platform":"Android|iOS|Both",
-  "status":"","dev_result":"","qa_result":""
-}]}
-Generate 25-35 test cases. Format: ${fmt}. Be specific to Hitwicket flows.`;
+Return ONLY valid JSON. Start with { end with }
+
+{"feature_name":"name","test_cases":[{"id":"TC-001","feature":"area","title":"title","category":"Functional|UI|Regression|Edge Case|Performance","preconditions":"setup","steps":"1. X 2. Y","expected_result":"outcome","break_point":"failure","systems":"modules","edge_case":"Yes|No","priority":"${prio==='P0-P3'?'P0|P1|P2|P3':'Critical|High|Medium|Low'}","platform":"Android|iOS|Both"}]}
+
+Generate 20-25 test cases. Keep fields brief. Cover happy path, negative, edge cases.`;
 
   try{
     const raw=await wAI(prompt);
     clearInterval(iv);
+    const clean=raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
     let result;
-    try{result=JSON.parse(raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim());}
-    catch{const m=raw.match(/\{[\s\S]*\}/);if(m)result=JSON.parse(m[0]);else throw new Error('Parse failed');}
+    try{result=JSON.parse(clean);}
+    catch{const m=clean.match(/\{[\s\S]*\}/);if(m)result=JSON.parse(m[0]);else throw new Error('Parse failed');}
     lastPRD=result;renderPRD(result);
   }catch(e){
     clearInterval(iv);
@@ -1020,19 +846,13 @@ function renderPRD(r){
   document.getElementById('pLdr').classList.remove('on');
   document.getElementById('pOut').style.display='block';
   const tcs=r.test_cases||[];
-  document.getElementById('pStats').textContent=`${r.feature_name||'Feature'} · ${tcs.length} test cases generated`;
+  document.getElementById('pStats').textContent=`${r.feature_name||'Feature'} · ${tcs.length} test cases`;
   const pc={P0:'pp0',P1:'pp1',P2:'pp2',P3:'pp3',Critical:'pp0',High:'pp1',Medium:'pp2',Low:'pp3'};
   document.getElementById('pTBody').innerHTML=tcs.map(tc=>`<tr>
-    <td class="tid">${tc.id||''}</td>
-    <td>${tc.feature||''}</td>
-    <td>${tc.title||''}</td>
-    <td>${tc.category||''}</td>
-    <td style="min-width:120px;">${tc.preconditions||''}</td>
-    <td style="min-width:180px;">${tc.steps||''}</td>
-    <td style="min-width:160px;">${tc.expected_result||tc.expected||''}</td>
-    <td>${tc.break_point||''}</td>
-    <td>${tc.systems||''}</td>
-    <td>${tc.edge_case||''}</td>
+    <td class="tid">${tc.id||''}</td><td>${tc.feature||''}</td><td>${tc.title||''}</td><td>${tc.category||''}</td>
+    <td>${tc.preconditions||''}</td><td>${tc.steps||''}</td>
+    <td>${tc.expected_result||tc.expected||''}</td>
+    <td>${tc.break_point||''}</td><td>${tc.systems||''}</td><td>${tc.edge_case||''}</td>
     <td><span class="pb2 ${pc[tc.priority]||'pp2'}">${tc.priority||''}</span></td>
     <td></td><td></td><td></td>
   </tr>`).join('');
@@ -1040,17 +860,14 @@ function renderPRD(r){
 
 async function savePRDToKB(){
   if(!lastPRD){toast('No results','er');return;}
-  setCloud('sy','saving…');
   try{
     const d=await wFetch('/kb','POST',{type:'prd',title:'PRD: '+(lastPRD.feature_name||'Feature'),area:lastPRD.feature_name||'',content:JSON.stringify(lastPRD,null,2)});
     kbEntries.unshift(d.entry);updateKBUI();
-    setCloud('ok',`☁️ ${kbEntries.length} entries`);toast('Saved to KB ✓','ok');
-  }catch(e){setCloud('er','error');toast(e.message,'er');}
+    setCloud('ok',`☁️ ${kbEntries.length}`);toast('Saved ✓','ok');
+  }catch(e){toast(e.message,'er');}
 }
 
-// ═══════════════════════════════════════════
 // BULK IMPORT
-// ═══════════════════════════════════════════
 function idov(e){e.preventDefault();document.getElementById('iuz').classList.add('drag')}
 function idol(){document.getElementById('iuz').classList.remove('drag')}
 function idop(e){e.preventDefault();idol();if(e.dataTransfer.files.length)importFiles({target:{files:e.dataTransfer.files}})}
@@ -1060,14 +877,14 @@ async function importFiles(e){
   if(!files.length)return;
   importChunks=[];
   document.getElementById('iuz').classList.add('ok');
-  document.getElementById('iuz').querySelector('.ut').innerHTML=`<strong>${files.length} file${files.length>1?'s':''} loaded</strong> — processing…`;
+  document.getElementById('iuz').querySelector('.ut').innerHTML=`<strong>${files.length} file${files.length>1?'s':''}</strong> loaded`;
   for(const file of files){
     const ext=file.name.split('.').pop().toLowerCase();
     try{
-      if(ext==='xlsx'||ext==='xls') await parseExcel(file);
-      else if(ext==='csv') await parseCSV(file);
-      else if(ext==='txt'||ext==='md') await parseTxt(file);
-    }catch(err){toast(`Error reading ${file.name}: ${err.message}`,'er');}
+      if(ext==='xlsx'||ext==='xls')await parseExcel(file);
+      else if(ext==='csv')await parseCSV(file);
+      else if(ext==='txt'||ext==='md')await parseTxt(file);
+    }catch(err){toast(`${file.name}: ${err.message}`,'er');}
   }
   renderImportPreview();
   document.getElementById('ifi').value='';
@@ -1075,8 +892,8 @@ async function importFiles(e){
 
 async function parseExcel(file){
   const split=document.getElementById('splitSheets').checked;
-  const defType=document.getElementById('importType').value;
-  const defArea=document.getElementById('importArea').value.trim();
+  const dt=document.getElementById('importType').value;
+  const da=document.getElementById('importArea').value.trim();
   return new Promise((res,rej)=>{
     const rd=new FileReader();
     rd.onload=e=>{
@@ -1084,14 +901,12 @@ async function parseExcel(file){
         const wb=XLSX.read(e.target.result,{type:'array'});
         if(split){
           wb.SheetNames.forEach(sn=>{
-            const ws=wb.Sheets[sn];
-            const csv=XLSX.utils.sheet_to_csv(ws);
-            if(csv.trim().length>10) importChunks.push({title:`${file.name} — ${sn}`,area:defArea||sn,type:defType,content:csv,selected:true,source:`Excel: ${sn}`,rows:csv.split('\n').length-1});
+            const csv=XLSX.utils.sheet_to_csv(wb.Sheets[sn]);
+            if(csv.trim().length>10)importChunks.push({title:`${file.name} — ${sn}`,area:da||sn,type:dt,content:csv,selected:true,rows:csv.split('\n').length-1});
           });
-        } else {
-          let combined='';
-          wb.SheetNames.forEach(sn=>{combined+=`\n=== ${sn} ===\n${XLSX.utils.sheet_to_csv(wb.Sheets[sn])}\n`;});
-          importChunks.push({title:file.name,area:defArea,type:defType,content:combined.trim(),selected:true,source:`Excel (${wb.SheetNames.length} sheets)`,rows:combined.split('\n').length});
+        }else{
+          let c='';wb.SheetNames.forEach(sn=>{c+=`\n=== ${sn} ===\n${XLSX.utils.sheet_to_csv(wb.Sheets[sn])}\n`;});
+          importChunks.push({title:file.name,area:da,type:dt,content:c.trim(),selected:true,rows:c.split('\n').length});
         }
         res();
       }catch(err){rej(err);}
@@ -1101,13 +916,12 @@ async function parseExcel(file){
 }
 
 async function parseCSV(file){
-  const defType=document.getElementById('importType').value;
-  const defArea=document.getElementById('importArea').value.trim();
+  const dt=document.getElementById('importType').value;
+  const da=document.getElementById('importArea').value.trim();
   return new Promise((res,rej)=>{
     const rd=new FileReader();
     rd.onload=e=>{
-      const content=e.target.result;
-      importChunks.push({title:file.name.replace('.csv',''),area:defArea,type:defType,content,selected:true,source:'CSV',rows:content.split('\n').filter(r=>r.trim()).length-1});
+      importChunks.push({title:file.name.replace('.csv',''),area:da,type:dt,content:e.target.result,selected:true,rows:e.target.result.split('\n').filter(r=>r.trim()).length-1});
       res();
     };
     rd.onerror=rej;rd.readAsText(file);
@@ -1116,24 +930,24 @@ async function parseCSV(file){
 
 async function parseTxt(file){
   const splitH=document.getElementById('splitHeadings').checked;
-  const defType=document.getElementById('importType').value;
-  const defArea=document.getElementById('importArea').value.trim();
+  const dt=document.getElementById('importType').value;
+  const da=document.getElementById('importArea').value.trim();
   return new Promise((res,rej)=>{
     const rd=new FileReader();
     rd.onload=e=>{
       const content=e.target.result;
       if(splitH){
-        const sections=content.split(/\n(?=#{1,3}\s)/);
+        const secs=content.split(/\n(?=#{1,3}\s)/);
         let added=0;
-        sections.forEach((sec,i)=>{
+        secs.forEach((sec,i)=>{
           if(sec.trim().length<20)return;
           const fl=sec.split('\n')[0].replace(/^#+\s*/,'').trim();
-          importChunks.push({title:fl||`${file.name} §${i+1}`,area:defArea,type:defType,content:sec.trim(),selected:true,source:`${file.name} §${i+1}`,rows:sec.split('\n').length});
+          importChunks.push({title:fl||`${file.name} §${i+1}`,area:da,type:dt,content:sec.trim(),selected:true,rows:sec.split('\n').length});
           added++;
         });
-        if(!added) importChunks.push({title:file.name.replace(/\.(txt|md)$/i,''),area:defArea,type:defType,content,selected:true,source:file.name,rows:content.split('\n').length});
-      } else {
-        importChunks.push({title:file.name.replace(/\.(txt|md)$/i,''),area:defArea,type:defType,content,selected:true,source:file.name,rows:content.split('\n').length});
+        if(!added)importChunks.push({title:file.name.replace(/\.(txt|md)$/i,''),area:da,type:dt,content,selected:true,rows:content.split('\n').length});
+      }else{
+        importChunks.push({title:file.name.replace(/\.(txt|md)$/i,''),area:da,type:dt,content,selected:true,rows:content.split('\n').length});
       }
       res();
     };
@@ -1146,28 +960,28 @@ function renderImportPreview(){
   const empty=document.getElementById('importEmpty');
   if(!importChunks.length){wrap.style.display='none';empty.style.display='block';empty.textContent='No chunks detected.';return;}
   wrap.style.display='block';empty.style.display='none';
-  const tl={test_cases:'Test Cases',code:'Code',prd:'PRD',note:'Note'};
+  const tl={test_cases:'TC',code:'Code',prd:'PRD',note:'Note'};
   const tcls={test_cases:'ktc',code:'kco',prd:'kpr',note:'kno'};
   document.getElementById('chunkList').innerHTML=importChunks.map((c,i)=>`
     <div class="chunk">
-      <input type="checkbox" class="chunk-check" ${c.selected?'checked':''} onchange="importChunks[${i}].selected=this.checked;updateChunkCounts()">
-      <div class="chunk-info">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span class="chunk-title">${c.title}</span>
-          <span class="kbb ${tcls[c.type]||'kno'}" style="font-size:9px;">${tl[c.type]||c.type}</span>
+      <input type="checkbox" class="cc" ${c.selected?'checked':''} onchange="importChunks[${i}].selected=this.checked;updateChunkCounts()">
+      <div class="ci">
+        <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+          <span class="ct2">${c.title}</span>
+          <span class="kbb ${tcls[c.type]||'kno'}">${tl[c.type]||c.type}</span>
         </div>
-        <div class="chunk-meta">📁 ${c.source} · ${c.rows} rows · ${c.content.length} chars${c.area?' · 📍 '+c.area:''}</div>
-        <div class="chunk-preview">${c.content.substring(0,160).replace(/\n/g,' ')}…</div>
-        <div style="display:flex;gap:7px;margin-top:6px;flex-wrap:wrap;">
+        <div class="cm">${c.rows} rows · ${c.content.length} chars${c.area?' · '+c.area:''}</div>
+        <div class="cp2">${c.content.substring(0,140).replace(/\n/g,' ')}…</div>
+        <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;">
           <input type="text" value="${c.title}" onchange="importChunks[${i}].title=this.value"
-            style="flex:1;min-width:130px;padding:4px 8px;font-size:11px;background:var(--s3);border:1px solid var(--bd2);color:var(--t);border-radius:2px;outline:none;" placeholder="Title">
+            style="flex:1;min-width:120px;padding:3px 7px;font-size:10px;background:var(--s3);border:1px solid var(--bd2);color:var(--t);border-radius:2px;outline:none;" placeholder="Title">
           <input type="text" value="${c.area||''}" onchange="importChunks[${i}].area=this.value"
-            style="width:120px;padding:4px 8px;font-size:11px;background:var(--s3);border:1px solid var(--bd2);color:var(--t);border-radius:2px;outline:none;" placeholder="Area tag">
-          <select onchange="importChunks[${i}].type=this.value" style="padding:4px 8px;font-size:11px;width:auto;background:var(--s3);border:1px solid var(--bd2);color:var(--t);border-radius:2px;outline:none;">
+            style="width:110px;padding:3px 7px;font-size:10px;background:var(--s3);border:1px solid var(--bd2);color:var(--t);border-radius:2px;outline:none;" placeholder="Area">
+          <select onchange="importChunks[${i}].type=this.value" style="padding:3px 7px;font-size:10px;width:auto;background:var(--s3);border:1px solid var(--bd2);color:var(--t);border-radius:2px;outline:none;">
             <option value="test_cases" ${c.type==='test_cases'?'selected':''}>Test Cases</option>
-            <option value="prd"        ${c.type==='prd'?'selected':''}>PRD</option>
-            <option value="code"       ${c.type==='code'?'selected':''}>Code</option>
-            <option value="note"       ${c.type==='note'?'selected':''}>Note</option>
+            <option value="prd" ${c.type==='prd'?'selected':''}>PRD</option>
+            <option value="code" ${c.type==='code'?'selected':''}>Code</option>
+            <option value="note" ${c.type==='note'?'selected':''}>Note</option>
           </select>
         </div>
       </div>
@@ -1184,7 +998,7 @@ function selectAllChunks(val){importChunks.forEach(c=>c.selected=val);renderImpo
 
 async function saveSelectedChunks(){
   const sel=importChunks.filter(c=>c.selected);
-  if(!sel.length){toast('No chunks selected','er');return;}
+  if(!sel.length){toast('Nothing selected','er');return;}
   const btn=document.getElementById('saveChunksBtn');
   btn.disabled=true;
   document.getElementById('importProgPanel').style.display='block';
@@ -1195,31 +1009,29 @@ async function saveSelectedChunks(){
 
   for(let i=0;i<sel.length;i++){
     const c=sel[i];
-    lbl.textContent=`${i+1} / ${sel.length} saving…`;
+    lbl.textContent=`${i+1}/${sel.length}`;
     bar.style.width=`${Math.round((i/sel.length)*100)}%`;
     try{
       const d=await wFetch('/kb','POST',{type:c.type,title:c.title||`Import ${i+1}`,area:c.area||'',content:c.content});
       kbEntries.unshift(d.entry);saved++;
-      det.innerHTML+=`<span style="color:var(--g);">✓</span> ${c.title}<br>`;
+      det.innerHTML+=`<span style="color:var(--g)">✓</span> ${c.title}<br>`;
     }catch(e){
       failed++;
-      det.innerHTML+=`<span style="color:var(--r);">✗</span> ${c.title}: ${e.message}<br>`;
+      det.innerHTML+=`<span style="color:var(--r)">✗</span> ${c.title}: ${e.message}<br>`;
     }
     await new Promise(r=>setTimeout(r,200));
   }
 
   bar.style.width='100%';
-  lbl.textContent=`Done — ${saved} saved${failed?`, ${failed} failed`:''}`;
-  updateKBUI();setCloud('ok',`☁️ ${kbEntries.length} entries`);
+  lbl.textContent=`${saved} saved${failed?`, ${failed} failed`:''}`;
+  updateKBUI();setCloud('ok',`☁️ ${kbEntries.length}`);
   btn.disabled=false;
-  toast(`${saved} entries saved to KB ✓`,saved>0?'ok':'er');
+  toast(`${saved} entries saved ✓`,saved>0?'ok':'er');
   importChunks=importChunks.filter(c=>!c.selected);
   setTimeout(renderImportPreview,400);
 }
 
-// ═══════════════════════════════════════════
 // TOAST
-// ═══════════════════════════════════════════
 let tT;
 function toast(msg,type='ok'){
   const el=document.getElementById('toast');
@@ -1227,9 +1039,7 @@ function toast(msg,type='ok'){
   clearTimeout(tT);tT=setTimeout(()=>el.className='toast',3500);
 }
 
-// ═══════════════════════════════════════════
 // INIT
-// ═══════════════════════════════════════════
 window.addEventListener('DOMContentLoaded',()=>{
   const w=document.getElementById('ftags');
   FEATURES.forEach(f=>{
