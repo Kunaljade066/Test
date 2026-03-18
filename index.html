@@ -442,9 +442,9 @@ select.fi2 option{background:var(--bg2)}
 .bar-fill{height:100%;border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1)}
 .bar-n{font-family:var(--mono);font-size:10px;color:var(--dim);min-width:20px;text-align:right}
 
-.dup-box{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:12px 14px;margin-bottom:14px;display:none}
+.dup-box{background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.28);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:none}
 .dup-box.on{display:block}
-.dup-title{font-family:var(--mono);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#fbbf24;margin-bottom:8px;font-weight:700}
+.dup-title{font-family:var(--mono);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--g2);margin-bottom:8px;font-weight:700}
 .dup-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(245,158,11,.1);cursor:none;font-size:11px}
 .dup-item:last-child{border-bottom:none}
 .dup-id{font-family:var(--mono);color:var(--g1);flex-shrink:0;font-size:10px}
@@ -612,6 +612,10 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
     </div>
     <div class="tb-end">
       <div class="pip-wrap"><div class="pip" id="pip"></div><span class="pip-lbl" id="pipLbl">—</span></div>
+      <div id="liveWrap" style="display:none;align-items:center;gap:4px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:20px;padding:2px 9px" title="Active team members">
+        <div style="width:5px;height:5px;border-radius:50%;background:var(--g4);box-shadow:0 0 5px var(--g4);animation:blink 2.5s ease-in-out infinite;flex-shrink:0"></div>
+        <span id="liveCount" style="font-family:var(--mono);font-size:10px;color:var(--g4);font-weight:700;white-space:nowrap"></span>
+      </div>
       <button class="btn btn-g btn-sm" onclick="exportCSV()" title="Export CSV">📥</button>
       <button class="btn btn-g btn-sm" onclick="refreshAll()">↻</button>
       <button class="btn btn-v btn-sm" onclick="openNew()">＋ BUG</button>
@@ -964,6 +968,26 @@ const loadSession=()=>{try{const r=JSON.parse(localStorage.getItem(SK)||'null');
 const clearSession=()=>localStorage.removeItem(SK);
 
 // Silent token refresh: re-verify token every 45 minutes to keep session alive
+// ── LIVE PRESENCE ─────────────────────────────────────────
+let _presenceTimer=null;
+async function startLivePresence(){
+  await updateLiveCount();
+  _presenceTimer=setInterval(updateLiveCount,90000);
+}
+async function updateLiveCount(){
+  try{
+    const d=await api('/team');
+    const members=d.members||[];
+    const n=members.length;
+    const lbl=document.getElementById('liveCount');
+    const wrap=document.getElementById('liveWrap');
+    if(!lbl||!wrap)return;
+    lbl.textContent=n===1?'1 online':`${n} online`;
+    wrap.style.display='flex';
+    wrap.title='Active: '+members.map(m=>m.name).join(', ');
+  }catch(e){}
+}
+
 let _refreshTimer = null;
 function scheduleTokenRefresh() {
   if (_refreshTimer) clearInterval(_refreshTimer);
@@ -1156,7 +1180,8 @@ function onLogin(){
   }
   loadTheme();
   loadNotifs();updateNotifBadge();
-  scheduleTokenRefresh(); // Start silent refresh cycle
+  scheduleTokenRefresh();
+  startLivePresence();
   refreshAll().then(()=>{
     hideLoad();
     checkDeepLink();
@@ -1348,22 +1373,22 @@ function renderHome(){
   const done=S.bugs.filter(b=>['Dev Fixed','Done','QA Pass'].includes(b.status)).length;
   const total=S.bugs.length;
   document.getElementById('homeQuick').innerHTML=`
-    <div class="hq-card" onclick="sbFilterByVal('Open','status')">
+    <div class="hq-card" onclick="showInlineDrawer('🟣 Open Bugs',S.bugs.filter(b=>b.status==='Open'))">
       <div class="hq-icon">🟣</div><div class="hq-n" style="color:#a78bfa">${open}</div><div class="hq-l">Open</div>
     </div>
-    <div class="hq-card" onclick="sbFilterByVal('In Progress','status')">
+    <div class="hq-card" onclick="showInlineDrawer('🔵 Active Bugs',S.bugs.filter(b=>['In Progress','Bugged'].includes(b.status)))">
       <div class="hq-icon">🔵</div><div class="hq-n" style="color:var(--g2)">${active}</div><div class="hq-l">Active</div>
     </div>
-    <div class="hq-card" onclick="sbFilterByVal('Critical','priority')">
+    <div class="hq-card" onclick="showInlineDrawer('🚨 Critical & Urgent',S.bugs.filter(b=>['Critical','Urgent'].includes(b.priority)&&!['Dev Fixed','Done','QA Pass','Closed'].includes(b.status)))">
       <div class="hq-icon">🚨</div><div class="hq-n" style="color:var(--g5)">${crit}</div><div class="hq-l">Critical</div>
     </div>
-    <div class="hq-card" onclick="sbFilterByVal('mine','assignee')">
+    <div class="hq-card" onclick="showInlineDrawer('👤 Assigned to Me',S.bugs.filter(b=>(b.assignees||[]).some(a=>a.email===S.user?.email)))">
       <div class="hq-icon">👤</div><div class="hq-n" style="background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${mine}</div><div class="hq-l">Mine</div>
     </div>
-    <div class="hq-card" onclick="sbFilterByVal('Dev Fixed','status')">
+    <div class="hq-card" onclick="showInlineDrawer('🛠 Resolved',S.bugs.filter(b=>['Dev Fixed','Done','QA Pass'].includes(b.status)))">
       <div class="hq-icon">🛠</div><div class="hq-n" style="color:var(--g4)">${done}</div><div class="hq-l">Resolved</div>
     </div>
-    <div class="hq-card" onclick="sbFilterByVal('all','status')">
+    <div class="hq-card" onclick="showInlineDrawer('📋 All Bugs',S.bugs)">
       <div class="hq-icon">📋</div><div class="hq-n" style="color:var(--text)">${total}</div><div class="hq-l">Total</div>
     </div>`;
   const critBugs=S.bugs.filter(b=>['Critical','Urgent'].includes(b.priority)&&!['Dev Fixed','Done','QA Pass','Closed'].includes(b.status)).slice(0,6);
@@ -1405,7 +1430,10 @@ function renderTable(){
   h+=`<th>Actions</th></tr></thead><tbody>`;
   sl.forEach(bug=>{
     h+=`<tr onclick="openDetail('${bug.id}')">
-      <td class="tc-id">${esc(bug.id||'—')}</td>
+      <td class="tc-id" style="white-space:nowrap">
+        ${esc(bug.id||'—')}
+        ${bug.feature?`<div style="font-family:var(--mono);font-size:8px;color:var(--g1);opacity:.5;margin-top:1px;max-width:100px;overflow:hidden;text-overflow:ellipsis">${esc(bug.feature.slice(0,14))}</div>`:''}
+      </td>
       <td class="tc-title" title="${esc(bug.title||'')}">${esc(bug.title||'—')}</td>
       <td>${pChip(bug.priority)}</td><td>${svrChip(bug.severity)}</td><td>${stChip(bug.status)}</td>
       <td>${avStack(bug.assignees||[],20)}</td>
@@ -1726,37 +1754,93 @@ function openDropdownManager(){
 function openPodManager(){ openDropdownManager(); }
 
 function renderDropdownManagerBody(){
-  const fieldTabs = DD_FIELDS.map(f=>`
-    <button class="btn ${_ddActiveKey===f.key?'btn-v':'btn-g'} btn-sm"
-      onclick="_ddActiveKey='${f.key}';renderDropdownManagerBody()">${esc(f.label)}</button>`).join('');
-  const opts = getDropOpts(_ddActiveKey);
-  const fieldLabel = DD_FIELDS.find(f=>f.key===_ddActiveKey)?.label||_ddActiveKey;
+  const BUILTIN=['pod','platform'];
+  const isFeat=(_ddActiveKey==='__features__');
+  const af=DD_FIELDS.find(f=>f.key===_ddActiveKey);
+  const opts=af?[...(af.options||[])]:[];
+  const lbl=af?.label||'';
+  const isBuiltin=BUILTIN.includes(_ddActiveKey);
 
-  // Also allow adding a brand-new field tab
-  document.getElementById('panelBody').innerHTML=`
-    <div class="info-banner">🗂️ Manage dropdown options for each field. Changes apply immediately to all bug forms.</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">${fieldTabs}
-      <button class="btn btn-g btn-sm" onclick="ddAddField()" title="Add new dropdown field">＋ New Field</button>
+  const tabs=[
+    ...DD_FIELDS.map(f=>`<button class="btn ${_ddActiveKey===f.key?'btn-v':'btn-g'} btn-sm" onclick="_ddActiveKey='${f.key}';renderDropdownManagerBody()">${esc(f.label)}</button>`),
+    `<button class="btn ${isFeat?'btn-v':'btn-g'} btn-sm" onclick="_ddActiveKey='__features__';renderDropdownManagerBody()">🎮 Features</button>`,
+    `<button class="btn btn-g btn-sm" style="border-style:dashed" onclick="ddAddField()">＋ New Field</button>`,
+  ].join('');
+
+  let content='';
+  if(isFeat){
+    const feats=[...new Set(S.bugs.map(b=>b.feature).filter(Boolean))].sort();
+    content=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mute)">features in use (${feats.length})</span><span style="font-family:var(--mono);font-size:9px;color:var(--dim)">Delete clears the tag from all its bugs</span></div>
+    <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;overflow:hidden">
+      ${feats.length?feats.map(feat=>{const cnt=S.bugs.filter(b=>b.feature===feat).length;const safe=feat.replace(/\\/g,'\\\\').replace(/'/g,"\\'");return`<div style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid rgba(255,255,255,.03)"><span style="flex:1;font-size:12px;font-weight:700;color:var(--text)">${esc(feat)}</span><span style="font-family:var(--mono);font-size:10px;color:var(--mute)">${cnt} bug${cnt!==1?'s':''}</span><button class="pod-del-btn" onclick="ddDeleteFeature('${safe}')">🗑 Delete</button></div>`;}).join(''):`<div style="padding:16px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim)">No features logged yet</div>`}
+    </div>`;
+  }else{
+    content=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <span style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mute)">${esc(lbl)} options (${opts.length})</span>
+      <div style="display:flex;gap:5px">
+        <button class="btn btn-g btn-xs" onclick="ddRenameField()">✏️ Rename</button>
+        ${!isBuiltin?`<button class="btn btn-r btn-xs" onclick="ddDeleteField()">🗑 Delete Field</button>`:''}
+      </div>
     </div>
-    <div style="margin-bottom:4px;font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mute)">${esc(fieldLabel)} options</div>
-    <div style="margin-bottom:14px;background:var(--bg3);border:1px solid var(--bd);border-radius:8px;overflow:hidden">
-      ${opts.length ? opts.map((p,i)=>`
-        <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.03)">
-          <span style="flex:1;font-size:12px;font-weight:600;color:var(--text)">${esc(p)}</span>
-          <button class="pod-del-btn" onclick="ddRemoveOpt(${i})">✕</button>
-        </div>`).join('')
-      : `<div style="padding:14px;font-family:var(--mono);font-size:11px;color:var(--dim);text-align:center">No options yet</div>`}
+    <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin-bottom:12px">
+      ${opts.length?opts.map((p,i)=>`<div style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.03)">
+        <div style="display:flex;flex-direction:column;gap:1px">
+          <button class="pod-del-btn" style="padding:1px 5px;font-size:9px;line-height:1.2" onclick="ddMoveOpt(${i},-1)" ${i===0?'disabled':''}>▲</button>
+          <button class="pod-del-btn" style="padding:1px 5px;font-size:9px;line-height:1.2" onclick="ddMoveOpt(${i},1)" ${i===opts.length-1?'disabled':''}>▼</button>
+        </div>
+        <span style="flex:1;font-size:12px;font-weight:600;color:var(--text)">${esc(p)}</span>
+        <button class="pod-del-btn" onclick="ddRemoveOpt(${i})">✕ Remove</button>
+      </div>`).join(''):`<div style="padding:14px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim)">No options yet — add below</div>`}
     </div>
     <div class="fg" style="display:flex;gap:8px;align-items:flex-end">
-      <div style="flex:1">
-        <label class="fl">Add option to ${esc(fieldLabel)}</label>
+      <div style="flex:1"><label class="fl">Add option to ${esc(lbl)}</label>
         <input class="fi2" id="dd-new-input" placeholder="New option…" onkeydown="if(event.key==='Enter')ddAddOpt()">
       </div>
       <button class="btn btn-v" onclick="ddAddOpt()" style="flex-shrink:0">+ Add</button>
     </div>`;
-  setTimeout(()=>document.getElementById('dd-new-input')?.focus(),60);
+  }
+
+  document.getElementById('panelBody').innerHTML=`
+    <div class="info-banner" style="margin-bottom:12px">🗂️ Changes sync to all users. Add/remove options, rename fields, reorder, delete entire fields, manage features.</div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--bd)">${tabs}</div>
+    ${content}`;
+  setTimeout(()=>document.getElementById('dd-new-input')?.focus(),80);
 }
 
+async function ddRenameField(){
+  const f=DD_FIELDS.find(x=>x.key===_ddActiveKey);if(!f)return;
+  const name=prompt('New label for this field:',f.label);
+  if(!name?.trim()||name.trim()===f.label)return;
+  f.label=name.trim();
+  try{await persistDDConfig();toast('Field renamed ✓','ok');}catch(e){toast('Renamed locally','info');}
+  renderDropdownManagerBody();
+}
+async function ddDeleteField(){
+  const f=DD_FIELDS.find(x=>x.key===_ddActiveKey);if(!f)return;
+  if(['pod','platform'].includes(f.key)){toast('Cannot delete built-in fields','err');return;}
+  if(!confirm(`Delete entire field "${f.label}"? Bug data is kept, column disappears from forms.`))return;
+  DD_FIELDS.splice(DD_FIELDS.indexOf(f),1);
+  _ddActiveKey=DD_FIELDS[0]?.key||'pod';
+  try{await persistDDConfig();toast('Field deleted ✓','ok');}catch(e){toast('Deleted locally','info');}
+  renderDropdownManagerBody();
+}
+async function ddMoveOpt(idx,dir){
+  const f=DD_FIELDS.find(x=>x.key===_ddActiveKey);if(!f)return;
+  const opts=f.options||[];const ni=idx+dir;
+  if(ni<0||ni>=opts.length)return;
+  [opts[idx],opts[ni]]=[opts[ni],opts[idx]];
+  try{await saveDropOpts(_ddActiveKey,opts);}catch(e){}
+  renderDropdownManagerBody();
+}
+async function ddDeleteFeature(feat){
+  const bugs=S.bugs.filter(b=>b.feature===feat);
+  if(!confirm(`Delete feature "${feat}"?\n${bugs.length} bug(s) will have their feature tag cleared.`))return;
+  let done=0;
+  for(const bug of bugs){try{await api(`/bugs/${bug.id}`,'PUT',{...bug,feature:''});done++;}catch(e){}}
+  toast(`"${feat}" deleted, ${done} bug(s) updated ✓`,'ok');
+  await refreshAll();
+  renderDropdownManagerBody();
+}
 async function ddAddOpt(){
   const inp = document.getElementById('dd-new-input');
   const val = inp?.value?.trim();
@@ -1887,6 +1971,8 @@ function openDetail(id){
     </div>
     ${dsec('Description',bug.title||bug.description)}
     ${dsec('Steps to Reproduce',bug.steps)}
+    ${bug.repro?`<div class="dsec"><div class="dsec-title">Repro Rate</div><div class="dtext">${esc(bug.repro)}</div></div>`:''}
+    ${dsec('Expected Result',bug.expected)}
     ${dsec('Actual Result',bug.actual)}
     ${bug.attachment?`<div class="dsec"><div class="dsec-title">Attachment</div><div class="dtext">${bug.attachment.startsWith('http')?`<a href="${esc(bug.attachment)}" target="_blank" style="color:var(--g2)">🔗 ${esc(bug.attachment)}</a>`:'📎 '+esc(bug.attachment)}</div></div>`:''}
     <div class="dsec">
@@ -2122,11 +2208,19 @@ function buildBugForm(bug,full){
       <div class="fg"><label class="fl">Sprint</label><select class="fi2" id="f-sp"><option value="">No Sprint</option>${spOpts}</select></div>
       <div class="fg"><label class="fl">Build</label><input class="fi2" id="f-build" value="${esc(bug?.build||'')}" placeholder="e.g. v3.2.1"></div>
       <div class="fg"><label class="fl">Device / User ID</label><input class="fi2" id="f-dev" value="${esc(bug?.device||'')}" placeholder="e.g. Pixel 8 / UID 12345"></div>
-      <div class="fg fc2"><label class="fl">Steps / Repro Rate</label>
-        <textarea class="fi2" id="f-steps" rows="3" placeholder="1. Open app&#10;2. Tap…&#10;Repro: 80%">${esc(bug?.steps||'')}</textarea>
+      <div class="fg fc2"><label class="fl">Steps to Reproduce</label>
+        <textarea class="fi2" id="f-steps" rows="3" placeholder="1. Open app&#10;2. Tap X&#10;3. Observe Y">${esc(bug?.steps||'')}</textarea>
+      </div>
+      <div class="fg"><label class="fl">Repro Rate</label>
+        <select class="fi2" id="f-repro">
+          ${['','100% — Always','~80% — Often','~50% — Sometimes','~20% — Rarely','<5% — Very Rare','Once — Not Reproduced'].map(v=>`<option value="${v}"${(bug?.repro||'')===v?' selected':''}>${v||'— Select Repro Rate —'}</option>`).join('')}
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Expected Result</label>
+        <textarea class="fi2" id="f-expected" rows="2" placeholder="What should have happened?">${esc(bug?.expected||'')}</textarea>
       </div>
       <div class="fg fc2"><label class="fl">Actual Result</label>
-        <textarea class="fi2" id="f-actual" rows="3" placeholder="What actually happened?">${esc(bug?.actual||'')}</textarea>
+        <textarea class="fi2" id="f-actual" rows="3" placeholder="What actually happened instead?">${esc(bug?.actual||'')}</textarea>
       </div>
       <div class="fg fc2"><label class="fl">Attachment (filename or URL)</label>
         <input class="fi2" id="f-att" value="${esc(bug?.attachment||'')}" placeholder="screenshot.png or https://…">
@@ -2136,15 +2230,43 @@ function buildBugForm(bug,full){
   if(bug?.title)checkDup(bug.title,bug?.id||'');
 }
 
+// AI-powered duplicate detector
+let _dupTimer=null,_dupLastTxt='';
 function checkDup(txt,curId){
   const box=document.getElementById('dupBox'),lst=document.getElementById('dupList');
-  if(!box||!lst||!txt||txt.length<6){box?.classList.remove('on');return;}
+  if(!box||!lst||!txt||txt.length<6){box?.classList.remove('on');_dupLastTxt='';return;}
+  if(txt===_dupLastTxt)return;
+  _dupLastTxt=txt;
+  clearTimeout(_dupTimer);
   const words=txt.toLowerCase().split(/\s+/).filter(w=>w.length>3);
-  if(!words.length){box.classList.remove('on');return;}
-  const matches=S.bugs.filter(b=>b.id!==curId).map(b=>({bug:b,score:words.filter(w=>(b.title+' '+(b.actual||'')).toLowerCase().includes(w)).length})).filter(m=>m.score>=Math.min(2,words.length)).sort((a,b)=>b.score-a.score).slice(0,4);
-  if(!matches.length){box.classList.remove('on');return;}
+  const candidates=S.bugs.filter(b=>b.id!==curId)
+    .map(b=>({bug:b,score:words.filter(w=>(b.title+' '+(b.steps||'')+' '+(b.actual||'')).toLowerCase().includes(w)).length}))
+    .filter(m=>m.score>0).sort((a,b)=>b.score-a.score).slice(0,8);
+  if(!candidates.length){box.classList.remove('on');return;}
   box.classList.add('on');
-  lst.innerHTML=matches.map(m=>`<div class="dup-item" onclick="openDetail('${m.bug.id}');closePanel()"><span class="dup-id">${esc(m.bug.id||'—')}</span><span class="dup-t">${esc(m.bug.title||'')}</span>${stChip(m.bug.status)}<span class="dup-pct">${Math.round(m.score/words.length*100)}%</span></div>`).join('');
+  lst.innerHTML=`<div style="display:flex;align-items:center;gap:5px;margin-bottom:7px;font-family:var(--mono);font-size:9px;color:var(--g2)"><span class="spin" style="width:10px;height:10px;border-width:1.5px"></span>Checking with AI…</div>`
+    +candidates.slice(0,3).map(m=>`<div class="dup-item" onclick="openDetail('${m.bug.id}');closePanel()"><span class="dup-id">${esc(m.bug.id)}</span><span class="dup-t">${esc(m.bug.title||'')}</span>${stChip(m.bug.status)}</div>`).join('');
+  _dupTimer=setTimeout(()=>_aiDup(txt,curId,candidates),900);
+}
+async function _aiDup(txt,curId,candidates){
+  const box=document.getElementById('dupBox'),lst=document.getElementById('dupList');
+  if(!box||!lst)return;
+  try{
+    const list=candidates.map(c=>`${c.bug.id}: ${c.bug.title}${c.bug.actual?' | '+c.bug.actual.slice(0,80):''}`).join('\n');
+    const prompt=`QA duplicate-bug detector. New bug:\n"${txt}"\n\nExisting bugs:\n${list}\n\nRate similarity: HIGH (same root cause >70%), MEDIUM (related 30-70%). Respond ONLY valid JSON array:\n[{"id":"BUG-XXX","similarity":"HIGH","reason":"one line"}]\nReturn [] if nothing qualifies.`;
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    const raw=(data.content?.[0]?.text||'').replace(/```[\s\S]*?```/g,'').trim();
+    const arr=JSON.parse(raw.match(/\[[\s\S]*\]/)?.[0]||'[]');
+    if(!Array.isArray(arr)||!arr.length){box.classList.remove('on');return;}
+    box.classList.add('on');
+    lst.innerHTML=`<div style="font-family:var(--mono);font-size:9px;color:var(--g2);margin-bottom:6px;letter-spacing:1px">✨ AI SIMILARITY ANALYSIS</div>`
+      +arr.map(r=>{
+        const bug=S.bugs.find(b=>b.id===r.id);if(!bug)return'';
+        const col=r.similarity==='HIGH'?'var(--g5)':'var(--g3)';
+        return`<div class="dup-item" onclick="openDetail('${bug.id}');closePanel()"><span class="dup-id">${esc(bug.id)}</span><span class="dup-t">${esc(bug.title||'')}</span>${stChip(bug.status)}<span style="font-family:var(--mono);font-size:9px;font-weight:700;color:${col};padding:1px 6px;border-radius:8px;border:1px solid ${col};flex-shrink:0">${r.similarity}</span></div><div style="padding:1px 8px 6px;font-family:var(--mono);font-size:9px;color:var(--dim);line-height:1.5">${esc(r.reason||'')}</div>`;
+      }).join('');
+  }catch(e){console.warn('[ai-dup]',e.message);}
 }
 
 function openPanel(){document.getElementById('overlay').classList.add('on');document.getElementById('panel').classList.add('on');}
@@ -2188,7 +2310,7 @@ async function saveBug(){
         feature:document.getElementById('f-feat')?.value||'',sprint:document.getElementById('f-sp')?.value||'',
         build:document.getElementById('f-build')?.value||'',
         device:document.getElementById('f-dev')?.value||'',
-        steps:document.getElementById('f-steps')?.value||'',actual:document.getElementById('f-actual')?.value||'',
+        steps:document.getElementById('f-steps')?.value||'',repro:document.getElementById('f-repro')?.value||'',expected:document.getElementById('f-expected')?.value||'',actual:document.getElementById('f-actual')?.value||'',
         attachment:document.getElementById('f-att')?.value||'',
         ...ddVals,
         app_url:APP_URL,
@@ -2203,6 +2325,9 @@ async function saveBug(){
         res=await api('/bugs','POST',data);
         if(assignees.length)addNotif('New bug assigned',data.title,res.bug?.id);
         toast(`Created: ${res.bug?.id} ✓`,'ok');
+        const _nid=res.bug?.id||'';
+        const _nm=[`Nice catch! ${_nid} is on the radar 🔍 Go find more!`,`${_nid} filed! 🏏 One down — how many more are hiding?`,`Bug logged ✓ ${_nid} — keep hunting, the pitch is full of them!`,`${_nid} trapped! 🎯 Your team will thank you. Spot another?`,`Good eye! ${_nid} queued up. More bugs won't escape you! 👀`];
+        setTimeout(()=>showNatasha(_nm[Math.floor(Math.random()*_nm.length)]),400);
       }
       closePanel();await refreshAll();
     }
