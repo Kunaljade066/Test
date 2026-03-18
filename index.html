@@ -584,7 +584,7 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
 <div class="mobile-nav" id="mobileNav">
   <div class="mn-items">
     <div class="mn-item on" id="mn-home" onclick="goTab('home')"><span class="mn-icon">🏠</span><span class="mn-label">Home</span></div>
-    <div class="mn-item" id="mn-backlog" onclick="goTab('backlog')"><span class="mn-icon">📋</span><span class="mn-label">Bugs</span></div>
+    <div class="mn-item" id="mn-backlog" onclick="goToBugsClean()"><span class="mn-icon">📋</span><span class="mn-label">Bugs</span></div>
     <div class="mn-item" id="mn-board" onclick="goTab('board')"><span class="mn-icon">⬛</span><span class="mn-label">Board</span></div>
     <button class="mn-fab" onclick="openNew()" title="New Bug">＋</button>
     <div class="mn-item" id="mn-sprints" onclick="goTab('sprints')"><span class="mn-icon">🏃</span><span class="mn-label">Sprints</span></div>
@@ -603,7 +603,7 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
     </div>
     <div class="tb-tabs">
       <div class="tb-tab on" id="tt-home"      onclick="goTab('home')">🏠 Home</div>
-      <div class="tb-tab"    id="tt-backlog"   onclick="goTab('backlog')">📋 Bugs</div>
+      <div class="tb-tab"    id="tt-backlog"   onclick="goToBugsClean()">📋 Bugs</div>
       <div class="tb-tab"    id="tt-board"     onclick="goTab('board')">⬛ Board</div>
       <div class="tb-tab"    id="tt-sprints"   onclick="goTab('sprints')">🏃 Sprints</div>
       <div class="tb-tab"    id="tt-features"  onclick="goTab('features')">🎮 Features</div>
@@ -793,8 +793,9 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
 const WORKER    = 'https://frosty-wood-37ecbugiq-workerjs.kunal-249.workers.dev';
 const GOOGLE_ID = '714484298488-ucn9blv0cr5ol2h0v9p6irbrj87murce.apps.googleusercontent.com';
 const ALLOWED   = 'hitwicket.com';
-const REDIRECT  = 'https://kunaljade066.github.io/MasterBugs/';
-const APP_URL   = 'https://kunaljade066.github.io/MasterBugs/';
+// Dynamic origin — works on any domain/port without code changes
+const REDIRECT  = window.location.origin + window.location.pathname;
+const APP_URL   = window.location.origin + window.location.pathname;
 
 // ══════════════════════════════════════════
 // ALL STATUSES (single source of truth)
@@ -851,24 +852,28 @@ async function saveDropOpts(key, arr) {
 }
 
 // Persist entire DD_FIELDS config to backend as a special sprint record
+// Track the config sprint id so we can update it reliably
+let _ddConfigSprintId = null;
+
 async function persistDDConfig() {
   try {
     const payload = DD_FIELDS.map(f=>({key:f.key,label:f.label,options:f.options||[]}));
-    // Store as a sprint with a special name '__dd_config__'
-    // First check if it exists
-    const existing = S.sprints.find(s=>s.name===DD_CONFIG_KEY);
-    if(existing) {
-      // Update via PUT-like: delete then re-create
-      await api(`/sprints/${existing.id}`,'DELETE');
+    // Delete existing config sprint if we know its id
+    if(_ddConfigSprintId) {
+      try { await api(`/sprints/${_ddConfigSprintId}`,'DELETE'); } catch(e) {}
+      _ddConfigSprintId = null;
     }
-    await api('/sprints','POST',{name:DD_CONFIG_KEY,start:'',end:'',goal:JSON.stringify(payload)});
-  } catch(e) { console.warn('[dd] persist failed:',e.message); }
+    const res = await api('/sprints','POST',{name:DD_CONFIG_KEY,start:'',end:'',goal:JSON.stringify(payload)});
+    if(res?.sprint?.id) _ddConfigSprintId = res.sprint.id;
+  } catch(e) { console.warn('[dd] persist failed:',e.message); throw e; }
 }
 
 // Load DD config from sprints list (called after refreshAll fetches sprints)
-function loadDDConfigFromSprints() {
-  const cfgSprint = S.sprints.find(s=>s.name===DD_CONFIG_KEY);
-  if(!cfgSprint) return;
+function loadDDConfigFromSprints(rawSprints) {
+  // rawSprints = unfiltered list including the config record
+  const cfgSprint = rawSprints.find(s=>s.name===DD_CONFIG_KEY);
+  if(!cfgSprint) { _ddConfigSprintId=null; return; }
+  _ddConfigSprintId = cfgSprint.id;
   try {
     const payload = JSON.parse(cfgSprint.goal||'[]');
     if(!Array.isArray(payload)) return;
@@ -878,7 +883,6 @@ function loadDDConfigFromSprints() {
       if(existing) {
         existing.options = item.options||[];
       } else {
-        // New field added by admin
         DD_FIELDS.push({key:item.key,label:item.label,options:item.options||[]});
       }
     });
@@ -1084,20 +1088,41 @@ function initGoogleSignIn() {
   }
 }
 
-// Fallback popup-based sign-in (used only if GIS fails to load)
+// Fallback: same-tab redirect flow (no popup, no new tab)
 function doSignInPopup(){
   const nonce=Math.random().toString(36).slice(2);
-  const p=new URLSearchParams({client_id:GOOGLE_ID,redirect_uri:REDIRECT,response_type:'id_token',scope:'openid email profile',nonce,hd:ALLOWED,prompt:'select_account'});
-  const popup=window.open('https://accounts.google.com/o/oauth2/v2/auth?'+p,'gauth','width=500,height=600,left=200,top=100');
-  if(!popup){loginErr('Popup blocked — please allow popups or use the Google button above.');return;}
-  const t=setInterval(()=>{
-    try{const h=popup?.location?.hash||'';if(h.includes('id_token')){clearInterval(t);popup.close();verifyToken(new URLSearchParams(h.slice(1)).get('id_token'));}}catch{}
-    if(!popup||popup.closed)clearInterval(t);
-  },400);
+  try { sessionStorage.setItem('gauth_nonce', nonce); } catch(e){}
+  const redirectUri = window.location.origin + window.location.pathname;
+  const p=new URLSearchParams({
+    client_id:GOOGLE_ID,
+    redirect_uri:redirectUri,
+    response_type:'token id_token',
+    scope:'openid email profile',
+    nonce,
+    hd:ALLOWED,
+    prompt:'select_account',
+    include_granted_scopes:'true',
+  });
+  // Navigate current tab — on return, checkOAuthFragment() will catch it
+  window.location.href='https://accounts.google.com/o/oauth2/v2/auth?'+p;
 }
 
-// Keep doSignIn as alias for any remaining references
+// Keep doSignIn as alias
 function doSignIn(){ doSignInPopup(); }
+
+// Check if we just returned from an OAuth redirect (fragment contains id_token)
+function checkOAuthFragment(){
+  const hash = window.location.hash;
+  if(!hash.includes('id_token')) return false;
+  const params = new URLSearchParams(hash.slice(1));
+  const token = params.get('id_token');
+  if(!token) return false;
+  // Clean the URL immediately so refresh doesn't re-trigger
+  history.replaceState({},'',window.location.pathname);
+  setLoad(60,'Verifying…');
+  verifyToken(token);
+  return true;
+}
 
 async function verifyToken(token){
   if(!token){loginErr('No credential received.');return;}
@@ -1188,8 +1213,9 @@ async function refreshAll(){
   setCloud('busy','loading…');
   try{
     const [bugsD,sprintsD,teamD]=await Promise.all([api('/bugs'),api('/sprints'),api('/team')]);
-    S.bugs=bugsD.bugs||[];S.sprints=(sprintsD.sprints||[]).filter(s=>s.name!==DD_CONFIG_KEY);S.teamMembers=teamD.members||[];
-    loadDDConfigFromSprints();
+    const _rawSprints=sprintsD.sprints||[];
+    S.bugs=bugsD.bugs||[];S.sprints=_rawSprints.filter(s=>s.name!==DD_CONFIG_KEY);S.teamMembers=teamD.members||[];
+    loadDDConfigFromSprints(_rawSprints);
     S.bugs.forEach(b=>{if(!b.assignees)b.assignees=b.assignee_email?[{name:b.assignee||'',email:b.assignee_email,picture:b.assignee_picture||''}]:[];});
     updateSbBadges();populateDropdowns();applyF();populateBoardSprint();
     setCloud('ok',`☁ ${S.bugs.length}`);
@@ -1291,6 +1317,8 @@ function applyF(){
 // VIEWS
 // ══════════════════════════════════════════
 function goTab(v){
+  // Close inline drawer when switching to a real tab
+  if(v!=='backlog')closeInlineDrawer();
   S.view=v;
   ['home','backlog','board','sprints','features','dashboard','notifs'].forEach(n=>{
     const el=document.getElementById('v-'+n);if(el)el.style.display=n===v?'':'none';
@@ -1473,7 +1501,10 @@ function renderSprints(){
   }).join('');
 }
 
-function fBySprint(n){S.sbMode='status';S.sbVal='all';document.getElementById('fsp').value=n;S.view='backlog';goTab('backlog');applyF();}
+function fBySprint(n){
+  const bugs = S.bugs.filter(b=>b.sprint===n);
+  showInlineDrawer('🏃 Sprint: '+n, bugs, ()=>fBySprint(n));
+}
 function openSprintForm(){
   if(S.user?.role!=='admin'){toast('Admin only','err');return;}
   document.getElementById('panelTitle').textContent='NEW SPRINT';
@@ -1499,6 +1530,87 @@ async function delSprint(id){if(!confirm('Delete sprint?'))return;try{await api(
 // ══════════════════════════════════════════
 // FEATURES
 // ══════════════════════════════════════════
+// ── INLINE BUG DRAWER ───────────────────────────────────────
+// Shows a filtered bug list in a slide-down section on the current page.
+// No tab switch — stays on features/sprints/dashboard.
+function showInlineDrawer(title, bugs, refreshFn){
+  // Remove any existing drawer
+  document.getElementById('inlineDrawer')?.remove();
+
+  const drawer = document.createElement('div');
+  drawer.id = 'inlineDrawer';
+  drawer.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:700;background:var(--bg1);border-top:2px solid var(--g1);box-shadow:0 -8px 40px rgba(0,0,0,.5);max-height:60vh;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1)';
+
+  const header = `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--bd);flex-shrink:0;background:var(--bg2)">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-family:var(--disp);font-size:13px;font-weight:800;letter-spacing:1px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${esc(title)}</span>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--mute)">${bugs.length} bug${bugs.length!==1?'s':''}</span>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-g btn-sm" onclick="goToBacklogFiltered()" title="Open in Bugs tab">📋 Open in Bugs</button>
+      <button class="btn btn-g btn-sm" onclick="closeInlineDrawer()">✕</button>
+    </div>
+  </div>`;
+
+  const rows = bugs.length
+    ? bugs.map(bug=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid rgba(255,255,255,.03);cursor:pointer;transition:background .1s" onclick="openDetail('${bug.id}')" onmouseenter="this.style.background='rgba(124,58,237,.06)'" onmouseleave="this.style.background=''">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--g1);flex-shrink:0;width:100px">${esc(bug.id)}</span>
+        <span style="flex:1;font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(bug.title||'')}</span>
+        <div style="display:flex;gap:4px;flex-shrink:0">${pChip(bug.priority)}${stChip(bug.status)}${avStack(bug.assignees||[],18)}</div>
+      </div>`).join('')
+    : '<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim)">No bugs found</div>';
+
+  drawer.innerHTML = header + `<div style="overflow-y:auto;flex:1">${rows}</div>`;
+  document.body.appendChild(drawer);
+  // Store current filter context for "Open in Bugs" button
+  window._drawerTitle = title;
+  window._drawerBugs = bugs;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>drawer.style.transform='translateY(0)'));
+}
+
+function closeInlineDrawer(){
+  const d = document.getElementById('inlineDrawer');
+  if(!d) return;
+  d.style.transform='translateY(100%)';
+  setTimeout(()=>d.remove(), 300);
+}
+
+function goToBacklogFiltered(){
+  // When user explicitly wants to go to bugs tab, do it with filter pre-set
+  const bugs = window._drawerBugs || [];
+  // Collect unique ids for filter — use search
+  if(bugs.length){
+    const feat = bugs[0]?.feature;
+    const sprint = bugs[0]?.sprint;
+    closeInlineDrawer();
+    S.sbMode='status'; S.sbVal='all';
+    document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('on'));
+    document.querySelector('.sb-item')?.classList.add('on');
+    if(feat){ document.getElementById('ff').value=feat; }
+    else if(sprint){ document.getElementById('fsp').value=sprint; }
+    S.view='backlog'; goTab('backlog'); applyF();
+  } else {
+    closeInlineDrawer();
+    S.view='backlog'; goTab('backlog'); applyF();
+  }
+}
+
+// When Bugs tab is clicked directly, always reset ALL filters
+function goToBugsClean(){
+  closeInlineDrawer();
+  // Clear all filters
+  document.getElementById('fq').value='';
+  document.getElementById('fs').value='';
+  document.getElementById('fp').value='';
+  document.getElementById('fa').value='';
+  document.getElementById('ff').value='';
+  document.getElementById('fsp').value='';
+  S.sbMode='status'; S.sbVal='all';
+  document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('on'));
+  document.querySelector('.sb-item')?.classList.add('on');
+  S.view='backlog'; goTab('backlog'); applyF();
+}
+
 function renderFeatures(){
   const el=document.getElementById('featuresWrap');if(!el)return;
   const feats=[...new Set(S.bugs.map(b=>b.feature).filter(Boolean))].sort();
@@ -1537,11 +1649,27 @@ function renderFeatures(){
     </div>`;
   }).join('');
 }
-function fByFeat(f){S.sbMode='status';S.sbVal='all';document.getElementById('ff').value=f;S.view='backlog';goTab('backlog');applyF();}
+function fByFeat(f){
+  // Show filtered bugs in an inline drawer on the features page
+  const bugs = S.bugs.filter(b=>b.feature===f);
+  showInlineDrawer('🎮 Feature: '+f, bugs, ()=>fByFeat(f));
+}
 
 // ══════════════════════════════════════════
 // DASHBOARD
 // ══════════════════════════════════════════
+function dashDrillDown(field, value){
+  let bugs;
+  if(field==='assignee'){
+    bugs = S.bugs.filter(b=>(b.assignees||[]).some(a=>a.name===value));
+  } else if(field) {
+    bugs = S.bugs.filter(b=>b[field]===value);
+  } else {
+    bugs = S.bugs;
+  }
+  showInlineDrawer('📊 '+value+' ('+field+')', bugs);
+}
+
 function renderDashboard(){
   renderStats('dashStats');
   const el=document.getElementById('dashCharts');if(!el)return;
@@ -1550,17 +1678,17 @@ function renderDashboard(){
   const sco={'Open':'#a78bfa','In Progress':'var(--g2)','In Review':'var(--g3)','Dev Fixed':'#6ee7b7','Done':'var(--g4)','Bugged':'var(--g5)','QA Pass':'var(--g4)'};
   const cntBy=f=>Object.entries(S.bugs.reduce((a,b)=>{const v=b[f]||'—';a[v]=(a[v]||0)+1;return a;},{})).sort((a,b)=>b[1]-a[1]).slice(0,8);
   const cntByAssignee=()=>{const m={};S.bugs.forEach(b=>(b.assignees||[]).forEach(a=>{if(a.name)m[a.name]=(m[a.name]||0)+1;}));return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,8);};
-  const bc=(title,data,co={})=>{
+  const bc=(title,data,co={},filterKey='')=>{
     const mx=data.length?Math.max(...data.map(d=>d[1])):1;
     return`<div class="dash-card"><div class="dash-title">${title}</div>
-      ${data.map(([l,v],i)=>`<div class="bar-row">
+      ${data.map(([l,v],i)=>`<div class="bar-row" style="cursor:pointer" onclick="dashDrillDown('${filterKey||''}','${l.replace(/'/g,"\'")}')" title="View ${v} bug${v!==1?'s':''}">
         <div class="bar-lbl" title="${l}">${l.length>11?l.slice(0,11)+'…':l}</div>
         <div class="bar-bg"><div class="bar-fill" style="width:${(v/mx*100).toFixed(1)}%;background:${co[l]||dc[i%dc.length]};box-shadow:0 0 6px ${co[l]||dc[i%dc.length]}44"></div></div>
         <div class="bar-n">${v}</div>
       </div>`).join('')||'<div style="color:var(--dim);font-size:11px;font-family:var(--mono)">No data</div>'}
     </div>`;
   };
-  el.innerHTML=bc('BY PRIORITY',cntBy('priority'),pco)+bc('BY STATUS',cntBy('status'),sco)+bc('BY ASSIGNEE',cntByAssignee())+bc('BY FEATURE',cntBy('feature'))+DD_FIELDS.map(f=>bc('BY '+f.label.toUpperCase(),cntBy(f.key))).join('')+bc('BY SPRINT',cntBy('sprint'))+bc('BY BUILD',cntBy('build'));
+  el.innerHTML=bc('BY PRIORITY',cntBy('priority'),pco,'priority')+bc('BY STATUS',cntBy('status'),sco,'status')+bc('BY ASSIGNEE',cntByAssignee(),'','assignee')+bc('BY FEATURE',cntBy('feature'),{},'feature')+DD_FIELDS.map(f=>bc('BY '+f.label.toUpperCase(),cntBy(f.key),{},f.key)).join('')+bc('BY SPRINT',cntBy('sprint'),{},'sprint')+bc('BY BUILD',cntBy('build'),{},'build');
 }
 
 // ══════════════════════════════════════════
@@ -2125,12 +2253,14 @@ function toast(msg,type='ok'){
   setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),400);},4500);
 }
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closePanel();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePanel();closeInlineDrawer();}});
 
 // ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
 window.addEventListener('DOMContentLoaded',()=>{
+  // Must check OAuth fragment FIRST before anything else wipes the hash
+  if(checkOAuthFragment()) return;
   loadTheme();
   setLoad(20,'CHECKING SESSION');
   document.addEventListener('click',e=>{if(!e.target.closest('.user-pill-wrap'))closeProfileMenu();});
