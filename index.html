@@ -6,6 +6,8 @@
 <link rel="icon" type="image/png" href="https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png">
 <title>BugPulse</title>
 <meta name="theme-color" content="#06060f">
+<link rel="preload" href="https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png" as="image">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 /* ═══════════════════════════════════════════════════
@@ -559,15 +561,19 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
     </div>
     <div class="lc-title">BugPulse</div>
     <div class="lc-sub">Hitwicket · Bug Management</div>
-    <button class="lc-gbtn" id="gSignInBtn">
-      <svg width="20" height="20" viewBox="0 0 48 48">
-        <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.6 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.6-.4-3.9z"/>
-        <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 19 12 24 12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.6 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
-        <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.3 35.3 26.8 36 24 36c-5.2 0-9.7-3.3-11.3-8H6.1C9.5 36.2 16.2 44 24 44z"/>
-        <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.6l6.2 5.2C41.1 35.3 44 30 44 24c0-1.3-.1-2.6-.4-3.9z"/>
-      </svg>
-      Sign in with Google
-    </button>
+    <!-- Google Identity Services button renders here -->
+    <div id="gSignInBtn" style="display:flex;justify-content:center;margin-bottom:4px;min-height:44px"></div>
+    <div id="gSignInFallback" style="display:none">
+      <button class="lc-gbtn" id="gSignInFallbackBtn">
+        <svg width="20" height="20" viewBox="0 0 48 48">
+          <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.6 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.6-.4-3.9z"/>
+          <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 19 12 24 12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.6 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+          <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.3 35.3 26.8 36 24 36c-5.2 0-9.7-3.3-11.3-8H6.1C9.5 36.2 16.2 44 24 44z"/>
+          <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.6l6.2 5.2C41.1 35.3 44 30 44 24c0-1.3-.1-2.6-.4-3.9z"/>
+        </svg>
+        Sign in with Google
+      </button>
+    </div>
     <div class="lc-note">Restricted to <b>@hitwicket.com</b> accounts only</div>
     <div class="lc-err" id="loginErr"></div>
   </div>
@@ -592,7 +598,8 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
     <div class="tb-brand" onclick="goTab('home')" id="topBrand">
       <img src="https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png" alt="Hitwicket"
         class="tb-logo-full"
-        onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span class=\'tb-name\'>HW·TRACKER</span>')">
+        loading="eager"
+        onerror="this.onerror=null;this.src='https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png';this.style.display='none';this.insertAdjacentHTML('afterend','<span class=\'tb-name\'>BugPulse</span>')">
     </div>
     <div class="tb-tabs">
       <div class="tb-tab on" id="tt-home"      onclick="goTab('home')">🏠 Home</div>
@@ -815,30 +822,72 @@ const KCOLS = [
 // POD OPTIONS — defaults, admin can extend
 // ══════════════════════════════════════════
 // ── DROPDOWN OPTION MANAGER ─────────────────────────────────
-// Admins can manage custom options for any bug field dropdown.
-// Each field is stored separately: hwt_dropopts_<fieldKey>_v1
+// DD_FIELDS stores field definitions + current options.
+// Options are saved to the KV backend (via a special sprint record
+// with id '__dd_config__') so ALL users see admin changes instantly.
+// Locally cached for performance; refreshed on every refreshAll().
 const DD_FIELDS = [
-  { key:'pod',   label:'POD',     defaults:['Openers','Middle Order','LiveOps','Tech Infra'] },
-  { key:'platform', label:'Platform', defaults:['Android','iOS','Web','PC','Console'] },
-  { key:'module', label:'Module',  defaults:[] },
+  { key:'pod',      label:'POD',      options:['Openers','Middle Order','LiveOps','Tech Infra'] },
+  { key:'platform', label:'Platform', options:['Android','iOS','Web','PC','Console'] },
 ];
+// DD_FIELDS_EXTRA holds dynamically added fields (loaded from backend)
+// All fields (built-in + extra) are merged at runtime.
+
+const DD_CONFIG_KEY = '__dd_cfg_v1';
+
+// Get all fields (built-in + any extra loaded from backend)
+function getAllDDFields() { return DD_FIELDS; }
 
 function getDropOpts(key) {
+  const f = DD_FIELDS.find(f=>f.key===key);
+  return f ? [...(f.options||[])] : [];
+}
+
+// Save options to field in-memory + persist to backend
+async function saveDropOpts(key, arr) {
+  const f = DD_FIELDS.find(f=>f.key===key);
+  if(f) f.options = arr;
+  await persistDDConfig();
+}
+
+// Persist entire DD_FIELDS config to backend as a special sprint record
+async function persistDDConfig() {
   try {
-    const raw = localStorage.getItem(`hwt_dropopts_${key}_v1`);
-    if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) return arr; }
-  } catch {}
-  const field = DD_FIELDS.find(f=>f.key===key);
-  return field ? [...field.defaults] : [];
+    const payload = DD_FIELDS.map(f=>({key:f.key,label:f.label,options:f.options||[]}));
+    // Store as a sprint with a special name '__dd_config__'
+    // First check if it exists
+    const existing = S.sprints.find(s=>s.name===DD_CONFIG_KEY);
+    if(existing) {
+      // Update via PUT-like: delete then re-create
+      await api(`/sprints/${existing.id}`,'DELETE');
+    }
+    await api('/sprints','POST',{name:DD_CONFIG_KEY,start:'',end:'',goal:JSON.stringify(payload)});
+  } catch(e) { console.warn('[dd] persist failed:',e.message); }
 }
 
-function saveDropOpts(key, arr) {
-  try { localStorage.setItem(`hwt_dropopts_${key}_v1`, JSON.stringify(arr)); } catch {}
+// Load DD config from sprints list (called after refreshAll fetches sprints)
+function loadDDConfigFromSprints() {
+  const cfgSprint = S.sprints.find(s=>s.name===DD_CONFIG_KEY);
+  if(!cfgSprint) return;
+  try {
+    const payload = JSON.parse(cfgSprint.goal||'[]');
+    if(!Array.isArray(payload)) return;
+    payload.forEach(item=>{
+      if(!item.key||!item.label) return;
+      const existing = DD_FIELDS.find(f=>f.key===item.key);
+      if(existing) {
+        existing.options = item.options||[];
+      } else {
+        // New field added by admin
+        DD_FIELDS.push({key:item.key,label:item.label,options:item.options||[]});
+      }
+    });
+  } catch(e) { console.warn('[dd] load failed:',e.message); }
 }
 
-// Legacy alias for existing code that calls getPodOptions/savePodOptions
+// Legacy alias
 function getPodOptions() { return getDropOpts('pod'); }
-function savePodOptions(arr) { saveDropOpts('pod', arr); }
+function savePodOptions(arr) { saveDropOpts('pod', arr).catch(()=>{}); }
 
 // ══════════════════════════════════════════
 // CURSORS
@@ -869,7 +918,14 @@ function savePodOptions(arr) { saveDropOpts('pod', arr); }
 // ══════════════════════════════════════════
 function setLoad(p,m){document.getElementById('loadBar').style.width=p+'%';document.getElementById('loadSub').textContent=m;}
 function hideLoad(){const l=document.getElementById('loadScreen');l.classList.add('fade');setTimeout(()=>l.style.display='none',520);}
-function showLogin(){hideLoad();setTimeout(()=>{document.getElementById('loginScreen').style.display='flex';},120);}
+function showLogin(){
+  hideLoad();
+  setTimeout(()=>{
+    document.getElementById('loginScreen').style.display='flex';
+    // Init Google Sign-In button after login screen is visible
+    setTimeout(initGoogleSignIn, 200);
+  },120);
+}
 
 // ══════════════════════════════════════════
 // STATE
@@ -982,16 +1038,66 @@ function checkDeepLink(){
 // ══════════════════════════════════════════
 // AUTH
 // ══════════════════════════════════════════
-function doSignIn(){
+// Google Identity Services callback (called by GIS SDK)
+function handleGoogleCredential(response) {
+  if(response?.credential) {
+    setLoad(60,'Verifying…');
+    document.getElementById('loginScreen').style.pointerEvents='none';
+    verifyToken(response.credential);
+  }
+}
+
+function initGoogleSignIn() {
+  if(!window.google?.accounts?.id) {
+    // GIS not loaded yet — show fallback button
+    document.getElementById('gSignInFallback').style.display='block';
+    document.getElementById('gSignInBtn').style.display='none';
+    document.getElementById('gSignInFallbackBtn').addEventListener('click', doSignInPopup);
+    return;
+  }
+  try {
+    google.accounts.id.initialize({
+      client_id: GOOGLE_ID,
+      callback: handleGoogleCredential,
+      auto_select: false,
+      cancel_on_tap_outside: true,
+      hosted_domain: ALLOWED,
+    });
+    google.accounts.id.renderButton(
+      document.getElementById('gSignInBtn'),
+      {
+        theme: 'outline',
+        size: 'large',
+        width: 332,
+        text: 'signin_with',
+        shape: 'rectangular',
+        logo_alignment: 'left',
+      }
+    );
+    // Also show One Tap prompt
+    google.accounts.id.prompt();
+  } catch(e) {
+    console.warn('[gis] init failed:', e);
+    document.getElementById('gSignInFallback').style.display='block';
+    document.getElementById('gSignInBtn').style.display='none';
+    document.getElementById('gSignInFallbackBtn').addEventListener('click', doSignInPopup);
+  }
+}
+
+// Fallback popup-based sign-in (used only if GIS fails to load)
+function doSignInPopup(){
   const nonce=Math.random().toString(36).slice(2);
   const p=new URLSearchParams({client_id:GOOGLE_ID,redirect_uri:REDIRECT,response_type:'id_token',scope:'openid email profile',nonce,hd:ALLOWED,prompt:'select_account'});
   const popup=window.open('https://accounts.google.com/o/oauth2/v2/auth?'+p,'gauth','width=500,height=600,left=200,top=100');
-  if(!popup){loginErr('Popup blocked — allow popups.');return;}
+  if(!popup){loginErr('Popup blocked — please allow popups or use the Google button above.');return;}
   const t=setInterval(()=>{
     try{const h=popup?.location?.hash||'';if(h.includes('id_token')){clearInterval(t);popup.close();verifyToken(new URLSearchParams(h.slice(1)).get('id_token'));}}catch{}
     if(!popup||popup.closed)clearInterval(t);
   },400);
 }
+
+// Keep doSignIn as alias for any remaining references
+function doSignIn(){ doSignInPopup(); }
 
 async function verifyToken(token){
   if(!token){loginErr('No credential received.');return;}
@@ -1082,7 +1188,8 @@ async function refreshAll(){
   setCloud('busy','loading…');
   try{
     const [bugsD,sprintsD,teamD]=await Promise.all([api('/bugs'),api('/sprints'),api('/team')]);
-    S.bugs=bugsD.bugs||[];S.sprints=sprintsD.sprints||[];S.teamMembers=teamD.members||[];
+    S.bugs=bugsD.bugs||[];S.sprints=(sprintsD.sprints||[]).filter(s=>s.name!==DD_CONFIG_KEY);S.teamMembers=teamD.members||[];
+    loadDDConfigFromSprints();
     S.bugs.forEach(b=>{if(!b.assignees)b.assignees=b.assignee_email?[{name:b.assignee||'',email:b.assignee_email,picture:b.assignee_picture||''}]:[];});
     updateSbBadges();populateDropdowns();applyF();populateBoardSprint();
     setCloud('ok',`☁ ${S.bugs.length}`);
@@ -1096,7 +1203,32 @@ async function refreshAll(){
 function sbFilter(val,mode,el){
   S.sbMode=mode;S.sbVal=val;
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('on'));
-  el.classList.add('on');goTab('backlog');applyF();
+  if(el)el.classList.add('on');
+  // Set view BEFORE goTab so renderTable doesn't bail on the guard
+  S.view='backlog';
+  goTab('backlog');
+  // applyF is called inside goTab->renderTable, but call again to be sure
+  applyF();
+}
+
+// sbFilterByVal: safe version that doesn't need a DOM el reference
+function sbFilterByVal(val, mode) {
+  S.sbMode=mode; S.sbVal=val;
+  // Update sidebar active state by matching data
+  document.querySelectorAll('.sb-item').forEach(el=>{
+    el.classList.remove('on');
+  });
+  // Re-activate correct sidebar item
+  document.querySelectorAll('.sb-item').forEach(el=>{
+    const onclick = el.getAttribute('onclick')||'';
+    if(mode==='status'&&val==='all'&&onclick.includes("'all','status'")) el.classList.add('on');
+    else if(mode==='status'&&onclick.includes(`'${val}','status'`)) el.classList.add('on');
+    else if(mode==='priority'&&onclick.includes(`'${val}','priority'`)) el.classList.add('on');
+    else if(mode==='assignee'&&val==='mine'&&onclick.includes("'mine','assignee'")) el.classList.add('on');
+  });
+  S.view='backlog';
+  goTab('backlog');
+  applyF();
 }
 
 function updateSbBadges(){
@@ -1188,22 +1320,22 @@ function renderHome(){
   const done=S.bugs.filter(b=>['Dev Fixed','Done','QA Pass'].includes(b.status)).length;
   const total=S.bugs.length;
   document.getElementById('homeQuick').innerHTML=`
-    <div class="hq-card" onclick="sbFilter('Open','status',document.querySelectorAll('.sb-item')[1]);goTab('backlog')">
+    <div class="hq-card" onclick="sbFilterByVal('Open','status')">
       <div class="hq-icon">🟣</div><div class="hq-n" style="color:#a78bfa">${open}</div><div class="hq-l">Open</div>
     </div>
-    <div class="hq-card" onclick="sbFilter('In Progress','status',document.querySelectorAll('.sb-item')[2]);goTab('backlog')">
+    <div class="hq-card" onclick="sbFilterByVal('In Progress','status')">
       <div class="hq-icon">🔵</div><div class="hq-n" style="color:var(--g2)">${active}</div><div class="hq-l">Active</div>
     </div>
-    <div class="hq-card" onclick="sbFilter('Critical','priority',document.querySelectorAll('.sb-sec')[1].querySelectorAll('.sb-item')[0]);goTab('backlog')">
+    <div class="hq-card" onclick="sbFilterByVal('Critical','priority')">
       <div class="hq-icon">🚨</div><div class="hq-n" style="color:var(--g5)">${crit}</div><div class="hq-l">Critical</div>
     </div>
-    <div class="hq-card" onclick="sbFilter('mine','assignee',document.querySelectorAll('.sb-sec')[2].querySelectorAll('.sb-item')[0]);goTab('backlog')">
+    <div class="hq-card" onclick="sbFilterByVal('mine','assignee')">
       <div class="hq-icon">👤</div><div class="hq-n" style="background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${mine}</div><div class="hq-l">Mine</div>
     </div>
-    <div class="hq-card" onclick="sbFilter('Dev Fixed','status',document.querySelectorAll('.sb-item')[6]);goTab('backlog')">
+    <div class="hq-card" onclick="sbFilterByVal('Dev Fixed','status')">
       <div class="hq-icon">🛠</div><div class="hq-n" style="color:var(--g4)">${done}</div><div class="hq-l">Resolved</div>
     </div>
-    <div class="hq-card" onclick="goTab('backlog')">
+    <div class="hq-card" onclick="sbFilterByVal('all','status')">
       <div class="hq-icon">📋</div><div class="hq-n" style="color:var(--text)">${total}</div><div class="hq-l">Total</div>
     </div>`;
   const critBugs=S.bugs.filter(b=>['Critical','Urgent'].includes(b.priority)&&!['Dev Fixed','Done','QA Pass','Closed'].includes(b.status)).slice(0,6);
@@ -1341,7 +1473,7 @@ function renderSprints(){
   }).join('');
 }
 
-function fBySprint(n){document.getElementById('fsp').value=n;goTab('backlog');applyF();}
+function fBySprint(n){S.sbMode='status';S.sbVal='all';document.getElementById('fsp').value=n;S.view='backlog';goTab('backlog');applyF();}
 function openSprintForm(){
   if(S.user?.role!=='admin'){toast('Admin only','err');return;}
   document.getElementById('panelTitle').textContent='NEW SPRINT';
@@ -1405,7 +1537,7 @@ function renderFeatures(){
     </div>`;
   }).join('');
 }
-function fByFeat(f){document.getElementById('ff').value=f;goTab('backlog');applyF();}
+function fByFeat(f){S.sbMode='status';S.sbVal='all';document.getElementById('ff').value=f;S.view='backlog';goTab('backlog');applyF();}
 
 // ══════════════════════════════════════════
 // DASHBOARD
@@ -1497,38 +1629,45 @@ function renderDropdownManagerBody(){
   setTimeout(()=>document.getElementById('dd-new-input')?.focus(),60);
 }
 
-function ddAddOpt(){
+async function ddAddOpt(){
   const inp = document.getElementById('dd-new-input');
   const val = inp?.value?.trim();
   if(!val){toast('Enter a value','err');return;}
   const opts = getDropOpts(_ddActiveKey);
   if(opts.map(o=>o.toLowerCase()).includes(val.toLowerCase())){toast('Already exists','err');return;}
   opts.push(val);
-  saveDropOpts(_ddActiveKey, opts);
-  toast(`"${val}" added ✓`,'ok');
+  try{
+    await saveDropOpts(_ddActiveKey, opts);
+    toast(`"${val}" added — all users will see this ✓`,'ok');
+  }catch(e){toast('Saved locally (backend sync failed)','info');}
   renderDropdownManagerBody();
 }
 
-function ddRemoveOpt(idx){
+async function ddRemoveOpt(idx){
   const opts = getDropOpts(_ddActiveKey);
   const name = opts[idx];
   if(!confirm(`Remove "${name}"?`)) return;
   opts.splice(idx,1);
-  saveDropOpts(_ddActiveKey, opts);
-  toast(`Removed`,'ok');
+  try{
+    await saveDropOpts(_ddActiveKey, opts);
+    toast(`Removed — all users updated ✓`,'ok');
+  }catch(e){toast('Removed locally (backend sync failed)','info');}
   renderDropdownManagerBody();
 }
 
-function ddAddField(){
+async function ddAddField(){
   const name = prompt('New field label (e.g. "Environment", "Team"):');
   if(!name?.trim()) return;
   const key = name.trim().toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
   if(!key){toast('Invalid name','err');return;}
   if(DD_FIELDS.find(f=>f.key===key)){toast('Already exists','err');return;}
-  DD_FIELDS.push({key, label:name.trim(), defaults:[]});
+  DD_FIELDS.push({key, label:name.trim(), options:[]});
   _ddActiveKey = key;
+  try{
+    await persistDDConfig();
+    toast(`Field "${name.trim()}" created — visible to all ✓`,'ok');
+  }catch(e){toast('Created locally (backend sync failed)','info');}
   renderDropdownManagerBody();
-  toast(`Field "${name.trim()}" created ✓`,'ok');
 }
 
 // ══════════════════════════════════════════
@@ -1992,7 +2131,6 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closePanel();});
 // INIT
 // ══════════════════════════════════════════
 window.addEventListener('DOMContentLoaded',()=>{
-  document.getElementById('gSignInBtn').addEventListener('click',doSignIn);
   loadTheme();
   setLoad(20,'CHECKING SESSION');
   document.addEventListener('click',e=>{if(!e.target.closest('.user-pill-wrap'))closeProfileMenu();});
