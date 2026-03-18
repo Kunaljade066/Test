@@ -862,9 +862,13 @@ let _ddConfigSprintId = null;
 async function persistDDConfig() {
   try {
     const payload = DD_FIELDS.map(f=>({key:f.key,label:f.label,options:f.options||[]}));
-    // Delete existing config sprint if we know its id
-    if(_ddConfigSprintId) {
-      try { await api(`/sprints/${_ddConfigSprintId}`,'DELETE'); } catch(e) {}
+    // Always fetch fresh sprint list to find existing config sprint
+    // (avoids stale _ddConfigSprintId after token refresh)
+    const freshSprints = await api('/sprints');
+    const existing = (freshSprints.sprints||[]).find(s=>s.name===DD_CONFIG_KEY);
+    if(existing) {
+      _ddConfigSprintId = existing.id;
+      try { await api(`/sprints/${existing.id}`,'DELETE'); } catch(e) {}
       _ddConfigSprintId = null;
     }
     const res = await api('/sprints','POST',{name:DD_CONFIG_KEY,start:'',end:'',goal:JSON.stringify(payload)});
@@ -975,8 +979,11 @@ async function startLivePresence(){
   _presenceTimer=setInterval(updateLiveCount,90000);
 }
 async function updateLiveCount(){
+  if(!S.user?.idToken) return; // guard: no token yet
   try{
-    const d=await api('/team');
+    const r=await fetch(WORKER+'/team',{headers:{'Content-Type':'application/json','X-Google-Token':S.user.idToken}});
+    if(!r.ok) return; // silently skip on auth error, don't retry aggressively
+    const d=await r.json();
     const members=d.members||[];
     const n=members.length;
     const lbl=document.getElementById('liveCount');
@@ -985,7 +992,7 @@ async function updateLiveCount(){
     lbl.textContent=n===1?'1 online':`${n} online`;
     wrap.style.display='flex';
     wrap.title='Active: '+members.map(m=>m.name).join(', ');
-  }catch(e){}
+  }catch(e){} // silently ignore network errors
 }
 
 let _refreshTimer = null;
@@ -1181,9 +1188,10 @@ function onLogin(){
   loadTheme();
   loadNotifs();updateNotifBadge();
   scheduleTokenRefresh();
-  startLivePresence();
   refreshAll().then(()=>{
     hideLoad();
+    // Start live presence AFTER data loads and token is confirmed good
+    startLivePresence();
     checkDeepLink();
     const firstName=(S.user.name||'').split(' ')[0]||'there';
     const critCount=S.bugs.filter(b=>['Critical','Urgent'].includes(b.priority)&&!['Dev Fixed','Done','QA Pass','Closed'].includes(b.status)).length;
@@ -1812,59 +1820,72 @@ async function ddRenameField(){
   const name=prompt('New label for this field:',f.label);
   if(!name?.trim()||name.trim()===f.label)return;
   f.label=name.trim();
-  try{await persistDDConfig();toast('Field renamed ✓','ok');}catch(e){toast('Renamed locally','info');}
   renderDropdownManagerBody();
+  try{await persistDDConfig();toast('Field renamed ✓','ok');}catch(e){toast('Renamed locally — sync failed, try again','info');}
 }
 async function ddDeleteField(){
   const f=DD_FIELDS.find(x=>x.key===_ddActiveKey);if(!f)return;
   if(['pod','platform'].includes(f.key)){toast('Cannot delete built-in fields','err');return;}
-  if(!confirm(`Delete entire field "${f.label}"? Bug data is kept, column disappears from forms.`))return;
+  if(!confirm(`Delete entire field "${f.label}"?\nBug data is kept but the column disappears from all forms.`))return;
   DD_FIELDS.splice(DD_FIELDS.indexOf(f),1);
   _ddActiveKey=DD_FIELDS[0]?.key||'pod';
-  try{await persistDDConfig();toast('Field deleted ✓','ok');}catch(e){toast('Deleted locally','info');}
   renderDropdownManagerBody();
+  try{await persistDDConfig();toast('Field deleted ✓','ok');}catch(e){toast('Deleted locally — sync failed, try again','info');}
 }
 async function ddMoveOpt(idx,dir){
   const f=DD_FIELDS.find(x=>x.key===_ddActiveKey);if(!f)return;
   const opts=f.options||[];const ni=idx+dir;
   if(ni<0||ni>=opts.length)return;
   [opts[idx],opts[ni]]=[opts[ni],opts[idx]];
-  try{await saveDropOpts(_ddActiveKey,opts);}catch(e){}
   renderDropdownManagerBody();
+  try{await persistDDConfig();}catch(e){}
 }
 async function ddDeleteFeature(feat){
   const bugs=S.bugs.filter(b=>b.feature===feat);
   if(!confirm(`Delete feature "${feat}"?\n${bugs.length} bug(s) will have their feature tag cleared.`))return;
+  toast('Clearing feature tags…','info');
   let done=0;
   for(const bug of bugs){try{await api(`/bugs/${bug.id}`,'PUT',{...bug,feature:''});done++;}catch(e){}}
   toast(`"${feat}" deleted, ${done} bug(s) updated ✓`,'ok');
   await refreshAll();
+  _ddActiveKey='__features__';
   renderDropdownManagerBody();
 }
 async function ddAddOpt(){
   const inp = document.getElementById('dd-new-input');
   const val = inp?.value?.trim();
   if(!val){toast('Enter a value','err');return;}
-  const opts = getDropOpts(_ddActiveKey);
-  if(opts.map(o=>o.toLowerCase()).includes(val.toLowerCase())){toast('Already exists','err');return;}
-  opts.push(val);
-  try{
-    await saveDropOpts(_ddActiveKey, opts);
-    toast(`"${val}" added — all users will see this ✓`,'ok');
-  }catch(e){toast('Saved locally (backend sync failed)','info');}
+  const f = DD_FIELDS.find(x=>x.key===_ddActiveKey);
+  if(!f){toast('Field not found','err');return;}
+  if(!f.options) f.options=[];
+  if(f.options.map(o=>o.toLowerCase()).includes(val.toLowerCase())){toast('Already exists','err');return;}
+  // Update in-memory immediately and re-render
+  f.options.push(val);
   renderDropdownManagerBody();
+  // Then persist async
+  try{
+    await persistDDConfig();
+    toast(`"${val}" added ✓ — visible to all users`,'ok');
+  }catch(e){
+    toast(`"${val}" added locally. Backend sync failed — try again.`,'info');
+  }
 }
 
 async function ddRemoveOpt(idx){
-  const opts = getDropOpts(_ddActiveKey);
-  const name = opts[idx];
+  const f = DD_FIELDS.find(x=>x.key===_ddActiveKey);
+  if(!f||!f.options) return;
+  const name = f.options[idx];
   if(!confirm(`Remove "${name}"?`)) return;
-  opts.splice(idx,1);
-  try{
-    await saveDropOpts(_ddActiveKey, opts);
-    toast(`Removed — all users updated ✓`,'ok');
-  }catch(e){toast('Removed locally (backend sync failed)','info');}
+  // Update in-memory immediately
+  f.options.splice(idx,1);
   renderDropdownManagerBody();
+  // Then persist async
+  try{
+    await persistDDConfig();
+    toast(`"${name}" removed ✓`,'ok');
+  }catch(e){
+    toast(`Removed locally. Backend sync failed — try again.`,'info');
+  }
 }
 
 async function ddAddField(){
@@ -2413,7 +2434,10 @@ window.addEventListener('DOMContentLoaded',()=>{
       <button class="natasha-ok" onclick="dismissNatasha()">LET'S GO!</button>
     </div>
     <div class="natasha-char-wrap">
-      <img id="natashaImg" src="natasha.png" alt="Natasha">
+      <img id="natashaImg" src="natasha.png" alt="Natasha"
+        onerror="this.style.display='none';document.getElementById('natashaEmoji').style.display='block'"
+      >
+      <div id="natashaEmoji" style="display:none;font-size:80px;line-height:1;padding-bottom:8px;filter:drop-shadow(0 4px 12px rgba(124,58,237,.4))">🏏</div>
     </div>
   </div>
 </div>
