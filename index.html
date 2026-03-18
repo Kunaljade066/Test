@@ -300,17 +300,18 @@ tbody td{padding:9px 11px;vertical-align:middle;color:var(--mist)}
 .chip-sprint{background:rgba(124,58,237,.1);color:#c4b5fd;border:1px solid rgba(124,58,237,.2)}
 .chip-gray{background:var(--bg3);color:var(--fog);border:1px solid var(--bd)}
 
-.kanban{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px}
-.kcol{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;min-width:220px;flex:1;display:flex;flex-direction:column;max-height:calc(100vh - 150px);}
-.kcol-hd{padding:11px 13px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+/* ── BOARD: wrapping grid, no horizontal scroll ── */
+.kanban{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;padding-bottom:8px;}
+.kcol{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;display:flex;flex-direction:column;}
+.kcol-hd{padding:9px 12px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
 .kcol-name{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
 .kcol-n{background:var(--bg3);color:var(--mute);font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px}
-.kcol-cards{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:7px;min-height:60px}
-.kcard{background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:11px 12px;cursor:none;transition:all .15s;}
-.kcard:hover{border-color:var(--g1);transform:translateY(-2px);box-shadow:var(--glow)}
-.kcard-id{font-family:var(--mono);font-size:9px;color:var(--g1);margin-bottom:5px;letter-spacing:.5px}
-.kcard-title{font-size:12px;font-weight:700;color:var(--text);line-height:1.45;margin-bottom:9px;letter-spacing:.2px}
-.kcard-foot{display:flex;align-items:center;justify-content:space-between}
+.kcol-cards{padding:7px;display:flex;flex-direction:column;gap:6px;min-height:40px;}
+.kcard{background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:9px 10px;cursor:none;transition:border-color .15s,box-shadow .15s;}
+.kcard:hover{border-color:var(--g1);box-shadow:var(--glow)}
+.kcard-id{font-family:var(--mono);font-size:8px;color:var(--g1);margin-bottom:4px;letter-spacing:.5px}
+.kcard-title{font-size:11px;font-weight:700;color:var(--text);line-height:1.4;margin-bottom:7px;letter-spacing:.2px;word-break:break-word;}
+.kcard-foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:3px}
 
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;display:none;backdrop-filter:blur(4px)}
 .overlay.on{display:block}
@@ -392,8 +393,6 @@ select.fi2 option{background:var(--bg2)}
 .cm-opt-name{font-size:13px;font-weight:700;color:var(--text)}
 .cm-opt-email{font-family:var(--mono);font-size:10px;color:var(--mute)}
 .mention-pill{display:inline-block;background:rgba(124,58,237,.18);color:#c4b5fd;border:1px solid rgba(124,58,237,.35);border-radius:12px;padding:0 6px;font-family:var(--mono);font-size:11px;font-weight:700;cursor:none}
-.epod-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:6px;padding:3px 9px;font-family:var(--mono);font-size:11px;color:#fbbf24;font-weight:700}
-.epod-badge.overdue{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:#f87171;animation:pulse-red 2s ease-in-out infinite}
 @keyframes pulse-red{0%,100%{box-shadow:none}50%{box-shadow:0 0 10px rgba(239,68,68,.3)}}
 
 .sprint-card{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;margin-bottom:14px;overflow:hidden;box-shadow:var(--sh)}
@@ -626,7 +625,7 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
           <div class="pm-item" onclick="refreshAll();closeProfileMenu()"><span class="pm-icon">↻</span> Refresh Data</div>
           <div class="pm-item" onclick="showNatasha();closeProfileMenu()"><span class="pm-icon">🏏</span> Say Hi to Natasha</div>
           <div class="pm-divider"></div>
-          <div class="pm-item" id="managePodBtn" onclick="openPodManager();closeProfileMenu()" style="display:none"><span class="pm-icon">🏷️</span> Manage PODs</div>
+          <div class="pm-item" id="managePodBtn" onclick="openDropdownManager();closeProfileMenu()" style="display:none"><span class="pm-icon">🗂️</span> Manage Dropdowns</div>
           <div class="pm-divider" id="managePodDivider" style="display:none"></div>
           <div class="pm-item danger" onclick="signOut()"><span class="pm-icon">🚪</span> Sign Out</div>
         </div>
@@ -815,23 +814,31 @@ const KCOLS = [
 // ══════════════════════════════════════════
 // POD OPTIONS — defaults, admin can extend
 // ══════════════════════════════════════════
-const POD_STORAGE_KEY = 'hwt_pod_options_v1';
-const DEFAULT_PODS    = ['Openers','Middle Order','LiveOps','Tech Infra'];
+// ── DROPDOWN OPTION MANAGER ─────────────────────────────────
+// Admins can manage custom options for any bug field dropdown.
+// Each field is stored separately: hwt_dropopts_<fieldKey>_v1
+const DD_FIELDS = [
+  { key:'pod',   label:'POD',     defaults:['Openers','Middle Order','LiveOps','Tech Infra'] },
+  { key:'platform', label:'Platform', defaults:['Android','iOS','Web','PC','Console'] },
+  { key:'module', label:'Module',  defaults:[] },
+];
 
-function getPodOptions() {
+function getDropOpts(key) {
   try {
-    const raw = localStorage.getItem(POD_STORAGE_KEY);
-    if (raw) {
-      const arr = JSON.parse(raw);
-      if (Array.isArray(arr) && arr.length) return arr;
-    }
+    const raw = localStorage.getItem(`hwt_dropopts_${key}_v1`);
+    if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) return arr; }
   } catch {}
-  return [...DEFAULT_PODS];
+  const field = DD_FIELDS.find(f=>f.key===key);
+  return field ? [...field.defaults] : [];
 }
 
-function savePodOptions(arr) {
-  try { localStorage.setItem(POD_STORAGE_KEY, JSON.stringify(arr)); } catch {}
+function saveDropOpts(key, arr) {
+  try { localStorage.setItem(`hwt_dropopts_${key}_v1`, JSON.stringify(arr)); } catch {}
 }
+
+// Legacy alias for existing code that calls getPodOptions/savePodOptions
+function getPodOptions() { return getDropOpts('pod'); }
+function savePodOptions(arr) { saveDropOpts('pod', arr); }
 
 // ══════════════════════════════════════════
 // CURSORS
@@ -1232,7 +1239,7 @@ function renderTable(){
   document.getElementById('pgInfo').textContent=`${S.page}/${tp}`;
   document.getElementById('bl-sub').textContent=total+' issues';
   if(!sl.length){document.getElementById('tBody').innerHTML=`<div class="empty"><div class="empty-icon">🦗</div><h3>No issues</h3><p>Adjust filters or add a new bug.</p></div>`;return;}
-  const cols=[{k:'id',l:'ID'},{k:'title',l:'Title'},{k:'priority',l:'Priority'},{k:'severity',l:'Severity'},{k:'status',l:'Status'},{k:'assignees',l:'Assignees'},{k:'feature',l:'Feature'},{k:'sprint',l:'Sprint'},{k:'pod',l:'POD'},{k:'epod',l:'EPOD'},{k:'build',l:'Build'}];
+  const cols=[{k:'id',l:'ID'},{k:'title',l:'Title'},{k:'priority',l:'Priority'},{k:'severity',l:'Severity'},{k:'status',l:'Status'},{k:'assignees',l:'Assignees'},{k:'feature',l:'Feature'},{k:'sprint',l:'Sprint'},...DD_FIELDS.map(f=>({k:f.key,l:f.label})),{k:'build',l:'Build'}];
   let h=`<table><thead><tr>`;
   cols.forEach(c=>{const ar=S.sortCol===c.k?(S.sortDir===1?' ▲':' ▼'):'';h+=`<th onclick="sortBy('${c.k}')">${c.l}${ar}</th>`;});
   h+=`<th>Actions</th></tr></thead><tbody>`;
@@ -1244,8 +1251,7 @@ function renderTable(){
       <td>${avStack(bug.assignees||[],20)}</td>
       <td><span style="font-size:11px;font-weight:600">${esc(bug.feature||'—')}</span></td>
       <td>${bug.sprint?`<span class="chip chip-sprint">${esc(bug.sprint)}</span>`:''}</td>
-      <td>${bug.pod?`<span class="chip chip-gray">${esc(bug.pod)}</span>`:''}</td>
-      <td>${epodCell(bug.epod)}</td>
+      ${DD_FIELDS.map(f=>bug[f.key]?`<td><span class="chip chip-gray">${esc(bug[f.key])}</span></td>`:'<td></td>').join('')}
       <td><span style="font-family:var(--mono);font-size:10px;color:var(--mute)">${esc(bug.build||'—')}</span></td>
       <td onclick="event.stopPropagation()">
         <div style="display:flex;gap:4px">
@@ -1422,7 +1428,7 @@ function renderDashboard(){
       </div>`).join('')||'<div style="color:var(--dim);font-size:11px;font-family:var(--mono)">No data</div>'}
     </div>`;
   };
-  el.innerHTML=bc('BY PRIORITY',cntBy('priority'),pco)+bc('BY STATUS',cntBy('status'),sco)+bc('BY ASSIGNEE',cntByAssignee())+bc('BY FEATURE',cntBy('feature'))+bc('BY POD',cntBy('pod'))+bc('BY SPRINT',cntBy('sprint'))+bc('BY BUILD',cntBy('build'));
+  el.innerHTML=bc('BY PRIORITY',cntBy('priority'),pco)+bc('BY STATUS',cntBy('status'),sco)+bc('BY ASSIGNEE',cntByAssignee())+bc('BY FEATURE',cntBy('feature'))+DD_FIELDS.map(f=>bc('BY '+f.label.toUpperCase(),cntBy(f.key))).join('')+bc('BY SPRINT',cntBy('sprint'))+bc('BY BUILD',cntBy('build'));
 }
 
 // ══════════════════════════════════════════
@@ -1445,54 +1451,84 @@ function clickNotif(id,bugId){
 // ══════════════════════════════════════════
 // POD MANAGER (Admin)
 // ══════════════════════════════════════════
-function openPodManager(){
-  document.getElementById('panelTitle').textContent='MANAGE POD OPTIONS';
+// ── DROPDOWN MANAGER PANEL (Admin) ──────────────────────────
+let _ddActiveKey = 'pod';
+
+function openDropdownManager(){
+  document.getElementById('panelTitle').textContent='MANAGE DROPDOWN OPTIONS';
   document.getElementById('panelId').textContent='Admin';
   document.getElementById('panelFooter').innerHTML=`<button class="btn btn-g" onclick="closePanel()">Close</button>`;
-  renderPodManagerBody();
+  renderDropdownManagerBody();
   openPanel();
 }
 
-function renderPodManagerBody(){
-  const pods = getPodOptions();
+// Legacy alias
+function openPodManager(){ openDropdownManager(); }
+
+function renderDropdownManagerBody(){
+  const fieldTabs = DD_FIELDS.map(f=>`
+    <button class="btn ${_ddActiveKey===f.key?'btn-v':'btn-g'} btn-sm"
+      onclick="_ddActiveKey='${f.key}';renderDropdownManagerBody()">${esc(f.label)}</button>`).join('');
+  const opts = getDropOpts(_ddActiveKey);
+  const fieldLabel = DD_FIELDS.find(f=>f.key===_ddActiveKey)?.label||_ddActiveKey;
+
+  // Also allow adding a brand-new field tab
   document.getElementById('panelBody').innerHTML=`
-    <div class="info-banner">🏷️ POD options are saved in your browser. All team members see these when creating/editing bugs.</div>
-    <div style="margin-bottom:14px">
-      ${pods.map((p,i)=>`
-        <div class="pod-option-row" style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd)">
-          <span class="chip chip-gray" style="flex:1;justify-content:flex-start">${esc(p)}</span>
-          <button class="pod-del-btn" onclick="podDelete(${i})">✕ Remove</button>
-        </div>`).join('')}
+    <div class="info-banner">🗂️ Manage dropdown options for each field. Changes apply immediately to all bug forms.</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">${fieldTabs}
+      <button class="btn btn-g btn-sm" onclick="ddAddField()" title="Add new dropdown field">＋ New Field</button>
+    </div>
+    <div style="margin-bottom:4px;font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mute)">${esc(fieldLabel)} options</div>
+    <div style="margin-bottom:14px;background:var(--bg3);border:1px solid var(--bd);border-radius:8px;overflow:hidden">
+      ${opts.length ? opts.map((p,i)=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.03)">
+          <span style="flex:1;font-size:12px;font-weight:600;color:var(--text)">${esc(p)}</span>
+          <button class="pod-del-btn" onclick="ddRemoveOpt(${i})">✕</button>
+        </div>`).join('')
+      : `<div style="padding:14px;font-family:var(--mono);font-size:11px;color:var(--dim);text-align:center">No options yet</div>`}
     </div>
     <div class="fg" style="display:flex;gap:8px;align-items:flex-end">
       <div style="flex:1">
-        <label class="fl">Add New POD Option</label>
-        <input class="fi2" id="pod-new-input" placeholder="e.g. Finishers" onkeydown="if(event.key==='Enter')podAdd()">
+        <label class="fl">Add option to ${esc(fieldLabel)}</label>
+        <input class="fi2" id="dd-new-input" placeholder="New option…" onkeydown="if(event.key==='Enter')ddAddOpt()">
       </div>
-      <button class="btn btn-v" onclick="podAdd()" style="flex-shrink:0">+ Add</button>
+      <button class="btn btn-v" onclick="ddAddOpt()" style="flex-shrink:0">+ Add</button>
     </div>`;
+  setTimeout(()=>document.getElementById('dd-new-input')?.focus(),60);
 }
 
-function podAdd(){
-  const inp = document.getElementById('pod-new-input');
+function ddAddOpt(){
+  const inp = document.getElementById('dd-new-input');
   const val = inp?.value?.trim();
-  if(!val){toast('Enter a POD name','err');return;}
-  const pods = getPodOptions();
-  if(pods.includes(val)){toast('Already exists','err');return;}
-  pods.push(val);
-  savePodOptions(pods);
-  toast(`POD "${val}" added ✓`,'ok');
-  renderPodManagerBody();
+  if(!val){toast('Enter a value','err');return;}
+  const opts = getDropOpts(_ddActiveKey);
+  if(opts.map(o=>o.toLowerCase()).includes(val.toLowerCase())){toast('Already exists','err');return;}
+  opts.push(val);
+  saveDropOpts(_ddActiveKey, opts);
+  toast(`"${val}" added ✓`,'ok');
+  renderDropdownManagerBody();
 }
 
-function podDelete(idx){
-  const pods = getPodOptions();
-  const name = pods[idx];
-  if(!confirm(`Remove POD "${name}"?`)) return;
-  pods.splice(idx,1);
-  savePodOptions(pods);
-  toast(`POD removed`,'ok');
-  renderPodManagerBody();
+function ddRemoveOpt(idx){
+  const opts = getDropOpts(_ddActiveKey);
+  const name = opts[idx];
+  if(!confirm(`Remove "${name}"?`)) return;
+  opts.splice(idx,1);
+  saveDropOpts(_ddActiveKey, opts);
+  toast(`Removed`,'ok');
+  renderDropdownManagerBody();
+}
+
+function ddAddField(){
+  const name = prompt('New field label (e.g. "Environment", "Team"):');
+  if(!name?.trim()) return;
+  const key = name.trim().toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  if(!key){toast('Invalid name','err');return;}
+  if(DD_FIELDS.find(f=>f.key===key)){toast('Already exists','err');return;}
+  DD_FIELDS.push({key, label:name.trim(), defaults:[]});
+  _ddActiveKey = key;
+  renderDropdownManagerBody();
+  toast(`Field "${name.trim()}" created ✓`,'ok');
 }
 
 // ══════════════════════════════════════════
@@ -1565,7 +1601,7 @@ function openDetail(id){
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px">
       ${pChip(bug.priority)} ${svrChip(bug.severity)} ${stChip(bug.status)}
       ${bug.sprint?`<span class="chip chip-sprint">${esc(bug.sprint)}</span>`:''}
-      ${bug.pod?`<span class="chip chip-gray">🏷 ${esc(bug.pod)}</span>`:''}
+      ${DD_FIELDS.filter(f=>bug[f.key]).map(f=>`<span class="chip chip-gray">${esc(f.label)}: ${esc(bug[f.key])}</span>`).join(" ")}
     </div>
     <div class="dgrid" style="margin-bottom:18px">
       <div class="dgi" style="grid-column:1/-1"><div class="dgi-l">Assignees</div>
@@ -1576,9 +1612,8 @@ function openDetail(id){
       <div class="dgi"><div class="dgi-l">Reporter</div><div style="display:flex;align-items:center;gap:7px;margin-top:5px">${avEl(bug.reporter,bug.reporter_picture,24)}<div><div class="dgi-v">${esc(bug.reporter||'—')}</div><div style="font-family:var(--mono);font-size:10px;color:var(--mute)">${esc(bug.reporter_email||'')}</div></div></div></div>
       <div class="dgi"><div class="dgi-l">Feature</div><div class="dgi-v">${esc(bug.feature||'—')}</div></div>
       <div class="dgi"><div class="dgi-l">Sprint</div><div class="dgi-v">${esc(bug.sprint||'—')}</div></div>
-      <div class="dgi"><div class="dgi-l">POD</div><div class="dgi-v">${esc(bug.pod||'—')}</div></div>
+      ${DD_FIELDS.filter(f=>bug[f.key]).map(f=>`<div class="dgi"><div class="dgi-l">${esc(f.label)}</div><div class="dgi-v">${esc(bug[f.key])}</div></div>`).join("")}
       <div class="dgi"><div class="dgi-l">Build</div><div class="dgi-v" style="font-family:var(--mono);font-size:11px">${esc(bug.build||'—')}</div></div>
-      <div class="dgi"><div class="dgi-l">EPOD</div><div style="margin-top:4px">${bug.epod?epodBadge(bug.epod):'<span style="font-size:12px;color:var(--dim);font-family:var(--mono)">—</span>'}</div></div>
       <div class="dgi"><div class="dgi-l">Device / UID</div><div class="dgi-v">${esc(bug.device||'—')}</div></div>
       <div class="dgi"><div class="dgi-l">Created</div><div class="dgi-v" style="font-family:var(--mono);font-size:10px">${esc(bug.created_at||'—')}</div></div>
       <div class="dgi"><div class="dgi-l">Updated</div><div class="dgi-v" style="font-family:var(--mono);font-size:10px">${esc(bug.updated_at||'—')}</div></div>
@@ -1721,20 +1756,6 @@ async function postComment(bugId){
   }catch(e){toast(e.message,'err');}
 }
 
-function epodCell(epod){
-  if(!epod)return'<span style="font-family:var(--mono);font-size:10px;color:var(--dim)">—</span>';
-  const today=new Date();today.setHours(0,0,0,0);
-  const d=new Date(epod);const overdue=d<today&&epod;
-  const label=d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
-  return`<span class="epod-badge${overdue?' overdue':''}">📅 ${label}</span>`;
-}
-function epodBadge(epod){
-  if(!epod)return'';
-  const today=new Date();today.setHours(0,0,0,0);
-  const d=new Date(epod);const overdue=d<today;
-  const label=d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
-  return`<span class="epod-badge${overdue?' overdue':''}">${overdue?'⚠️ OVERDUE':'📅'} ${label}</span>`;
-}
 
 function setTheme(mode){
   document.body.classList.toggle('light',mode==='light');
@@ -1794,8 +1815,6 @@ function openEdit(id){
 function buildBugForm(bug,full){
   const spOpts=S.sprints.map(s=>`<option value="${esc(s.name)}"${bug?.sprint===s.name?' selected':''}>${esc(s.name)}</option>`).join('');
   const stOpts=ALL_STATUSES.map(v=>`<option value="${v}"${(bug?.status||'Open')===v?' selected':''}>${v}</option>`).join('');
-  const pods=getPodOptions();
-  const podOpts=pods.map(p=>`<option value="${esc(p)}"${(bug?.pod||'')===p?' selected':''}>${esc(p)}</option>`).join('');
   document.getElementById('panelTitle').textContent=bug?(full?'EDIT '+bug.id:'UPDATE '+bug.id):'NEW BUG';
   document.getElementById('panelFooter').innerHTML=`<button class="btn btn-g" onclick="closePanel()">Cancel</button><button class="btn btn-v" id="panelSave" onclick="saveBug()">💾 SAVE</button>`;
 
@@ -1807,7 +1826,7 @@ function buildBugForm(bug,full){
         <div style="display:flex;gap:5px;flex-wrap:wrap">${pChip(bug.priority)}${stChip(bug.status)}</div>
       </div>
       <div class="fg"><label class="fl">Status</label><select class="fi2" id="f-st">${stOpts}</select></div>
-      <div class="fg"><label class="fl">POD</label><select class="fi2" id="f-pod"><option value="">— No POD —</option>${podOpts}</select></div>
+      ${DD_FIELDS.map(f=>{const opts=getDropOpts(f.key);return`<div class="fg"><label class="fl">${esc(f.label)}</label><select class="fi2" id="f-dd-${f.key}"><option value="">— None —</option>${opts.map(o=>`<option value="${esc(o)}"${(bug?.[f.key]||"")===o?" selected":""}>${esc(o)}</option>`).join("")}</select></div>`;}).join("")}
       <div class="fg"><label class="fl">Assignees</label>${buildMultiAssigneePicker(bug)}</div>
       <div class="fg"><label class="fl">Comment (optional)</label><textarea class="fi2" id="f-qc" rows="2" placeholder="Note about this update…"></textarea></div>`;
     setTimeout(renderMapTags,0);return;
@@ -1826,11 +1845,7 @@ function buildBugForm(bug,full){
         <select class="fi2" id="f-sv">${['','S1 - Blocker','S2 - Critical','S3 - Major','S4 - Minor'].map(v=>`<option value="${v}"${(bug?.severity||'')===v?' selected':''}>${v||'— None —'}</option>`).join('')}</select>
       </div>
       <div class="fg"><label class="fl">Status</label><select class="fi2" id="f-st">${stOpts}</select></div>
-      <div class="fg"><label class="fl">POD</label>
-        <select class="fi2" id="f-pod">
-          <option value="">— No POD —</option>${podOpts}
-        </select>
-      </div>
+      ${DD_FIELDS.map(f=>{const opts=getDropOpts(f.key);return`<div class="fg"><label class="fl">${esc(f.label)}</label><select class="fi2" id="f-dd-${f.key}"><option value="">— None —</option>${opts.map(o=>`<option value="${esc(o)}"${(bug?.[f.key]||"")===o?" selected":""}>${esc(o)}</option>`).join("")}</select></div>`;}).join("")}
       <div class="fg fc2"><label class="fl">Assignees</label>${buildMultiAssigneePicker(bug)}</div>
       <div class="fg"><label class="fl">Reporter</label><input class="fi2" id="f-rep" value="${esc(bug?.reporter||S.user?.name||'')}" placeholder="Your name"></div>
       <div class="fg"><label class="fl">Feature</label>
@@ -1839,7 +1854,6 @@ function buildBugForm(bug,full){
       </div>
       <div class="fg"><label class="fl">Sprint</label><select class="fi2" id="f-sp"><option value="">No Sprint</option>${spOpts}</select></div>
       <div class="fg"><label class="fl">Build</label><input class="fi2" id="f-build" value="${esc(bug?.build||'')}" placeholder="e.g. v3.2.1"></div>
-      <div class="fg"><label class="fl">EPOD — Expected Publish Date</label><input type="date" class="fi2" id="f-epod" value="${esc(bug?.epod||'')}"></div>
       <div class="fg"><label class="fl">Device / User ID</label><input class="fi2" id="f-dev" value="${esc(bug?.device||'')}" placeholder="e.g. Pixel 8 / UID 12345"></div>
       <div class="fg fc2"><label class="fl">Steps / Repro Rate</label>
         <textarea class="fi2" id="f-steps" rows="3" placeholder="1. Open app&#10;2. Tap…&#10;Repro: 80%">${esc(bug?.steps||'')}</textarea>
@@ -1883,10 +1897,11 @@ async function saveBug(){
     const prev=S.editing?S.bugs.find(b=>b.id===S.editing):null;
     const full=!S.editing||S.user?.role==='admin'||prev?.reporter_email===S.user?.email;
     const assignees=[..._mapAssignees];
-    const podVal=document.getElementById('f-pod')?.value||'';
+    const ddVals={};DD_FIELDS.forEach(f=>{ddVals[f.key]=document.getElementById(`f-dd-${f.key}`)?.value||'';});
 
     if(S.editing&&!full){
-      const data={status:document.getElementById('f-st')?.value||prev.status,assignees,pod:podVal,_restricted:true};
+      const ddVals={};DD_FIELDS.forEach(f=>{ddVals[f.key]=document.getElementById(`f-dd-${f.key}`)?.value||'';});
+      const data={status:document.getElementById('f-st')?.value||prev.status,assignees,...ddVals,_restricted:true};
       await api(`/bugs/${S.editing}`,'PUT',data);
       const qc=document.getElementById('f-qc')?.value?.trim();
       if(qc)await api(`/bugs/${S.editing}/comment`,'POST',{text:qc});
@@ -1905,11 +1920,10 @@ async function saveBug(){
         reporter_email:S.user?.email||'',reporter_picture:S.user?.picture||'',
         feature:document.getElementById('f-feat')?.value||'',sprint:document.getElementById('f-sp')?.value||'',
         build:document.getElementById('f-build')?.value||'',
-        epod:document.getElementById('f-epod')?.value||'',
         device:document.getElementById('f-dev')?.value||'',
         steps:document.getElementById('f-steps')?.value||'',actual:document.getElementById('f-actual')?.value||'',
         attachment:document.getElementById('f-att')?.value||'',
-        pod: podVal,
+        ...ddVals,
         app_url:APP_URL,
       };
       let res;
