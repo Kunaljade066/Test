@@ -52,7 +52,7 @@
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;overflow-x:hidden;font-size:14px;line-height:1.5}
+html{max-width:100vw;overflow-x:hidden}body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;overflow-x:hidden;font-size:14px;line-height:1.5;max-width:100vw}
 @media(pointer:fine){body{cursor:none}}
 
 ::-webkit-scrollbar{width:4px;height:4px}
@@ -508,14 +508,33 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
 .mn-fab:hover,.mn-fab:active{transform:scale(1.1)}
 @media(max-width:768px){
   .mobile-nav{display:block}
-  .main{padding-bottom:82px}
+  .main{padding-bottom:82px;overflow-x:hidden;max-width:100vw}
+  .wrap{padding:10px;max-width:100vw;overflow-x:hidden}
   .topbar{padding:0 12px;height:48px}
   .tb-tabs{display:none!important}
   .tb-divider{display:none}
   .tb-name{font-size:12px}
   .pip-wrap{display:none}
-  body{cursor:auto}
+  body{cursor:auto;overflow-x:hidden;max-width:100vw}
   #cur-bat,#cur-ball{display:none!important}
+  /* Table: no horizontal scroll on mobile, hide less important cols */
+  .tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{font-size:11px;min-width:0}
+  thead th:nth-child(n+7),tbody td:nth-child(n+7){display:none}
+  .tc-title{max-width:140px}
+  /* Cards */
+  .hq-card{padding:10px 12px}
+  .hq-n{font-size:22px}
+  /* Panel full screen */
+  .panel{width:100vw;max-width:100vw}
+  /* Stats */
+  .stats{grid-template-columns:1fr 1fr 1fr}
+  .sc{padding:10px 12px}
+  .sc-n{font-size:22px}
+  /* Kanban: single column scroll */
+  .kanban{grid-template-columns:1fr;overflow-x:hidden}
+  /* Live wrap */
+  #liveWrap{display:none!important}
 }
 @media(min-width:769px){.mobile-nav{display:none!important}}
 
@@ -523,9 +542,14 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
 #natashaIntro.gone{display:none}
 .natasha-wrap{display:flex;flex-direction:row;align-items:flex-end;gap:10px;pointer-events:all;padding-right:16px;padding-bottom:0;animation:nslide .7s cubic-bezier(.34,1.56,.64,1) both;}
 @media(max-width:768px){
-  #natashaIntro{bottom:82px;}
-  .natasha-bubble{width:min(240px,75vw);}
-  #natashaImg{width:110px;}
+  #natashaIntro{bottom:82px;right:0;max-width:100vw}
+  .natasha-wrap{padding-right:8px;gap:6px}
+  .natasha-bubble{width:170px;padding:10px 12px 10px;margin-bottom:120px}
+  .natasha-text{font-size:11px;margin-bottom:8px}
+  .natasha-name-tag{font-size:9px;padding:2px 7px}
+  .natasha-ok{font-size:8px;padding:7px 10px}
+  #natashaImg{width:90px}
+  #natashaEmoji{font-size:50px!important}
 }
 @keyframes nslide{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
 .natasha-bubble{background:linear-gradient(135deg,#ffffff,#f0f5ff);border-radius:16px 16px 4px 16px;padding:14px 16px 13px;width:210px;margin-bottom:160px;box-shadow:0 8px 40px rgba(0,0,0,.5),0 0 0 1px rgba(200,200,255,.5),0 0 20px rgba(124,58,237,.25);position:relative;flex-shrink:0;animation:bpop .5s .55s cubic-bezier(.34,1.56,.64,1) both;}
@@ -848,6 +872,7 @@ const DD_FIELDS_DEFAULTS = [
 const DD_FIELDS = DD_FIELDS_DEFAULTS.map(f=>({...f, options:[...f.options]}));
 
 const DD_CONFIG_KEY = '__dd_cfg_v1';
+const DD_LS_KEY    = 'hwt_dd_fields_v2'; // localStorage mirror for instant load
 
 function getDropOpts(key) {
   const f = DD_FIELDS.find(f=>f.key===key);
@@ -860,43 +885,63 @@ async function saveDropOpts(key, arr) {
   await persistDDConfig();
 }
 
-// Persist entire DD_FIELDS config to backend as a special sprint record
-// Track the config sprint id so we can update it reliably
-let _ddConfigSprintId = null;
-
+// ── Save to BOTH localStorage (instant) and KV backend (shared) ──
 async function persistDDConfig() {
+  const payload = DD_FIELDS.map(f=>({key:f.key,label:f.label,options:f.options||[]}));
+  // 1. Always save to localStorage immediately so current user never loses data
+  try { localStorage.setItem(DD_LS_KEY, JSON.stringify(payload)); } catch(e) {}
+  // 2. Push to backend (delete all old config sprints, create fresh one)
   try {
-    const payload = DD_FIELDS.map(f=>({key:f.key,label:f.label,options:f.options||[]}));
-    // Always fetch fresh sprint list to find existing config sprint
-    // (avoids stale _ddConfigSprintId after token refresh)
     const freshSprints = await api('/sprints');
-    const existing = (freshSprints.sprints||[]).find(s=>s.name===DD_CONFIG_KEY);
-    if(existing) {
-      _ddConfigSprintId = existing.id;
-      try { await api(`/sprints/${existing.id}`,'DELETE'); } catch(e) {}
-      _ddConfigSprintId = null;
+    const allCfg = (freshSprints.sprints||[]).filter(s=>s.name===DD_CONFIG_KEY);
+    // Delete ALL existing config sprints (clean up duplicates)
+    for(const s of allCfg) {
+      try { await api(`/sprints/${s.id}`,'DELETE'); } catch(e) {}
     }
     const res = await api('/sprints','POST',{name:DD_CONFIG_KEY,start:'',end:'',goal:JSON.stringify(payload)});
-    if(res?.sprint?.id) _ddConfigSprintId = res.sprint.id;
-  } catch(e) { console.warn('[dd] persist failed:',e.message); throw e; }
+    if(res?.sprint?.id) console.log('[dd] persisted to backend:', res.sprint.id);
+  } catch(e) {
+    console.warn('[dd] backend persist failed (local saved ok):', e.message);
+    // Don't throw — localStorage save already succeeded
+  }
 }
 
-// Load DD config from sprints list (called after refreshAll fetches sprints)
+// ── Load: backend wins over localStorage, localStorage wins over defaults ──
 function loadDDConfigFromSprints(rawSprints) {
-  const cfgSprint = rawSprints.find(s=>s.name===DD_CONFIG_KEY);
-  if(!cfgSprint) { _ddConfigSprintId=null; return; } // keep defaults
-  _ddConfigSprintId = cfgSprint.id;
+  // Find the LATEST config sprint (sort by creation, take last)
+  const cfgSprints = rawSprints.filter(s=>s.name===DD_CONFIG_KEY);
+  const cfgSprint = cfgSprints.length ? cfgSprints[cfgSprints.length-1] : null;
+
+  if(cfgSprint) {
+    try {
+      const payload = JSON.parse(cfgSprint.goal||'[]');
+      if(Array.isArray(payload) && payload.length) {
+        DD_FIELDS.length = 0;
+        payload.forEach(item=>{
+          if(item.key&&item.label) DD_FIELDS.push({key:item.key,label:item.label,options:item.options||[]});
+        });
+        // Mirror to localStorage
+        try { localStorage.setItem(DD_LS_KEY, JSON.stringify(payload)); } catch(e) {}
+        return;
+      }
+    } catch(e) { console.warn('[dd] backend load failed:', e.message); }
+  }
+
+  // No backend config — try localStorage
   try {
-    const payload = JSON.parse(cfgSprint.goal||'[]');
-    if(!Array.isArray(payload)||!payload.length) return;
-    // FULL REPLACE: wipe DD_FIELDS and rebuild from backend payload.
-    // This is the only way deletes actually stick.
-    DD_FIELDS.length = 0;
-    payload.forEach(item=>{
-      if(!item.key||!item.label) return;
-      DD_FIELDS.push({key:item.key,label:item.label,options:item.options||[]});
-    });
-  } catch(e) { console.warn('[dd] load failed:',e.message); }
+    const raw = localStorage.getItem(DD_LS_KEY);
+    if(raw) {
+      const payload = JSON.parse(raw);
+      if(Array.isArray(payload) && payload.length) {
+        DD_FIELDS.length = 0;
+        payload.forEach(item=>{
+          if(item.key&&item.label) DD_FIELDS.push({key:item.key,label:item.label,options:item.options||[]});
+        });
+        return;
+      }
+    }
+  } catch(e) {}
+  // Fall through to defaults (DD_FIELDS already has them)
 }
 
 // Legacy alias
