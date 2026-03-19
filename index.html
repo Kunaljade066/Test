@@ -545,25 +545,24 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
 #natashaIntro.gone{display:none}
 .natasha-wrap{display:flex;flex-direction:row;align-items:flex-end;gap:10px;pointer-events:all;padding-right:16px;padding-bottom:0;animation:nslide .7s cubic-bezier(.34,1.56,.64,1) both;}
 @media(max-width:768px){
-  /* Natasha: bottom-right corner above mobile nav */
   #natashaIntro{bottom:82px;right:0;left:auto;justify-content:flex-end;}
-  .natasha-wrap{padding-right:4px;gap:2px;align-items:flex-end;}
-  /* margin-bottom lifts bubble to face level — must be < image height */
+  .natasha-wrap{padding-right:3px;gap:1px;align-items:flex-end;}
   .natasha-bubble{
-    width:120px;
-    max-width:calc(50vw);
-    padding:6px 8px;
-    margin-bottom:36px;
-    border-radius:10px 10px 4px 10px;
+    width:100px;
+    max-width:42vw;
+    padding:5px 7px;
+    margin-bottom:28px;
+    border-radius:8px 8px 3px 8px;
     min-width:0;
-    margin-right:2px;
+    margin-right:1px;
+    box-shadow:0 4px 16px rgba(0,0,0,.4),0 0 0 1px rgba(200,200,255,.4);
   }
-  .natasha-bubble::after{display:block;bottom:10px;right:-7px;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:7px solid #f0f5ff}
-  .natasha-text{font-size:9px;margin-bottom:4px;line-height:1.3}
-  .natasha-name-tag{font-size:7px;padding:1px 4px;margin-bottom:3px;letter-spacing:1px}
-  .natasha-ok{font-size:7px;padding:4px 6px;letter-spacing:1px}
-  #natashaImg{width:52px;max-height:30vh}
-  #natashaEmoji{font-size:34px!important}
+  .natasha-bubble::after{display:block;bottom:8px;right:-6px;border-top:4px solid transparent;border-bottom:4px solid transparent;border-left:6px solid #f0f5ff}
+  .natasha-text{font-size:8px;margin-bottom:3px;line-height:1.3;font-weight:600}
+  .natasha-name-tag{font-size:6px;padding:1px 3px;margin-bottom:2px;letter-spacing:1px}
+  .natasha-ok{font-size:6px;padding:3px 5px;letter-spacing:1px}
+  #natashaImg{width:44px;max-height:28vh}
+  #natashaEmoji{font-size:30px!important}
 }
 @keyframes nslide{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
 .natasha-bubble{background:linear-gradient(135deg,#ffffff,#f0f5ff);border-radius:16px 16px 4px 16px;padding:16px 18px 15px;width:240px;margin-bottom:200px;box-shadow:0 8px 40px rgba(0,0,0,.5),0 0 0 1px rgba(200,200,255,.5),0 0 20px rgba(124,58,237,.25);position:relative;flex-shrink:0;animation:bpop .5s .55s cubic-bezier(.34,1.56,.64,1) both;}
@@ -995,8 +994,7 @@ function savePodOptions(arr) { saveDropOpts('pod', arr).catch(()=>{}); }
   const bat  = document.getElementById('cur-bat');
   const ball = document.getElementById('cur-ball');
   if(!bat||!ball) return;
-  let mx=window.innerWidth/2, my=window.innerHeight/2, bx=mx, by=my;
-  let visible=false;
+  let mx=0, my=0, bx=0, by=0;
 
   function loop(){
     bx += (mx-bx)*.22; by += (my-by)*.22;
@@ -1006,58 +1004,20 @@ function savePodOptions(arr) { saveDropOpts('pod', arr).catch(()=>{}); }
   }
   loop();
 
-  // Track real mouse position always
-  document.addEventListener('mousemove', e => {
-    mx = e.clientX; my = e.clientY;
-    if(!visible){ visible=true; bat.style.opacity='1'; ball.style.opacity='1'; }
-  }, {passive:true});
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
 
-  // Hide only when mouse truly leaves the browser window
-  document.addEventListener('mouseleave', () => {
-    visible=false; bat.style.opacity='0'; ball.style.opacity='0';
-  });
-  document.addEventListener('mouseenter', () => {
-    visible=true; bat.style.opacity='1'; ball.style.opacity='1';
-  });
-
-  // Hover detection: ball on interactive, bat otherwise
-  const HOVER_SEL = 'a,button,.btn,.tb-tab,.sb-item,.kcard,.hq-card,.home-bug-row,.map-option,.dup-item,.notif-item,tbody tr,.pb,.user-pill,.tb-brand,select,input,textarea,.pm-item,.pod-del-btn,.mn-item,.mn-fab,.hq-card,.home-section,.sprint-card';
-
-  function checkHover(target){
-    if(!target) return false;
-    // Walk up the tree — if any ancestor matches, show ball
-    let el = target;
-    while(el && el !== document.body){
-      if(el.matches && el.matches(HOVER_SEL)) return true;
-      el = el.parentElement;
-    }
-    return false;
-  }
-
+  const HOVER_SEL = 'a,button,.btn,.tb-tab,.sb-item,.kcard,.hq-card,.home-bug-row,.map-option,.dup-item,.notif-item,tbody tr,.pb,.user-pill,.tb-brand,select,input,textarea';
   document.addEventListener('mouseover', e => {
-    if(checkHover(e.target)) document.body.classList.add('hovering');
-    else document.body.classList.remove('hovering');
-  }, {passive:true});
-
-  // On mouseout, check where we went — not where we left
+    if (e.target.closest(HOVER_SEL)) document.body.classList.add('hovering');
+  });
   document.addEventListener('mouseout', e => {
-    const to = e.relatedTarget;
-    if(!to || to===document.documentElement){
+    if (e.target.closest(HOVER_SEL) && !e.relatedTarget?.closest(HOVER_SEL))
       document.body.classList.remove('hovering');
-      return;
-    }
-    if(checkHover(to)) document.body.classList.add('hovering');
-    else document.body.classList.remove('hovering');
-  }, {passive:true});
-
+  });
   document.addEventListener('mousedown', () => document.body.classList.add('clicking'));
   document.addEventListener('mouseup',   () => document.body.classList.remove('clicking'));
-
-  // After any click (e.g. confirm dialog closes), re-check hover on next move
-  document.addEventListener('click', () => {
-    // Brief delay for dialog to close, then re-show cursor
-    setTimeout(()=>{ bat.style.opacity='1'; ball.style.opacity='1'; visible=true; }, 50);
-  });
+  document.addEventListener('mouseleave',() => { bat.style.opacity='0'; ball.style.opacity='0'; });
+  document.addEventListener('mouseenter',() => { bat.style.opacity='1'; ball.style.opacity='1'; });
 })();
 
 // ══════════════════════════════════════════
