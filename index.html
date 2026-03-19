@@ -1097,6 +1097,30 @@ const saveSession=()=>{try{if(S.user)localStorage.setItem(SK,JSON.stringify({use
 const loadSession=()=>{try{const r=JSON.parse(localStorage.getItem(SK)||'null');if(!r||!r.user||Date.now()-r.ts>8*3600*1000){localStorage.removeItem(SK);return null;}return r;}catch{return null;}};
 const clearSession=()=>localStorage.removeItem(SK);
 
+// ── FAST BUG SYNC ─────────────────────────────────────────
+// Polls /bugs every 30s so other users see new bugs quickly.
+let _syncTimer=null;
+function startFastSync(){
+  if(_syncTimer) clearInterval(_syncTimer);
+  _syncTimer=setInterval(async()=>{
+    if(!S.user?.idToken) return;
+    try{
+      const r=await fetch(WORKER+'/bugs',{headers:{'Content-Type':'application/json','X-Google-Token':S.user.idToken}});
+      if(!r.ok) return;
+      const d=await r.json();
+      const fresh=d.bugs||[];
+      if(fresh.length!==S.bugs.length||(fresh[0]?.id!==S.bugs[0]?.id)){
+        fresh.forEach(b=>{if(!b.assignees)b.assignees=b.assignee_email?[{name:b.assignee||'',email:b.assignee_email,picture:b.assignee_picture||''}]:[];});
+        S.bugs=fresh;
+        updateSbBadges();populateDropdowns();applyF();
+        setCloud('ok',`☁ ${S.bugs.length}`);
+        if(S.view==='home')renderHome();
+        else if(S.view==='board')renderBoard();
+      }
+    }catch(e){}
+  },30000);
+}
+
 // Silent token refresh: re-verify token every 45 minutes to keep session alive
 // ── LIVE PRESENCE ─────────────────────────────────────────
 let _presenceTimer=null;
@@ -1326,6 +1350,7 @@ function onLogin(){
   loadNotifs();updateNotifBadge();
   scheduleTokenRefresh();
   refreshAll().then(()=>{
+    startFastSync();
     hideLoad();
     // Confetti burst on login!
     setTimeout(launchConfetti, 200);
