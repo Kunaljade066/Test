@@ -2638,9 +2638,11 @@ async function saveBug(){
         toast(`Created: ${res.bug?.id} ✓`,'ok');
         const _nid=res.bug?.id||'';
         const _nm=[`Nice catch! ${_nid} is on the radar 🔍 Go find more!`,`${_nid} filed! 🏏 One down — how many more are hiding?`,`Bug logged ✓ ${_nid} — keep hunting, the pitch is full of them!`,`${_nid} trapped! 🎯 Your team will thank you. Spot another?`,`Good eye! ${_nid} queued up. More bugs won't escape you! 👀`];
-        setTimeout(()=>showNatasha(_nm[Math.floor(Math.random()*_nm.length)]),400);
+        closePanel();
+        await refreshAll();
+        // Show Natasha AFTER refresh so it's visible immediately
+        showNatasha(_nm[Math.floor(Math.random()*_nm.length)]);
       }
-      closePanel();await refreshAll();
     }
   }catch(e){toast('❌ '+e.message,'err');}
   btn.disabled=false;btn.innerHTML='💾 SAVE';
