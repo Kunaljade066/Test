@@ -548,7 +548,7 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
   .natasha-text{font-size:11px;margin-bottom:8px}
   .natasha-name-tag{font-size:9px;padding:2px 7px}
   .natasha-ok{font-size:8px;padding:7px 10px}
-  #natashaImg{width:90px}
+  #natashaImg{width:90px;max-height:50vh}
   #natashaEmoji{font-size:50px!important}
 }
 @keyframes nslide{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
@@ -559,9 +559,24 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
 .natasha-text{font-size:12px;font-weight:700;color:#1a1a4a;line-height:1.6;margin-bottom:11px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
 .natasha-ok{width:100%;padding:9px 12px;background:linear-gradient(135deg,#7c3aed,#06b6d4);border:none;border-radius:8px;color:#fff;font-family:var(--disp);font-size:9px;font-weight:800;letter-spacing:1.5px;cursor:pointer;transition:all .15s;box-shadow:0 4px 14px rgba(124,58,237,.4);}
 .natasha-ok:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(124,58,237,.6)}
-.natasha-char-wrap{flex-shrink:0;display:flex;align-items:flex-end;}
-#natashaImg{width:160px;height:auto;display:block;object-fit:contain;object-position:bottom center;filter:drop-shadow(-4px 0 20px rgba(124,58,237,.3)) drop-shadow(0 -4px 12px rgba(0,0,0,.4));animation:char-bounce 2.4s ease-in-out infinite;transform-origin:bottom center;max-height:calc(100vh - 80px);}
-@keyframes char-bounce{0%,100%{transform:translateY(0) rotate(0deg)}35%{transform:translateY(-8px) rotate(-1deg)}70%{transform:translateY(-4px) rotate(.6deg)}}
+.natasha-char-wrap{flex-shrink:0;display:flex;align-items:flex-end;overflow:visible;}
+#natashaImg{
+  width:160px;height:auto;display:block;
+  object-fit:contain;object-position:bottom center;
+  filter:drop-shadow(-4px 0 20px rgba(124,58,237,.3)) drop-shadow(0 -4px 12px rgba(0,0,0,.4));
+  animation:char-bounce 2.4s ease-in-out infinite;
+  transform-origin:bottom center;
+  /* Never clip: let image grow upward as tall as needed */
+  max-height:70vh;
+  /* Sit flush on the "floor" (bottom of viewport) */
+  margin-bottom:0;
+  vertical-align:bottom;
+}
+@keyframes char-bounce{
+  0%,100%{transform:translateY(0)}
+  45%{transform:translateY(-12px)}
+  70%{transform:translateY(-6px)}
+}
 .tb-logo-full{height:30px;object-fit:contain;transition:filter .2s;}
 .tb-brand:hover .tb-logo-full{filter:drop-shadow(0 0 10px rgba(124,58,237,.8))}
 </style>
