@@ -540,14 +540,15 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
 #natashaIntro.gone{display:none}
 .natasha-wrap{display:flex;flex-direction:row;align-items:flex-end;gap:10px;pointer-events:all;padding-right:16px;padding-bottom:0;animation:nslide .7s cubic-bezier(.34,1.56,.64,1) both;}
 @media(max-width:768px){
-  #natashaIntro{bottom:82px;right:0;max-width:100vw}
-  /* Bubble: fix width so it never overflows left edge on small screens */
-  .natasha-wrap{padding-right:6px;gap:4px;max-width:100vw}
-  .natasha-bubble{width:min(148px,44vw);padding:8px 10px 8px;margin-bottom:100px;border-radius:12px 12px 4px 12px;min-width:0}
+  /* Center natasha horizontally, sits just above mobile nav */
+  #natashaIntro{bottom:82px;left:0;right:0;justify-content:center;}
+  .natasha-wrap{padding-right:0;gap:6px;justify-content:center;align-items:flex-end;}
+  .natasha-bubble{width:160px;padding:9px 11px 9px;margin-bottom:90px;border-radius:12px 12px 4px 12px;min-width:0}
+  .natasha-bubble::after{display:none}
   .natasha-text{font-size:10px;margin-bottom:6px;line-height:1.5}
   .natasha-name-tag{font-size:8px;padding:2px 5px;margin-bottom:5px;letter-spacing:1px}
   .natasha-ok{font-size:7px;padding:5px 8px;letter-spacing:1px}
-  #natashaImg{width:80px;max-height:50vh}
+  #natashaImg{width:80px;max-height:45vh}
   #natashaEmoji{font-size:48px!important}
 }
 @keyframes nslide{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
@@ -560,14 +561,18 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
 .natasha-ok:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(124,58,237,.6)}
 .natasha-char-wrap{flex-shrink:0;display:flex;align-items:flex-end;overflow:visible;}
 #natashaImg{
-  width:220px;height:auto;display:block;
+  width:260px;height:auto;display:block;
   object-fit:contain;object-position:bottom center;
   filter:drop-shadow(-4px 0 20px rgba(124,58,237,.3)) drop-shadow(0 -4px 12px rgba(0,0,0,.4));
   animation:char-bounce 2.4s ease-in-out infinite;
   transform-origin:bottom center;
-  max-height:75vh;
+  max-height:78vh;
   margin-bottom:0;
   vertical-align:bottom;
+}
+@media(min-width:1440px){
+  #natashaImg{width:320px;}
+  .natasha-bubble{width:260px;margin-bottom:230px;}
 }
 @keyframes char-bounce{
   0%,100%{transform:translateY(0)}
@@ -1047,20 +1052,31 @@ async function startLivePresence(){
   _presenceTimer=setInterval(updateLiveCount,90000);
 }
 async function updateLiveCount(){
-  if(!S.user?.idToken) return; // guard: no token yet
+  if(!S.user?.idToken) return;
   try{
     const r=await fetch(WORKER+'/team',{headers:{'Content-Type':'application/json','X-Google-Token':S.user.idToken}});
-    if(!r.ok) return; // silently skip on auth error, don't retry aggressively
+    if(!r.ok) return;
     const d=await r.json();
     const members=d.members||[];
-    const n=members.length;
     const lbl=document.getElementById('liveCount');
     const wrap=document.getElementById('liveWrap');
     if(!lbl||!wrap)return;
-    lbl.textContent=n===1?'1 member':`${n} members`;
+
+    // "Active today" = members whose lastSeen date matches today (IST)
+    const todayIST=new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'2-digit',year:'numeric'});
+    const activeToday=members.filter(m=>{
+      if(!m.lastSeen) return false;
+      // lastSeen is stored as "DD/MM/YYYY, HH:MM:SS AM/PM" in IST
+      const memberDate=m.lastSeen.split(',')[0]?.trim();
+      return memberDate===todayIST;
+    });
+
+    const n=activeToday.length||1; // always at least current user
+    lbl.textContent=n===1?'1 active today':`${n} active today`;
     wrap.style.display='flex';
-    wrap.title='Team members: '+members.map(m=>m.name).join(', ')+'\n(All who have signed in)';
-  }catch(e){} // silently ignore network errors
+    const names=activeToday.length?activeToday.map(m=>m.name).join(', '):S.user.name;
+    wrap.title='Active today: '+names;
+  }catch(e){}
 }
 
 let _refreshTimer = null;
