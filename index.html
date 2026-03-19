@@ -76,7 +76,7 @@ body::after{
 }
 
 #cur-bat{
-  position:fixed;pointer-events:none;z-index:99999;
+  position:fixed;pointer-events:none;z-index:999999;
   width:12px;height:42px;
   transform:translate(-50%,-50%) rotate(35deg);
   transform-origin:50% 85%;
@@ -87,7 +87,7 @@ body::after{
 #cur-bat .bb{width:12px;height:26px;background:linear-gradient(180deg,#f0e0b0,#d4b870 50%,#b09040);border-radius:6px 6px 4px 4px;box-shadow:inset -1px 0 4px rgba(0,0,0,.25),0 0 8px rgba(255,200,80,.15);position:relative}
 #cur-bat .bb::before{content:'';position:absolute;left:4px;top:4px;width:1px;height:16px;background:rgba(160,120,40,.5);border-radius:1px}
 #cur-ball{
-  position:fixed;pointer-events:none;z-index:99999;
+  position:fixed;pointer-events:none;z-index:999999;
   width:20px;height:20px;border-radius:50%;
   transform:translate(-50%,-50%);
   display:none;
@@ -451,8 +451,8 @@ select.fi2 option{background:var(--bg2)}
 .dup-t{flex:1;color:var(--mist);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dup-pct{font-family:var(--mono);font-size:10px;color:#fbbf24;font-weight:700;flex-shrink:0}
 
-.toast-wrap{position:fixed;bottom:22px;right:22px;z-index:9999;display:flex;flex-direction:column;gap:8px}
-.toast{background:var(--bg2);border:1px solid var(--bd2);border-radius:10px;padding:11px 16px;font-size:13px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .28s cubic-bezier(.34,1.56,.64,1);box-shadow:var(--sh2);max-width:340px;display:flex;align-items:center;gap:9px;}
+.toast-wrap{position:fixed;bottom:22px;right:22px;z-index:9999;display:flex;flex-direction:column;gap:8px;cursor:auto}
+.toast{background:var(--bg2);border:1px solid var(--bd2);border-radius:10px;padding:11px 16px;font-size:13px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .28s cubic-bezier(.34,1.56,.64,1);box-shadow:var(--sh2);max-width:340px;display:flex;align-items:center;gap:9px;cursor:auto}
 .toast.show{transform:translateX(0)}
 .toast.ok{border-left:3px solid var(--g4);box-shadow:var(--sh2),0 0 12px rgba(16,185,129,.15)}
 .toast.err{border-left:3px solid var(--g5);box-shadow:var(--sh2),0 0 12px rgba(239,68,68,.15)}
@@ -985,7 +985,10 @@ function savePodOptions(arr) { saveDropOpts('pod', arr).catch(()=>{}); }
 (function(){
   const bat  = document.getElementById('cur-bat');
   const ball = document.getElementById('cur-ball');
-  let mx=0, my=0, bx=0, by=0;
+  if(!bat||!ball) return;
+  let mx=window.innerWidth/2, my=window.innerHeight/2, bx=mx, by=my;
+  let visible=false;
+
   function loop(){
     bx += (mx-bx)*.22; by += (my-by)*.22;
     bat.style.left  = bx + 'px'; bat.style.top  = by + 'px';
@@ -993,14 +996,59 @@ function savePodOptions(arr) { saveDropOpts('pod', arr).catch(()=>{}); }
     requestAnimationFrame(loop);
   }
   loop();
-  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
-  const HOVER_SEL = 'a,button,.btn,.tb-tab,.sb-item,.kcard,.hq-card,.home-bug-row,.map-option,.dup-item,.notif-item,tbody tr,.pb,.user-pill,.tb-brand,select,input,textarea';
-  document.addEventListener('mouseover', e => { if (e.target.closest(HOVER_SEL)) document.body.classList.add('hovering'); });
-  document.addEventListener('mouseout',  e => { if (e.target.closest(HOVER_SEL) && !e.relatedTarget?.closest(HOVER_SEL)) document.body.classList.remove('hovering'); });
+
+  // Track real mouse position always
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    if(!visible){ visible=true; bat.style.opacity='1'; ball.style.opacity='1'; }
+  }, {passive:true});
+
+  // Hide only when mouse truly leaves the browser window
+  document.addEventListener('mouseleave', () => {
+    visible=false; bat.style.opacity='0'; ball.style.opacity='0';
+  });
+  document.addEventListener('mouseenter', () => {
+    visible=true; bat.style.opacity='1'; ball.style.opacity='1';
+  });
+
+  // Hover detection: ball on interactive, bat otherwise
+  const HOVER_SEL = 'a,button,.btn,.tb-tab,.sb-item,.kcard,.hq-card,.home-bug-row,.map-option,.dup-item,.notif-item,tbody tr,.pb,.user-pill,.tb-brand,select,input,textarea,.pm-item,.pod-del-btn,.mn-item,.mn-fab,.hq-card,.home-section,.sprint-card';
+
+  function checkHover(target){
+    if(!target) return false;
+    // Walk up the tree — if any ancestor matches, show ball
+    let el = target;
+    while(el && el !== document.body){
+      if(el.matches && el.matches(HOVER_SEL)) return true;
+      el = el.parentElement;
+    }
+    return false;
+  }
+
+  document.addEventListener('mouseover', e => {
+    if(checkHover(e.target)) document.body.classList.add('hovering');
+    else document.body.classList.remove('hovering');
+  }, {passive:true});
+
+  // On mouseout, check where we went — not where we left
+  document.addEventListener('mouseout', e => {
+    const to = e.relatedTarget;
+    if(!to || to===document.documentElement){
+      document.body.classList.remove('hovering');
+      return;
+    }
+    if(checkHover(to)) document.body.classList.add('hovering');
+    else document.body.classList.remove('hovering');
+  }, {passive:true});
+
   document.addEventListener('mousedown', () => document.body.classList.add('clicking'));
   document.addEventListener('mouseup',   () => document.body.classList.remove('clicking'));
-  document.addEventListener('mouseleave',() => { bat.style.opacity='0'; ball.style.opacity='0'; });
-  document.addEventListener('mouseenter',() => { bat.style.opacity='1'; ball.style.opacity='1'; });
+
+  // After any click (e.g. confirm dialog closes), re-check hover on next move
+  document.addEventListener('click', () => {
+    // Brief delay for dialog to close, then re-show cursor
+    setTimeout(()=>{ bat.style.opacity='1'; ball.style.opacity='1'; visible=true; }, 50);
+  });
 })();
 
 // ══════════════════════════════════════════
