@@ -84,7 +84,7 @@ body::after{
   transition:opacity .2s;
 }
 #cur-bat .bh{width:4px;height:16px;background:linear-gradient(180deg,#c8a060,#a07040);border-radius:2px;margin:0 auto}
-#cur-bat .bb{width:12px;height:26px;background:linear-gradient(180deg,#f0e0b0,#d4b870 50%,#b09040);border-radius:6px 6px 4px 4px;box-shadow:inset -1px 0 4px rgba(0,0,0,.25),0 0 8px rgba(255,200,80,.15)}
+#cur-bat .bb{width:12px;height:26px;background:linear-gradient(180deg,#f0e0b0,#d4b870 50%,#b09040);border-radius:6px 6px 4px 4px;box-shadow:inset -1px 0 4px rgba(0,0,0,.25),0 0 8px rgba(255,200,80,.15);position:relative}
 #cur-bat .bb::before{content:'';position:absolute;left:4px;top:4px;width:1px;height:16px;background:rgba(160,120,40,.5);border-radius:1px}
 #cur-ball{
   position:fixed;pointer-events:none;z-index:99999;
@@ -514,6 +514,11 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
   .tb-name{font-size:12px}
   .pip-wrap{display:none}
   body{cursor:auto;overflow-x:hidden;max-width:100vw}
+  /* Force all interactive elements to show default cursor on mobile */
+  button,.btn,.tb-tab,.sb-item,.kcard,.hq-card,.map-option,
+  .notif-item,tbody tr,.pb,.user-pill,.tb-brand,select,input,
+  textarea,thead th,.sc,.pm-item,.pod-del-btn,.mn-item,.mn-fab,
+  .home-bug-row,.dup-item{cursor:auto!important}
   #cur-bat,#cur-ball{display:none!important}
   /* Table: no horizontal scroll on mobile, hide less important cols */
   .tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -542,8 +547,8 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
 @media(max-width:768px){
   /* Center natasha horizontally, sits just above mobile nav */
   #natashaIntro{bottom:82px;left:0;right:0;justify-content:center;}
-  .natasha-wrap{padding-right:0;gap:6px;justify-content:center;align-items:flex-end;}
-  .natasha-bubble{width:160px;padding:9px 11px 9px;margin-bottom:90px;border-radius:12px 12px 4px 12px;min-width:0}
+  .natasha-wrap{padding-right:0;gap:0;justify-content:center;align-items:flex-end;}
+  .natasha-bubble{width:155px;padding:9px 11px 9px;margin-bottom:90px;border-radius:12px 12px 4px 12px;min-width:0}
   .natasha-bubble::after{display:none}
   .natasha-text{font-size:10px;margin-bottom:6px;line-height:1.5}
   .natasha-name-tag{font-size:8px;padding:2px 5px;margin-bottom:5px;letter-spacing:1px}
