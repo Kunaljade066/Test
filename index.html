@@ -545,16 +545,16 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
 #natashaIntro.gone{display:none}
 .natasha-wrap{display:flex;flex-direction:row;align-items:flex-end;gap:10px;pointer-events:all;padding-right:16px;padding-bottom:0;animation:nslide .7s cubic-bezier(.34,1.56,.64,1) both;}
 @media(max-width:768px){
-  /* Center natasha horizontally, sits just above mobile nav */
-  #natashaIntro{bottom:82px;left:0;right:0;justify-content:center;}
-  .natasha-wrap{padding-right:0;gap:0;justify-content:center;align-items:flex-end;}
-  .natasha-bubble{width:155px;padding:9px 11px 9px;margin-bottom:90px;border-radius:12px 12px 4px 12px;min-width:0}
-  .natasha-bubble::after{display:none}
-  .natasha-text{font-size:10px;margin-bottom:6px;line-height:1.5}
-  .natasha-name-tag{font-size:8px;padding:2px 5px;margin-bottom:5px;letter-spacing:1px}
-  .natasha-ok{font-size:7px;padding:5px 8px;letter-spacing:1px}
-  #natashaImg{width:80px;max-height:45vh}
-  #natashaEmoji{font-size:48px!important}
+  /* Natasha: stays bottom-right, bubble hugs image */
+  #natashaIntro{bottom:82px;right:0;left:auto;justify-content:flex-end;}
+  .natasha-wrap{padding-right:3px;gap:0;align-items:flex-end;}
+  .natasha-bubble{width:140px;padding:8px 10px;margin-bottom:95px;border-radius:12px 12px 4px 12px;min-width:0;margin-right:0}
+  .natasha-bubble::after{display:block;bottom:14px;right:-9px;border-top:7px solid transparent;border-bottom:7px solid transparent;border-left:9px solid #f0f5ff}
+  .natasha-text{font-size:10px;margin-bottom:5px;line-height:1.4}
+  .natasha-name-tag{font-size:7px;padding:2px 5px;margin-bottom:4px;letter-spacing:1px}
+  .natasha-ok{font-size:7px;padding:5px 7px;letter-spacing:1px}
+  #natashaImg{width:76px;max-height:45vh}
+  #natashaEmoji{font-size:46px!important}
 }
 @keyframes nslide{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
 .natasha-bubble{background:linear-gradient(135deg,#ffffff,#f0f5ff);border-radius:16px 16px 4px 16px;padding:16px 18px 15px;width:240px;margin-bottom:200px;box-shadow:0 8px 40px rgba(0,0,0,.5),0 0 0 1px rgba(200,200,255,.5),0 0 20px rgba(124,58,237,.25);position:relative;flex-shrink:0;animation:bpop .5s .55s cubic-bezier(.34,1.56,.64,1) both;}
@@ -2335,9 +2335,30 @@ function toggleProfileMenu(e){
 function closeProfileMenu(){document.getElementById('profileMenu')?.classList.remove('on');}
 
 const NATASHA_MSGS=['Welcome back! Ready to squash some bugs today? 🏏','New bugs spotted! Let\'s smash them out of the park! 🏏','Hey! Don\'t forget to check your assigned issues! 👀','Great work team! Keep the quality high! ⭐','Remember: a bug fixed today is a player happy tomorrow! 🎮'];
-function showNatasha(msg){
+// mood: 'happy'|'angry'|'shocked'|'cool'|'sad'|'default'
+// Place these files alongside the HTML:
+//   natasha.png, natasha_happy.png, natasha_angry.png,
+//   natasha_shocked.png, natasha_cool.png, natasha_sad.png
+const NATASHA_IMGS={
+  happy:   'natasha_happy.png',
+  angry:   'natasha_angry.png',
+  shocked: 'natasha_shocked.png',
+  cool:    'natasha_cool.png',
+  sad:     'natasha_sad.png',
+  default: 'natasha.png',
+};
+function showNatasha(msg, mood='default'){
   const intro=document.getElementById('natashaIntro');
   const wrap=intro.querySelector('.natasha-wrap');
+  const img=document.getElementById('natashaImg');
+  // Swap mood image
+  if(img){
+    const src=NATASHA_IMGS[mood]||'natasha.png';
+    img.onerror=()=>{img.onerror=null;if(src!=='natasha.png'){img.src='natasha.png';img.onerror=()=>{img.onerror=null;img.style.display='none';document.getElementById('natashaEmoji').style.display='block';};}else{img.style.display='none';document.getElementById('natashaEmoji').style.display='block';}};
+    img.src=src;
+    img.style.display='block';
+    document.getElementById('natashaEmoji').style.display='none';
+  }
   document.getElementById('natashaText').textContent=msg||NATASHA_MSGS[Math.floor(Math.random()*NATASHA_MSGS.length)];
   intro.classList.remove('gone');
   wrap.style.animation='none';wrap.offsetHeight;wrap.style.animation='';
@@ -2489,6 +2510,32 @@ function closePanel(){
 // ══════════════════════════════════════════
 // SAVE BUG
 // ══════════════════════════════════════════
+// ── NATASHA MOOD ENGINE ─────────────────────────────────────
+function natashaMoodForStatus(status, title){
+  const t = title ? `"${title.slice(0,30)}"` : 'this bug';
+  switch(status){
+    case 'Dev Fixed':
+    case 'Done':
+      return {mood:'happy', msg:`🎉 ${t} is FIXED! The team delivers! 🏆`};
+    case 'QA Pass':
+      return {mood:'happy', msg:`✅ QA passed on ${t}! Shipping time! 🚀`};
+    case 'Not a bug':
+      return {mood:'angry', msg:`😤 Not a bug?! Double-check before closing ${t}! 🔍`};
+    case 'Non-Recreatable':
+      return {mood:'angry', msg:`😠 Can't reproduce ${t}? Keep the ticket open! 👀`};
+    case 'Closed':
+      return {mood:'cool', msg:`🔒 ${t} closed. Good riddance! 😎`};
+    case 'Bugged':
+      return {mood:'sad', msg:`😢 Regression on ${t}! Squash it again! 🏏`};
+    case 'In Progress':
+      return {mood:'cool', msg:`💪 Someone's on ${t}. Go go go! 🏃`};
+    case 'In Review':
+      return {mood:'cool', msg:`🔎 ${t} in review. Almost there! 🤞`};
+    default:
+      return {mood:'default', msg:`📋 ${t} → ${status}. Keep the momentum! 🏏`};
+  }
+}
+
 async function saveBug(){
   const btn=document.getElementById('panelSave');
   btn.disabled=true;btn.innerHTML='<span class="spin"></span>';
@@ -2505,7 +2552,10 @@ async function saveBug(){
       const qc=document.getElementById('f-qc')?.value?.trim();
       if(qc)await api(`/bugs/${S.editing}/comment`,'POST',{text:qc});
       if(assignees.length)addNotif('Assignees updated',prev.title,S.editing);
-      if(data.status!==prev.status)addNotif(`Status: ${prev.title}`,`${prev.status} → ${data.status}`,S.editing);
+      if(data.status!==prev.status){
+        addNotif(`Status: ${prev.title}`,`${prev.status} → ${data.status}`,S.editing);
+        setTimeout(()=>{const {mood,msg}=natashaMoodForStatus(data.status,prev.title);showNatasha(msg,mood);},800);
+      }
       toast('Updated ✓','ok');closePanel();await refreshAll();
     }else{
       const title=document.getElementById('f-title')?.value?.trim();
@@ -2529,7 +2579,10 @@ async function saveBug(){
       if(S.editing){
         res=await api(`/bugs/${S.editing}`,'PUT',data);
         if(assignees.length)addNotif('Assignees updated',data.title,S.editing);
-        if(prev&&data.status!==prev.status)addNotif(`Status: ${res.bug?.id||S.editing}`,`${data.title} → ${data.status}`,S.editing);
+        if(prev&&data.status!==prev.status){
+          addNotif(`Status: ${res.bug?.id||S.editing}`,`${data.title} → ${data.status}`,S.editing);
+          setTimeout(()=>{const {mood,msg}=natashaMoodForStatus(data.status,data.title);showNatasha(msg,mood);},800);
+        }
         toast('Bug updated ✓','ok');
       }else{
         res=await api('/bugs','POST',data);
