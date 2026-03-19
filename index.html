@@ -1336,9 +1336,10 @@ function onLogin(){
     const critCount=S.bugs.filter(b=>['Critical','Urgent'].includes(b.priority)&&!['Dev Fixed','Done','QA Pass','Closed'].includes(b.status)).length;
     const myCount=S.bugs.filter(b=>(b.assignees||[]).some(a=>a.email===S.user?.email)).length;
     let msg=`Hey ${firstName}! Welcome back to BugPulse! 🏏`;
-    if(critCount>0)msg=`Hey ${firstName}! There are ${critCount} critical bug${critCount>1?'s':''} waiting! Let's smash them! 🚨`;
-    else if(myCount>0)msg=`Hey ${firstName}! You have ${myCount} bug${myCount>1?'s':''} assigned. Time to get cracking! 🏏`;
-    setTimeout(()=>showNatasha(msg),600);
+    let loginMood='happy';
+    if(critCount>0){msg=`Hey ${firstName}! There are ${critCount} critical bug${critCount>1?'s':''} waiting! Let's smash them! 🚨`;loginMood='angry';}
+    else if(myCount>0){msg=`Hey ${firstName}! You have ${myCount} bug${myCount>1?'s':''} assigned. Time to get cracking! 🏏`;loginMood='cool';}
+    setTimeout(()=>showNatasha(msg,loginMood),600);
   });
 }
 
@@ -2392,13 +2393,26 @@ const NATASHA_MSGS=['Welcome back! Ready to squash some bugs today? 🏏','New b
 // Place these files alongside the HTML:
 //   natasha.png, natasha_happy.png, natasha_angry.png,
 //   natasha_shocked.png, natasha_cool.png, natasha_sad.png
+// ── NATASHA MOOD SYSTEM ─────────────────────────────────
+// Save your images alongside the HTML file:
+//   natasha_happy.png   — Image1 left half  (laughing)
+//   natasha_cool.png    — Image1 right half (binoculars focused)
+//   natasha_angry.png   — Image2 left half  (angry fist)
+//   natasha_sad.png     — Image2 right half (sad, hand on chest)
+//   natasha.png         — fallback default
+//
+// Each entry: [filename, object-position]
+// Since the originals are sprite sheets (2 poses side by side),
+// we use object-fit:cover + object-position to show the right half.
 const NATASHA_IMGS={
-  happy:   'natasha_happy.png',
-  angry:   'natasha_angry.png',
-  shocked: 'natasha_shocked.png',
-  cool:    'natasha_cool.png',
-  sad:     'natasha_sad.png',
-  default: 'natasha.png',
+  happy:   ['natasha_happy.png',   'center'],
+  cool:    ['natasha_cool.png',    'center'],
+  angry:   ['natasha_angry.png',   'center'],
+  sad:     ['natasha_sad.png',     'center'],
+  shocked: ['natasha_angry.png',   'center'],
+  default: ['natasha.png',         'center'],
+  celebrate:['natasha_happy.png',  'center'],
+  search:  ['natasha_cool.png',    'center'],
 };
 function showNatasha(msg, mood='default'){
   const intro=document.getElementById('natashaIntro');
@@ -2406,8 +2420,16 @@ function showNatasha(msg, mood='default'){
   const img=document.getElementById('natashaImg');
   // Swap mood image
   if(img){
-    const src=NATASHA_IMGS[mood]||'natasha.png';
-    img.onerror=()=>{img.onerror=null;if(src!=='natasha.png'){img.src='natasha.png';img.onerror=()=>{img.onerror=null;img.style.display='none';document.getElementById('natashaEmoji').style.display='block';};}else{img.style.display='none';document.getElementById('natashaEmoji').style.display='block';}};
+    const entry=NATASHA_IMGS[mood]||NATASHA_IMGS.default;
+    const [src,pos]=Array.isArray(entry)?entry:[entry,'center'];
+    img.style.objectPosition=pos;
+    img.onerror=()=>{
+      img.onerror=null;
+      if(src!=='natasha.png'){
+        img.src='natasha.png';
+        img.onerror=()=>{img.onerror=null;img.style.display='none';document.getElementById('natashaEmoji').style.display='block';};
+      }else{img.style.display='none';document.getElementById('natashaEmoji').style.display='block';}
+    };
     img.src=src;
     img.style.display='block';
     document.getElementById('natashaEmoji').style.display='none';
@@ -2642,14 +2664,23 @@ async function saveBug(){
         if(assignees.length)addNotif('New bug assigned',data.title,res.bug?.id);
         toast(`Created: ${res.bug?.id} ✓`,'ok');
         const _nid=res.bug?.id||'';
-        const _nm=[`Nice catch! ${_nid} is on the radar 🔍 Go find more!`,`${_nid} filed! 🏏 One down — how many more are hiding?`,`Bug logged ✓ ${_nid} — keep hunting, the pitch is full of them!`,`${_nid} trapped! 🎯 Your team will thank you. Spot another?`,`Good eye! ${_nid} queued up. More bugs won't escape you! 👀`];
+        const _nm=[`Nice catch! ${_nid} is on the radar 🔍 Go find more!`,`${_nid} filed! 🏏 One down — how many more are hiding?`,`Bug logged ✓ ${_nid} — keep hunting, the pitch is full of them!`,`${_nid} trapped! 🎯 Your team will thank you. Spot another?`,`Good eye! ${_nid} queued up. More bugs won't escape you! 👀`];const _createMood='celebrate';
         closePanel();
-        await refreshAll();
-        // Re-render the current view so new bug appears immediately without extra refresh
-        if(S.view==='home') renderHome();
-        else if(S.view==='backlog'){ applyF(); }
-        else { S.view='home'; goTab('home'); }
-        showNatasha(_nm[Math.floor(Math.random()*_nm.length)]);
+        // Push new bug into S.bugs immediately so UI updates before network round-trip
+        if(res?.bug) {
+          if(!res.bug.assignees) res.bug.assignees=assignees;
+          S.bugs.unshift(res.bug);
+          updateSbBadges();
+          populateDropdowns();
+          S.filtered=[...S.bugs];
+          S.page=1;
+          // Show it immediately on current view
+          if(S.view==='home') renderHome();
+          else { S.view='backlog'; goTab('backlog'); applyF(); }
+        }
+        showNatasha(_nm[Math.floor(Math.random()*_nm.length)],_createMood);
+        // Then sync from server in background
+        refreshAll().catch(()=>{});
       }
     }
   }catch(e){toast('❌ '+e.message,'err');}
