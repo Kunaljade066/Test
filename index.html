@@ -164,9 +164,7 @@ body.clicking #cur-bat{transform:translate(-50%,-50%) rotate(10deg)}
   color:#fff;margin-bottom:4px;text-transform:uppercase;}
 .lc-sub{font-family:var(--mono);font-size:9px;letter-spacing:4px;color:var(--mute);text-transform:uppercase;margin-bottom:28px}
 .lc-footer{margin-top:18px;font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:1px;text-align:center}
-.lc-footer b{color:var(--g3)}
-.lc-footer{margin-top:18px;font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:1px;text-align:center}
-.lc-footer b{color:var(--g3)}
+.lc-footer b{color:var(--dim)}
 .lc-gbtn{
   width:100%;padding:13px 20px;background:rgba(255,255,255,.96);border:none;border-radius:10px;
   display:flex;align-items:center;justify-content:center;gap:12px;
@@ -543,13 +541,14 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
 .natasha-wrap{display:flex;flex-direction:row;align-items:flex-end;gap:10px;pointer-events:all;padding-right:16px;padding-bottom:0;animation:nslide .7s cubic-bezier(.34,1.56,.64,1) both;}
 @media(max-width:768px){
   #natashaIntro{bottom:82px;right:0;max-width:100vw}
-  .natasha-wrap{padding-right:8px;gap:6px}
-  .natasha-bubble{width:170px;padding:10px 12px 10px;margin-bottom:120px}
-  .natasha-text{font-size:11px;margin-bottom:8px}
-  .natasha-name-tag{font-size:9px;padding:2px 7px}
-  .natasha-ok{font-size:8px;padding:7px 10px}
-  #natashaImg{width:90px;max-height:50vh}
-  #natashaEmoji{font-size:50px!important}
+  /* Bubble: fix width so it never overflows left edge on small screens */
+  .natasha-wrap{padding-right:6px;gap:4px;max-width:100vw}
+  .natasha-bubble{width:min(148px,44vw);padding:8px 10px 8px;margin-bottom:100px;border-radius:12px 12px 4px 12px;min-width:0}
+  .natasha-text{font-size:10px;margin-bottom:6px;line-height:1.5}
+  .natasha-name-tag{font-size:8px;padding:2px 5px;margin-bottom:5px;letter-spacing:1px}
+  .natasha-ok{font-size:7px;padding:5px 8px;letter-spacing:1px}
+  #natashaImg{width:80px;max-height:50vh}
+  #natashaEmoji{font-size:48px!important}
 }
 @keyframes nslide{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
 .natasha-bubble{background:linear-gradient(135deg,#ffffff,#f0f5ff);border-radius:16px 16px 4px 16px;padding:16px 18px 15px;width:240px;margin-bottom:200px;box-shadow:0 8px 40px rgba(0,0,0,.5),0 0 0 1px rgba(200,200,255,.5),0 0 20px rgba(124,58,237,.25);position:relative;flex-shrink:0;animation:bpop .5s .55s cubic-bezier(.34,1.56,.64,1) both;}
@@ -588,7 +587,13 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
 
 <div id="loadScreen">
   <div class="load-logo-wrap">
-    <div class="load-logo-ring"><div class="load-inner">🏏</div></div>
+    <div class="load-logo-ring">
+      <div class="load-inner">
+        <img src="https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png"
+          style="width:36px;height:36px;object-fit:contain;animation:spin-ring 2s linear infinite reverse"
+          onerror="this.outerHTML='🏏'">
+      </div>
+    </div>
   </div>
   <div class="load-title">BugPulse</div>
   <div class="load-bar-wrap"><div class="load-bar" id="loadBar"></div></div>
