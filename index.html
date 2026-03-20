@@ -851,11 +851,17 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
           <div class="ph">
             <div><h1>CLICKUP</h1><p id="cu-sub">Synced from ClickUp workspace</p></div>
             <div class="ph-r">
-              <button class="btn btn-g btn-sm" onclick="loadClickUp()">↻ Sync</button>
+              <!-- View toggle -->
+              <div style="display:flex;background:var(--bg3);border:1px solid var(--bd);border-radius:7px;overflow:hidden">
+                <button id="cu-view-list" class="btn btn-v btn-sm" style="border-radius:0;border:none" onclick="cuSetView('list')">☰ List</button>
+                <button id="cu-view-board" class="btn btn-g btn-sm" style="border-radius:0;border:none;border-left:1px solid var(--bd)" onclick="cuSetView('board')">⬛ Board</button>
+                <button id="cu-view-group" class="btn btn-g btn-sm" style="border-radius:0;border:none;border-left:1px solid var(--bd)" onclick="cuSetView('group')">🗂 By List</button>
+              </div>
+              <button class="btn btn-g btn-sm" onclick="loadClickUp(true)">↻ Sync</button>
             </div>
           </div>
           <div class="stats" id="cuStats"></div>
-          <!-- Filters row -->
+          <!-- Filters -->
           <div class="fbar" id="cuFilters" style="display:none">
             <input type="text" class="fi fi-q" id="cu-search" placeholder="🔍 Search tasks…" oninput="cuApplyFilters()">
             <select class="fi" id="cu-list-sel" onchange="cuApplyFilters()" style="min-width:160px"><option value="">All Lists</option></select>
@@ -863,12 +869,12 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
             <select class="fi" id="cu-priority-sel" onchange="cuApplyFilters()" style="min-width:130px"><option value="">All Priorities</option></select>
             <select class="fi" id="cu-assignee-sel" onchange="cuApplyFilters()" style="min-width:150px"><option value="">All Assignees</option></select>
           </div>
-          <div class="tw">
-            <div class="tw-hd"><span class="tw-hd-t" id="cuTitle">Tasks</span><span style="font-family:var(--mono);font-size:10px;color:var(--dim)" id="cuMeta"></span></div>
-            <div id="cuBody"><div class="empty"><div class="empty-icon">🟣</div><h3>CLICK SYNC</h3><p>Press ↻ Sync to load your ClickUp tasks.</p></div></div>
+          <div id="cuBody">
+            <div class="empty"><div class="empty-icon">🟣</div><h3>CLICK SYNC</h3><p>Press ↻ Sync to load your ClickUp tasks.</p></div>
           </div>
         </div>
-        <!-- CLICKUP TASK DETAIL PANEL (inline, no redirect) -->
+
+        <!-- CLICKUP TASK DETAIL PANEL -->
         <div class="overlay" id="cuOverlay" onclick="closeCuPanel()"></div>
         <div class="panel" id="cuPanel">
           <div class="ph2">
@@ -879,12 +885,10 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
             </div>
           </div>
           <div class="pb2" id="cuPanelBody"></div>
-          <div class="pf2" id="cuPanelFooter">
-            <button class="btn btn-g" onclick="closeCuPanel()">Close</button>
-          </div>
+          <div class="pf2"><button class="btn btn-g" onclick="closeCuPanel()">Close</button></div>
         </div>
 
-        <!-- IMPORT (admin only) -->
+                <!-- IMPORT (admin only) -->
         <div id="v-import" style="display:none">
           <div class="ph">
             <div><h1>IMPORT BUGS</h1><p>Admin only · Bulk import via CSV</p></div>
@@ -2854,39 +2858,55 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ══════════════════════════════════════════
-// CLICKUP INTEGRATION  — full inline viewer
+// CLICKUP INTEGRATION — full board/list/group view
 // ══════════════════════════════════════════
 const CU_TOKEN = 'pk_194617170_NZZKCEMOLFHZOYLIWV9EF6D6T6KDB42X';
 const CU_API   = 'https://api.clickup.com/api/v2';
-let _cuTasks = [], _cuFiltered = [], _cuLists = [], _cuLoaded = false;
+let _cuTasks = [], _cuFiltered = [], _cuLists = [], _cuLoaded = false, _cuView = 'list';
+
+// ── Status colour map (auto-built from real statuses) ──
+let _cuStatusColors = {};
+function cuStatusColor(s) {
+  if (!s) return 'var(--mute)';
+  const k = s.toLowerCase();
+  if (_cuStatusColors[k]) return _cuStatusColors[k];
+  if (k.includes('done')||k.includes('complete')||k.includes('closed')||k.includes('resolved')) return 'var(--g4)';
+  if (k.includes('progress')||k.includes('active')||k.includes('development')||k.includes('dev')) return 'var(--g2)';
+  if (k.includes('review')||k.includes('testing')||k.includes('qa')||k.includes('ready')) return 'var(--g3)';
+  if (k.includes('block')||k.includes('bug')||k.includes('hold')) return 'var(--g5)';
+  if (k.includes('open')||k.includes('todo')||k.includes('backlog')||k.includes('new')||k.includes('requirement')) return '#a78bfa';
+  if (k.includes('cancel')||k.includes('wont')||k.includes('duplicate')) return 'var(--mute)';
+  return 'var(--fog)';
+}
+function cuPrioColor(p) {
+  const m={urgent:'var(--g5)',high:'var(--g3)',normal:'var(--g2)',low:'var(--fog)'};
+  return m[(p||'').toLowerCase()]||'var(--mute)';
+}
 
 async function cuFetch(path) {
   const r = await fetch(CU_API + path, {
     headers: { Authorization: CU_TOKEN, 'Content-Type': 'application/json' }
   });
-  if (!r.ok) throw new Error(`ClickUp API ${r.status}: ${await r.text().catch(()=>'')}`);
+  if (!r.ok) throw new Error(`ClickUp ${r.status}`);
   return r.json();
 }
 
 async function loadClickUp(force) {
-  if (_cuLoaded && !force) { renderClickUp(); return; }
+  if (_cuLoaded && !force) { cuApplyFilters(); return; }
   const body = document.getElementById('cuBody');
   if (!body) return;
   document.getElementById('cuFilters').style.display = 'none';
   body.innerHTML = '<div style="padding:48px;text-align:center"><span class="spin" style="width:28px;height:28px;border-width:3px"></span><div style="font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:14px;letter-spacing:2px">SYNCING CLICKUP…</div></div>';
 
   try {
-    // 1. Teams
     const teamsData = await cuFetch('/team');
     const teams = teamsData.teams || [];
-    if (!teams.length) { body.innerHTML = '<div class="empty"><div class="empty-icon">🟣</div><h3>NO WORKSPACE</h3><p>No ClickUp workspace found for this token.</p></div>'; return; }
+    if (!teams.length) { body.innerHTML='<div class="empty"><div class="empty-icon">🟣</div><h3>NO WORKSPACE</h3></div>'; return; }
     const teamId = teams[0].id;
 
-    // 2. Spaces
     const spacesData = await cuFetch(`/team/${teamId}/space?archived=false`);
     const spaces = spacesData.spaces || [];
 
-    // 3. Lists across all spaces
     _cuLists = [];
     for (const sp of spaces) {
       try {
@@ -2894,309 +2914,434 @@ async function loadClickUp(force) {
         for (const folder of (fd.folders || [])) {
           try {
             const ld = await cuFetch(`/folder/${folder.id}/list?archived=false`);
-            (ld.lists || []).forEach(l => _cuLists.push({ id: l.id, name: l.name, folder: folder.name, space: sp.name }));
-          } catch(e) {}
+            (ld.lists||[]).forEach(l => _cuLists.push({id:l.id,name:l.name,folder:folder.name,folderId:folder.id,space:sp.name,spaceId:sp.id,taskCount:l.task_count||0}));
+          } catch(e){}
         }
-      } catch(e) {}
+      } catch(e){}
       try {
         const fld = await cuFetch(`/space/${sp.id}/list?archived=false`);
-        (fld.lists || []).forEach(l => _cuLists.push({ id: l.id, name: l.name, folder: '—', space: sp.name }));
-      } catch(e) {}
+        (fld.lists||[]).forEach(l => _cuLists.push({id:l.id,name:l.name,folder:'—',folderId:null,space:sp.name,spaceId:sp.id,taskCount:l.task_count||0}));
+      } catch(e){}
     }
 
-    // 4. Tasks — fetch all lists, store full task objects
+    // Fetch tasks — 2 pages per list, parallel
     _cuTasks = [];
-    await Promise.all(_cuLists.slice(0, 30).map(async l => {
-      try {
-        // page 0 + page 1 to get up to 200 per list
-        for (let page = 0; page <= 1; page++) {
-          const td = await cuFetch(`/list/${l.id}/task?archived=false&include_closed=true&subtasks=true&page=${page}`);
-          const tasks = td.tasks || [];
-          tasks.forEach(t => { t._listName = l.name; t._listId = l.id; t._spaceName = l.space; _cuTasks.push(t); });
-          if (tasks.length < 100) break; // no more pages
-        }
-      } catch(e) {}
+    await Promise.all(_cuLists.slice(0,40).map(async l => {
+      for (let page=0; page<=1; page++) {
+        try {
+          const td = await cuFetch(`/list/${l.id}/task?archived=false&include_closed=true&subtasks=true&page=${page}&order_by=created&reverse=true`);
+          const tasks = td.tasks||[];
+          tasks.forEach(t => {
+            t._listName=l.name; t._listId=l.id; t._spaceName=l.space; t._folderName=l.folder;
+            // Build status colour map from real data
+            if(t.status?.color) _cuStatusColors[t.status.status?.toLowerCase()] = t.status.color;
+          });
+          _cuTasks.push(...tasks);
+          if(tasks.length < 100) break;
+        } catch(e){ break; }
+      }
     }));
 
     _cuLoaded = true;
     cuBuildFilters();
     _cuFiltered = [..._cuTasks];
-    renderClickUp();
-    document.getElementById('cu-sub').textContent = `${_cuTasks.length} tasks · ${_cuLists.length} lists · ${teams[0].name}`;
     document.getElementById('cuFilters').style.display = 'flex';
+    document.getElementById('cu-sub').textContent = `${_cuTasks.length} tasks · ${_cuLists.length} lists · ${teams[0].name}`;
+    cuRender();
     toast(`ClickUp synced — ${_cuTasks.length} tasks ✓`, 'ok');
-
   } catch(e) {
-    body.innerHTML = `<div class="empty"><div class="empty-icon">🟣</div><h3>CLICKUP ERROR</h3><p>${esc(e.message)}</p></div>`;
-    toast('ClickUp: ' + e.message, 'err');
+    document.getElementById('cuBody').innerHTML = `<div class="empty"><div class="empty-icon">🟣</div><h3>CLICKUP ERROR</h3><p>${esc(e.message)}</p></div>`;
+    toast('ClickUp: '+e.message,'err');
   }
 }
 
 function cuBuildFilters() {
-  // Lists
   const listSel = document.getElementById('cu-list-sel');
-  if (listSel) listSel.innerHTML = '<option value="">All Lists</option>' + _cuLists.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('');
+  if(listSel) listSel.innerHTML = '<option value="">All Lists</option>' + _cuLists.map(l=>`<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('');
 
-  // Statuses
-  const statuses = [...new Set(_cuTasks.map(t => t.status?.status || '').filter(Boolean))].sort();
+  const statuses = [...new Set(_cuTasks.map(t=>t.status?.status||'').filter(Boolean))].sort();
   const stSel = document.getElementById('cu-status-sel');
-  if (stSel) stSel.innerHTML = '<option value="">All Statuses</option>' + statuses.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  if(stSel) stSel.innerHTML = '<option value="">All Statuses</option>' + statuses.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
 
-  // Priorities
-  const prios = [...new Set(_cuTasks.map(t => t.priority?.priority || '').filter(Boolean))];
-  const prOrder = ['urgent','high','normal','low'];
-  prios.sort((a,b) => prOrder.indexOf(a.toLowerCase()) - prOrder.indexOf(b.toLowerCase()));
-  const prSel = document.getElementById('cu-priority-sel');
-  if (prSel) prSel.innerHTML = '<option value="">All Priorities</option>' + prios.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+  const prOrder=['urgent','high','normal','low'];
+  const prios=[...new Set(_cuTasks.map(t=>t.priority?.priority||'').filter(Boolean))];
+  prios.sort((a,b)=>prOrder.indexOf(a.toLowerCase())-prOrder.indexOf(b.toLowerCase()));
+  const prSel=document.getElementById('cu-priority-sel');
+  if(prSel) prSel.innerHTML='<option value="">All Priorities</option>'+prios.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
 
-  // Assignees
-  const assigneeMap = {};
-  _cuTasks.forEach(t => (t.assignees||[]).forEach(a => { if(a.id) assigneeMap[a.id] = a.username || a.email || a.id; }));
-  const aSel = document.getElementById('cu-assignee-sel');
-  if (aSel) aSel.innerHTML = '<option value="">All Assignees</option>' + Object.entries(assigneeMap).map(([id,name]) => `<option value="${esc(id)}">${esc(name)}</option>`).join('');
+  const aMap={};
+  _cuTasks.forEach(t=>(t.assignees||[]).forEach(a=>{if(a.id)aMap[a.id]=a.username||a.email||a.id;}));
+  const aSel=document.getElementById('cu-assignee-sel');
+  if(aSel) aSel.innerHTML='<option value="">All Assignees</option>'+Object.entries(aMap).map(([id,name])=>`<option value="${esc(id)}">${esc(name)}</option>`).join('');
 }
 
 function cuApplyFilters() {
-  const q  = (document.getElementById('cu-search')?.value || '').toLowerCase();
-  const lv = document.getElementById('cu-list-sel')?.value    || '';
-  const sv = document.getElementById('cu-status-sel')?.value  || '';
-  const pv = document.getElementById('cu-priority-sel')?.value|| '';
-  const av = document.getElementById('cu-assignee-sel')?.value|| '';
-
-  _cuFiltered = _cuTasks.filter(t => {
-    if (lv && t._listId !== lv) return false;
-    if (sv && (t.status?.status || '') !== sv) return false;
-    if (pv && (t.priority?.priority || '') !== pv) return false;
-    if (av && !(t.assignees||[]).some(a => a.id === av)) return false;
-    if (q) {
-      const hay = [
-        t.name, t.custom_id, t.id,
-        t.status?.status,
-        (t.assignees||[]).map(a=>a.username||a.email).join(' '),
-        t._listName, t._spaceName,
-        t.description
-      ].join(' ').toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
+  const q  =(document.getElementById('cu-search')?.value||'').toLowerCase();
+  const lv =document.getElementById('cu-list-sel')?.value||'';
+  const sv =document.getElementById('cu-status-sel')?.value||'';
+  const pv =document.getElementById('cu-priority-sel')?.value||'';
+  const av =document.getElementById('cu-assignee-sel')?.value||'';
+  _cuFiltered=_cuTasks.filter(t=>{
+    if(lv&&t._listId!==lv) return false;
+    if(sv&&(t.status?.status||'')!==sv) return false;
+    if(pv&&(t.priority?.priority||'')!==pv) return false;
+    if(av&&!(t.assignees||[]).some(a=>a.id===av)) return false;
+    if(q){const hay=[t.name,t.custom_id,t.id,t.status?.status,(t.assignees||[]).map(a=>a.username||a.email).join(' '),t._listName,t._spaceName,t.description||''].join(' ').toLowerCase();if(!hay.includes(q))return false;}
     return true;
   });
-  renderClickUp();
+  cuRender();
+}
+function cuFilterList(){cuApplyFilters();}
+function cuFilterStatus(){cuApplyFilters();}
+
+function cuSetView(v){
+  _cuView=v;
+  ['list','board','group'].forEach(n=>{
+    const btn=document.getElementById('cu-view-'+n);
+    if(!btn)return;
+    btn.className=n===v?'btn btn-v btn-sm':'btn btn-g btn-sm';
+    btn.style.cssText='border-radius:0;border:none'+(n!=='list'?';border-left:1px solid var(--bd)':'');
+  });
+  cuRender();
 }
 
-// Keep old aliases working
-function cuFilterList()   { cuApplyFilters(); }
-function cuFilterStatus() { cuApplyFilters(); }
-
-function cuStatusColor(status) {
-  const s = (status || '').toLowerCase();
-  if (s.includes('done')||s.includes('complete')||s.includes('closed')) return 'var(--g4)';
-  if (s.includes('progress')||s.includes('active')) return 'var(--g2)';
-  if (s.includes('review')||s.includes('testing')||s.includes('qa')) return 'var(--g3)';
-  if (s.includes('block')||s.includes('bug')) return 'var(--g5)';
-  if (s.includes('open')||s.includes('todo')||s.includes('backlog')) return '#a78bfa';
-  return 'var(--mute)';
-}
-
-function cuPrioColor(p) {
-  const m = {urgent:'var(--g5)',high:'var(--g3)',normal:'var(--g2)',low:'var(--fog)'};
-  return m[(p||'').toLowerCase()] || 'var(--mute)';
-}
-
-function renderClickUp() {
-  const body = document.getElementById('cuBody');
-  if (!body) return;
-  const tasks = _cuFiltered;
-  document.getElementById('cuTitle').textContent = `Tasks (${tasks.length})`;
-  document.getElementById('cuMeta').textContent  = _cuTasks.length !== tasks.length ? `filtered from ${_cuTasks.length}` : `${tasks.length} total`;
-
-  // Stats
-  const stats = document.getElementById('cuStats');
-  if (stats && tasks.length) {
-    const done  = tasks.filter(t=>{const s=(t.status?.status||'').toLowerCase();return s.includes('done')||s.includes('complete')||s.includes('closed');}).length;
-    const prog  = tasks.filter(t=>{const s=(t.status?.status||'').toLowerCase();return s.includes('progress')||s.includes('active');}).length;
-    const high  = tasks.filter(t=>['urgent','high'].includes((t.priority?.priority||'').toLowerCase())).length;
-    const open  = tasks.filter(t=>{const s=(t.status?.status||'').toLowerCase();return s.includes('open')||s.includes('todo')||s.includes('backlog');}).length;
-    stats.innerHTML = `
+function cuRender(){
+  const stats=document.getElementById('cuStats');
+  const tasks=_cuFiltered;
+  if(stats&&tasks.length){
+    const done=tasks.filter(t=>{const s=(t.status?.status||'').toLowerCase();return s.includes('done')||s.includes('complete')||s.includes('closed')||s.includes('resolved');}).length;
+    const prog=tasks.filter(t=>{const s=(t.status?.status||'').toLowerCase();return s.includes('progress')||s.includes('active')||s.includes('development');}).length;
+    const high=tasks.filter(t=>['urgent','high'].includes((t.priority?.priority||'').toLowerCase())).length;
+    const open=tasks.filter(t=>{const s=(t.status?.status||'').toLowerCase();return s.includes('open')||s.includes('todo')||s.includes('backlog')||s.includes('new')||s.includes('requirement');}).length;
+    stats.innerHTML=`
       <div class="sc"><div class="sc-n" style="color:var(--text)">${tasks.length}</div><div class="sc-l">Total</div><div class="sc-bar" style="background:var(--bd3)"></div></div>
       <div class="sc"><div class="sc-n" style="color:#a78bfa">${open}</div><div class="sc-l">Open/Todo</div><div class="sc-bar" style="background:#a78bfa;box-shadow:0 0 6px #a78bfa"></div></div>
       <div class="sc"><div class="sc-n" style="color:var(--g2)">${prog}</div><div class="sc-l">In Progress</div><div class="sc-bar" style="background:var(--g2);box-shadow:0 0 6px var(--g2)"></div></div>
       <div class="sc"><div class="sc-n" style="color:var(--g4)">${done}</div><div class="sc-l">Done</div><div class="sc-bar" style="background:var(--g4);box-shadow:0 0 6px var(--g4)"></div></div>
       <div class="sc"><div class="sc-n" style="color:var(--g5)">${high}</div><div class="sc-l">High/Urgent</div><div class="sc-bar" style="background:var(--g5);box-shadow:0 0 6px var(--g5)"></div></div>`;
-  } else if (stats) { stats.innerHTML = ''; }
+  } else if(stats){ stats.innerHTML=''; }
 
-  if (!tasks.length) {
-    body.innerHTML = '<div class="empty"><div class="empty-icon">🟣</div><h3>NO TASKS</h3><p>No tasks match the current filters.</p></div>';
-    return;
-  }
-
-  const sc = s => { const c=cuStatusColor(s); return `<span style="font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid ${c};color:${c};white-space:nowrap">${esc(s||'—')}</span>`; };
-  const pc = p => { const label=p?.priority||'—';const c=cuPrioColor(label);return `<span style="font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:20px;border:1px solid ${c};color:${c}">${esc(label)}</span>`; };
-
-  let h = `<table><thead><tr>
-    <th>ID</th><th>Title</th><th>Status</th><th>Priority</th><th>Assignees</th><th>List</th><th>Due</th><th>Tags</th>
-  </tr></thead><tbody>`;
-
-  tasks.slice(0, 300).forEach(t => {
-    const asgn = (t.assignees||[]).map(a =>
-      `<div class="av" title="${esc(a.username||a.email||'?')}" style="width:20px;height:20px;font-size:8px;background:${avc(a.username||a.email||'?')};overflow:hidden">${
-        a.profilePicture ? `<img src="${esc(a.profilePicture)}" style="width:100%;height:100%;object-fit:cover">` : avi(a.username||a.email||'?')
-      }</div>`
-    ).join('');
-    const due = t.due_date ? new Date(parseInt(t.due_date)).toLocaleDateString('en-IN') : '—';
-    const dueColor = t.due_date && Date.now() > parseInt(t.due_date) ? 'var(--g5)' : 'var(--mute)';
-    const tags = (t.tags||[]).map(tag => `<span style="font-family:var(--mono);font-size:8px;padding:1px 6px;border-radius:10px;background:rgba(124,58,237,.15);color:var(--g2);border:1px solid rgba(124,58,237,.25)">${esc(tag.name)}</span>`).join(' ');
-    const hasDesc = !!(t.description && t.description.trim());
-    const commentCount = t.comment_count || 0;
-
-    h += `<tr onclick="openCuTask('${esc(t.id)}')" style="cursor:pointer">
-      <td class="tc-id" style="white-space:nowrap">
-        ${esc(t.custom_id || t.id?.slice(-6) || '—')}
-        ${commentCount ? `<div style="font-family:var(--mono);font-size:8px;color:var(--mute);margin-top:1px">💬 ${commentCount}</div>` : ''}
-      </td>
-      <td class="tc-title" title="${esc(t.name||'')}">
-        ${esc(t.name||'—')}
-        ${hasDesc ? '<span style="font-family:var(--mono);font-size:8px;color:var(--dim);margin-left:5px">📄</span>' : ''}
-      </td>
-      <td>${sc(t.status?.status)}</td>
-      <td>${pc(t.priority)}</td>
-      <td><div class="av-stack">${asgn||'<span style="font-size:11px;color:var(--dim)">—</span>'}</div></td>
-      <td><span style="font-size:11px;color:var(--fog)">${esc(t._listName||'—')}</span></td>
-      <td style="font-family:var(--mono);font-size:10px;color:${dueColor};white-space:nowrap">${due}</td>
-      <td>${tags}</td>
-    </tr>`;
-  });
-
-  h += '</tbody></table>';
-  if (tasks.length > 300) h += `<div style="padding:10px 16px;font-family:var(--mono);font-size:10px;color:var(--dim)">Showing first 300 of ${tasks.length} — use filters to narrow down</div>`;
-  body.innerHTML = `<div class="tscroll">${h}</div>`;
+  if(_cuView==='board') cuRenderBoard();
+  else if(_cuView==='group') cuRenderGroup();
+  else cuRenderList();
 }
 
-// ── Full task detail panel (no redirect to ClickUp) ──────────────────────
-async function openCuTask(taskId) {
-  const task = _cuTasks.find(t => t.id === taskId);
-  if (!task) return;
+// ── CHIP helpers ─────────────────────────────────────────────────────────
+function cuStatusChip(s){
+  const c=cuStatusColor(s);
+  return `<span style="font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid ${c};color:${c};background:${c}18;white-space:nowrap">${esc(s||'—')}</span>`;
+}
+function cuPrioChip(p){
+  const label=(p?.priority||'—');const c=cuPrioColor(label);
+  return `<span style="font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:20px;border:1px solid ${c};color:${c}">${esc(label)}</span>`;
+}
+function cuAvatar(a,sz=20){
+  if(a.profilePicture) return `<div class="av" title="${esc(a.username||a.email||'?')}" style="width:${sz}px;height:${sz}px;overflow:hidden"><img src="${esc(a.profilePicture)}" style="width:100%;height:100%;object-fit:cover"></div>`;
+  return `<div class="av" title="${esc(a.username||a.email||'?')}" style="width:${sz}px;height:${sz}px;font-size:${sz<22?7:9}px;background:${avc(a.username||a.email||'?')}">${avi(a.username||a.email||'?')}</div>`;
+}
+function cuAvatarStack(assignees,sz=20){
+  if(!assignees||!assignees.length) return '<span style="font-size:11px;color:var(--dim)">—</span>';
+  const show=assignees.slice(0,3),extra=assignees.length-3;
+  let h=`<div class="av-stack">`;
+  h+=show.map(a=>cuAvatar(a,sz)).join('');
+  if(extra>0) h+=`<div class="av" style="width:${sz}px;height:${sz}px;font-size:8px;background:var(--bg4);color:var(--mute)">+${extra}</div>`;
+  return h+'</div>';
+}
+function cuDue(t){
+  if(!t.due_date) return '—';
+  const d=new Date(parseInt(t.due_date));
+  const overdue=Date.now()>parseInt(t.due_date);
+  const str=d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+  const _duc=overdue?'var(--g5)':'var(--mute)';
+  return `<span style="color:${_duc};font-family:var(--mono);font-size:10px">${str}</span>`;
+}
 
-  document.getElementById('cuPanelTitle').textContent = task.name || 'Task Detail';
-  document.getElementById('cuPanelId').textContent    = task.custom_id || task.id?.slice(-6) || '';
-  document.getElementById('cuPanelBody').innerHTML    = '<div style="padding:32px;text-align:center"><span class="spin" style="width:20px;height:20px;border-width:2px"></span></div>';
+// ── LIST VIEW ────────────────────────────────────────────────────────────
+function cuRenderList(){
+  const body=document.getElementById('cuBody');if(!body)return;
+  const tasks=_cuFiltered;
+  if(!tasks.length){body.innerHTML='<div class="empty"><div class="empty-icon">🟣</div><h3>NO TASKS</h3><p>No tasks match filters.</p></div>';return;}
+  let h=`<table><thead><tr>
+    <th>ID</th><th>Title</th><th>Status</th><th>Priority</th><th>Assignees</th><th>List</th><th>Due</th><th>Tags</th><th>Time</th>
+  </tr></thead><tbody>`;
+  tasks.slice(0,400).forEach(t=>{
+    const tags=(t.tags||[]).map(tag=>`<span style="font-family:var(--mono);font-size:8px;padding:1px 5px;border-radius:8px;background:rgba(124,58,237,.15);color:var(--g2);border:1px solid rgba(124,58,237,.25)">${esc(tag.name)}</span>`).join(' ');
+    const time=t.time_spent?`${Math.floor(parseInt(t.time_spent)/3600000)}h ${Math.floor((parseInt(t.time_spent)%3600000)/60000)}m`:'—';
+    const _dueOverdue=t.due_date&&Date.now()>parseInt(t.due_date);
+    const due=t.due_date?`<span style="color:${_dueOverdue?'var(--g5)':'var(--mute)'};font-family:var(--mono);font-size:10px">${new Date(parseInt(t.due_date)).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}</span>`:'—';
+    const hasDesc=!!(t.description&&t.description.trim());
+    const cc=t.comment_count||0;
+    h+=`<tr onclick="openCuTask('${esc(t.id)}')" style="cursor:pointer">
+      <td class="tc-id" style="white-space:nowrap">
+        ${esc(t.custom_id||t.id?.slice(-6)||'—')}
+        ${cc?`<div style="font-family:var(--mono);font-size:8px;color:var(--mute);margin-top:1px">💬${cc}</div>`:''}
+      </td>
+      <td class="tc-title" title="${esc(t.name||'')}">
+        ${esc(t.name||'—')}${hasDesc?' <span style="opacity:.4;font-size:10px">📄</span>':''}
+      </td>
+      <td>${cuStatusChip(t.status?.status)}</td>
+      <td>${cuPrioChip(t.priority)}</td>
+      <td>${cuAvatarStack(t.assignees||[])}</td>
+      <td><span style="font-size:11px;color:var(--fog)">${esc(t._listName||'—')}</span></td>
+      <td>${due}</td>
+      <td>${tags}</td>
+      <td style="font-family:var(--mono);font-size:10px;color:var(--dim)">${time}</td>
+    </tr>`;
+  });
+  h+='</tbody></table>';
+  if(tasks.length>400) h+=`<div style="padding:10px 16px;font-family:var(--mono);font-size:10px;color:var(--dim)">Showing 400 of ${tasks.length} — use filters</div>`;
+  body.innerHTML=`<div class="tscroll">${h}</div>`;
+}
+
+// ── BOARD VIEW (columns = statuses, cards per status) ────────────────────
+function cuRenderBoard(){
+  const body=document.getElementById('cuBody');if(!body)return;
+  const tasks=_cuFiltered;
+  if(!tasks.length){body.innerHTML='<div class="empty"><div class="empty-icon">🟣</div><h3>NO TASKS</h3></div>';return;}
+
+  // Build unique status columns preserving order from data
+  const statusOrder=[];
+  const statusMap={};
+  tasks.forEach(t=>{
+    const s=t.status?.status||'No Status';
+    if(!statusMap[s]){statusMap[s]=[];statusOrder.push(s);}
+    statusMap[s].push(t);
+  });
+
+  let h=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;padding-bottom:12px">`;
+  statusOrder.forEach(status=>{
+    const col=statusMap[status];
+    const c=cuStatusColor(status);
+    h+=`<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:12px;display:flex;flex-direction:column">
+      <div style="padding:9px 12px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <span style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:${c};text-shadow:0 0 8px ${c}44">${esc(status)}</span>
+        <span style="background:var(--bg3);color:var(--mute);font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px">${col.length}</span>
+      </div>
+      <div style="padding:7px;display:flex;flex-direction:column;gap:6px;min-height:40px">
+        ${col.slice(0,20).map(t=>{
+          const due=t.due_date?new Date(parseInt(t.due_date)).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}):'';
+          const overdue=t.due_date&&Date.now()>parseInt(t.due_date);
+          return `<div onclick="openCuTask('${esc(t.id)}')" style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:9px 10px;cursor:pointer;transition:border-color .15s,box-shadow .15s" onmouseenter="this.style.borderColor='${c}';this.style.boxShadow='0 0 12px ${c}33'" onmouseleave="this.style.borderColor='var(--bd)';this.style.boxShadow=''">
+            <div style="font-family:var(--mono);font-size:8px;color:${c};margin-bottom:4px;letter-spacing:.5px">${esc(t.custom_id||t.id?.slice(-6)||'')}</div>
+            <div style="font-size:11px;font-weight:700;color:var(--text);line-height:1.4;margin-bottom:7px;word-break:break-word">${esc((t.name||'').slice(0,80))}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
+              ${cuPrioChip(t.priority)}
+              ${cuAvatarStack(t.assignees||[],18)}
+            </div>
+            ${due?`<div style="font-family:var(--mono);font-size:9px;color:${overdue?'var(--g5)':'var(--dim)'};margin-top:5px">📅 ${due}</div>`:''}
+            ${t._listName?`<div style="font-family:var(--mono);font-size:8px;color:var(--dim);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📋 ${esc(t._listName)}</div>`:''}
+          </div>`;
+        }).join('')}
+        ${col.length>20?`<div style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--dim);padding:8px">+${col.length-20} more — filter to narrow</div>`:''}
+      </div>
+    </div>`;
+  });
+  h+='</div>';
+  body.innerHTML=h;
+}
+
+// ── GROUP VIEW (grouped by List, like ClickUp sidebar) ───────────────────
+function cuRenderGroup(){
+  const body=document.getElementById('cuBody');if(!body)return;
+  const tasks=_cuFiltered;
+  if(!tasks.length){body.innerHTML='<div class="empty"><div class="empty-icon">🟣</div><h3>NO TASKS</h3></div>';return;}
+
+  // Group by list, preserve list order
+  const listOrder=[],listMap={};
+  _cuLists.forEach(l=>{if(!listMap[l.id]){listMap[l.id]={...l,tasks:[]};listOrder.push(l.id);}});
+  tasks.forEach(t=>{
+    if(listMap[t._listId]) listMap[t._listId].tasks.push(t);
+    else {
+      if(!listMap['__other__']){listMap['__other__']={id:'__other__',name:'Other',tasks:[]};listOrder.push('__other__');}
+      listMap['__other__'].tasks.push(t);
+    }
+  });
+
+  const dc=['#7c3aed','#0891b2','#059669','#d97706','#dc2626','#db2777','#0d9488','#7c3aed'];
+  let h='';
+  let colorIdx=0;
+
+  listOrder.forEach(lid=>{
+    const group=listMap[lid];
+    if(!group||!group.tasks.length) return;
+    const c=dc[colorIdx++%dc.length];
+    const listTasks=group.tasks;
+    const done=listTasks.filter(t=>{const s=(t.status?.status||'').toLowerCase();return s.includes('done')||s.includes('complete')||s.includes('closed');}).length;
+    const pct=listTasks.length?Math.round(done/listTasks.length*100):0;
+
+    h+=`<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:12px;margin-bottom:14px;overflow:hidden;box-shadow:var(--sh)">
+      <!-- List header -->
+      <div style="padding:12px 18px;background:var(--bg3);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="width:10px;height:10px;border-radius:50%;background:${c};flex-shrink:0;box-shadow:0 0 8px ${c}"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-family:var(--disp);font-size:13px;font-weight:700;letter-spacing:1px;color:var(--text)">${esc(group.name)}</div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--mute);margin-top:1px">${esc(group.folder||'')}${group.folder&&group.folder!=='—'?' · ':''}${esc(group.space||'')}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:120px">
+          <div class="sprint-prog" style="flex:1"><div class="sprint-prog-fill" style="width:${pct}%;background:linear-gradient(90deg,${c},${c}aa)"></div></div>
+          <span style="font-family:var(--mono);font-size:10px;color:${c}">${pct}%</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <span class="chip chip-gray">${listTasks.length} tasks</span>
+          ${done?`<span class="chip chip-done">${done} done</span>`:''}
+        </div>
+      </div>
+      <!-- Inline table for this list -->
+      <div class="tscroll">
+        <table style="width:100%"><thead><tr>
+          <th>ID</th><th>Title</th><th>Status</th><th>Priority</th><th>Assignees</th><th>Due</th><th>Tags</th>
+        </tr></thead><tbody>`;
+
+    listTasks.forEach(t=>{
+      const due=t.due_date?`<span style="color:${Date.now()>parseInt(t.due_date)?'var(--g5)':'var(--mute)'};font-family:var(--mono);font-size:10px">${new Date(parseInt(t.due_date)).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}</span>`:'—';
+      const tags=(t.tags||[]).map(tag=>`<span style="font-family:var(--mono);font-size:8px;padding:1px 5px;border-radius:8px;background:rgba(124,58,237,.15);color:var(--g2);border:1px solid rgba(124,58,237,.25)">${esc(tag.name)}</span>`).join(' ');
+      h+=`<tr onclick="openCuTask('${esc(t.id)}')" style="cursor:pointer">
+        <td class="tc-id">${esc(t.custom_id||t.id?.slice(-6)||'—')}</td>
+        <td class="tc-title" title="${esc(t.name||'')}">${esc(t.name||'—')}</td>
+        <td>${cuStatusChip(t.status?.status)}</td>
+        <td>${cuPrioChip(t.priority)}</td>
+        <td>${cuAvatarStack(t.assignees||[])}</td>
+        <td>${due}</td>
+        <td>${tags}</td>
+      </tr>`;
+    });
+    h+=`</tbody></table></div></div>`;
+  });
+  body.innerHTML=h||'<div class="empty"><div class="empty-icon">🟣</div><h3>NO TASKS</h3></div>';
+}
+
+// ── FULL TASK DETAIL PANEL ────────────────────────────────────────────────
+async function openCuTask(taskId){
+  const task=_cuTasks.find(t=>t.id===taskId);if(!task)return;
+  document.getElementById('cuPanelTitle').textContent=task.name||'Task';
+  document.getElementById('cuPanelId').textContent=task.custom_id||task.id?.slice(-6)||'';
+  document.getElementById('cuPanelBody').innerHTML='<div style="padding:32px;text-align:center"><span class="spin" style="width:20px;height:20px;border-width:2px"></span></div>';
   document.getElementById('cuOverlay').classList.add('on');
   document.getElementById('cuPanel').classList.add('on');
 
-  // Fetch full task detail + comments in parallel
-  let fullTask = task, comments = [];
+  let fullTask=task,comments=[];
   try {
-    const [td, cd] = await Promise.all([
-      cuFetch(`/task/${taskId}`),
-      cuFetch(`/task/${taskId}/comment`)
-    ]);
-    fullTask   = { ...task, ...td };
-    comments   = cd.comments || [];
-  } catch(e) {
-    console.warn('[cu] detail fetch failed:', e.message);
-  }
+    const [td,cd]=await Promise.all([cuFetch(`/task/${taskId}`),cuFetch(`/task/${taskId}/comment`)]);
+    fullTask={...task,...td};
+    comments=cd.comments||[];
+  } catch(e){ console.warn('[cu detail]',e.message); }
 
-  const sc  = s => { const c=cuStatusColor(s); return `<span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid ${c};color:${c}">${esc(s||'—')}</span>`; };
-  const pc  = p => { const label=(p?.priority||'—');const c=cuPrioColor(label);return `<span style="font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:20px;border:1px solid ${c};color:${c}">${esc(label)}</span>`; };
-  const due = fullTask.due_date ? new Date(parseInt(fullTask.due_date)).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
-  const created = fullTask.date_created ? new Date(parseInt(fullTask.date_created)).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
-  const updated = fullTask.date_updated ? new Date(parseInt(fullTask.date_updated)).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+  const due=fullTask.due_date?new Date(parseInt(fullTask.due_date)).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'—';
+  const start=fullTask.start_date?new Date(parseInt(fullTask.start_date)).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'—';
+  const created=fullTask.date_created?new Date(parseInt(fullTask.date_created)).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'—';
+  const updated=fullTask.date_updated?new Date(parseInt(fullTask.date_updated)).toLocaleString('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
+  const timeTracked=fullTask.time_spent?`${Math.floor(parseInt(fullTask.time_spent)/3600000)}h ${Math.floor((parseInt(fullTask.time_spent)%3600000)/60000)}m`:'—';
+  const timeEst=fullTask.time_estimate?`${Math.floor(parseInt(fullTask.time_estimate)/3600000)}h ${Math.floor((parseInt(fullTask.time_estimate)%3600000)/60000)}m`:'—';
 
-  const assigneeHtml = (fullTask.assignees||[]).length
-    ? (fullTask.assignees||[]).map(a => `
-        <div style="display:flex;align-items:center;gap:8px;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);border-radius:24px;padding:5px 12px 5px 5px">
-          <div class="av" style="width:26px;height:26px;font-size:9px;background:${avc(a.username||a.email||'?')};overflow:hidden">
-            ${a.profilePicture ? `<img src="${esc(a.profilePicture)}" style="width:100%;height:100%;object-fit:cover">` : avi(a.username||a.email||'?')}
-          </div>
-          <div>
-            <div style="font-size:12px;font-weight:700;color:var(--text)">${esc(a.username||a.email||'?')}</div>
-            ${a.email ? `<div style="font-family:var(--mono);font-size:10px;color:var(--mute)">${esc(a.email)}</div>` : ''}
-          </div>
-        </div>`).join('')
-    : '<span style="font-size:12px;color:var(--dim);font-family:var(--mono)">Unassigned</span>';
+  const assigneeHtml=(fullTask.assignees||[]).length
+    ?(fullTask.assignees||[]).map(a=>`
+      <div style="display:flex;align-items:center;gap:8px;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);border-radius:24px;padding:5px 12px 5px 5px">
+        ${cuAvatar(a,26)}
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text)">${esc(a.username||a.email||'?')}</div>
+          ${a.email?`<div style="font-family:var(--mono);font-size:10px;color:var(--mute)">${esc(a.email)}</div>`:''}
+        </div>
+      </div>`).join('')
+    :'<span style="font-size:12px;color:var(--dim);font-family:var(--mono)">Unassigned</span>';
 
-  const tags = (fullTask.tags||[]).map(tag =>
-    `<span style="font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(124,58,237,.15);color:var(--g2);border:1px solid rgba(124,58,237,.25)">${esc(tag.name)}</span>`
-  ).join(' ');
+  const tags=(fullTask.tags||[]).map(tag=>`<span style="font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(124,58,237,.15);color:var(--g2);border:1px solid rgba(124,58,237,.25)">${esc(tag.name)}</span>`).join(' ');
 
-  // Custom fields
-  const customFields = (fullTask.custom_fields||[]).filter(f => f.value !== undefined && f.value !== null && f.value !== '').map(f => {
-    let val = f.value;
-    if (Array.isArray(val)) val = val.map(v => v.name||v.label||v).join(', ');
-    if (typeof val === 'object') val = val.name || val.label || JSON.stringify(val);
-    return `<div class="dgi"><div class="dgi-l">${esc(f.name||'')}</div><div class="dgi-v" style="font-size:12px">${esc(String(val||''))}</div></div>`;
+  // Custom fields - show all with values
+  const cfHtml=(fullTask.custom_fields||[]).filter(f=>f.value!==undefined&&f.value!==null&&f.value!=='').map(f=>{
+    let val=f.value;
+    if(Array.isArray(val)) val=val.map(v=>v.name||v.label||v).join(', ');
+    else if(typeof val==='object'&&val!==null) val=val.name||val.label||JSON.stringify(val);
+    else if(typeof val==='number'&&f.type==='date') val=new Date(val).toLocaleDateString('en-IN');
+    return `<div class="dgi"><div class="dgi-l">${esc(f.name||'')}</div><div class="dgi-v" style="font-size:11px;font-family:var(--mono)">${esc(String(val||''))}</div></div>`;
   }).join('');
 
-  // Checklist items
-  const checklistHtml = (fullTask.checklists||[]).map(cl => `
-    <div style="margin-bottom:10px">
-      <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mute);margin-bottom:6px">${esc(cl.name||'Checklist')}</div>
-      ${(cl.items||[]).map(item => `
-        <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;background:rgba(0,0,0,.2);margin-bottom:3px">
-          <span style="font-size:14px">${item.resolved ? '✅' : '⬜'}</span>
-          <span style="font-size:12px;color:${item.resolved?'var(--mute)':'var(--text)'};${item.resolved?'text-decoration:line-through':''}">${esc(item.name||'')}</span>
+  // Checklists
+  const clHtml=(fullTask.checklists||[]).map(cl=>`
+    <div style="margin-bottom:12px">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mute);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--bd)">${esc(cl.name||'Checklist')}</div>
+      ${(cl.items||[]).map(item=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;margin-bottom:3px;background:rgba(0,0,0,.2)">
+          <span style="font-size:14px;flex-shrink:0">${item.resolved?'✅':'⬜'}</span>
+          <span style="font-size:12px;color:${item.resolved?'var(--mute)':'var(--text)'};${item.resolved?'text-decoration:line-through':''};line-height:1.4">${esc(item.name||'')}</span>
+          ${item.assignee?`<span style="margin-left:auto">${cuAvatar(item.assignee,16)}</span>`:''}
         </div>`).join('')}
     </div>`).join('');
 
-  // Description — strip simple markdown
-  const descHtml = (fullTask.description||'').trim()
-    ? `<div class="dtext" style="white-space:pre-wrap;line-height:1.8">${esc(fullTask.description||'')}</div>`
-    : '';
+  // Subtasks
+  const subHtml=(fullTask.subtasks||[]).map(st=>`
+    <div onclick="openCuTask('${esc(st.id)}')" style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;background:var(--bg2);border:1px solid var(--bd);margin-bottom:4px;cursor:pointer;transition:border-color .15s" onmouseenter="this.style.borderColor='var(--g1)'" onmouseleave="this.style.borderColor='var(--bd)'">
+      ${cuStatusChip(st.status?.status)}
+      <span style="flex:1;font-size:12px;color:var(--text);font-weight:600">${esc(st.name||'')}</span>
+      ${cuAvatarStack(st.assignees||[],18)}
+    </div>`).join('');
+
+  // Dependencies
+  const depHtml=(fullTask.dependencies||[]).map(d=>`
+    <div style="font-family:var(--mono);font-size:10px;color:var(--mute);padding:4px 0">
+      ${d.depends_on?'⬆ Blocked by: ':'⬇ Blocking: '}<span style="color:var(--g1)">${esc(d.depends_on||d.task_id||'')}</span>
+    </div>`).join('');
 
   // Comments
-  const commentsHtml = comments.length
-    ? comments.map(c => {
-        const author = c.user?.username || c.user?.email || '?';
-        const ts     = c.date ? new Date(parseInt(c.date)).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}) : '';
-        const text   = (c.comment_text || (c.comment||[]).map(b=>b.text||'').join('') || '').trim();
-        if (!text) return '';
-        return `<div class="act-item">
-          <div class="av" style="width:26px;height:26px;font-size:9px;flex-shrink:0;background:${avc(author)};overflow:hidden">
-            ${c.user?.profilePicture ? `<img src="${esc(c.user.profilePicture)}" style="width:100%;height:100%;object-fit:cover">` : avi(author)}
-          </div>
-          <div class="act-body">
-            <span class="act-author">${esc(author)}</span>
-            <span class="act-time">${esc(ts)}</span>
-            <div class="act-text">${esc(text)}</div>
-          </div>
-        </div>`;
-      }).filter(Boolean).join('')
-    : '<div style="font-family:var(--mono);font-size:11px;color:var(--dim);padding:8px 0">No comments.</div>';
+  const commentsHtml=comments.length
+    ?comments.map(c=>{
+      const author=c.user?.username||c.user?.email||'?';
+      const ts=c.date?new Date(parseInt(c.date)).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}):'';
+      const text=(c.comment_text||(c.comment||[]).map(b=>b.text||'').join('')||'').trim();
+      if(!text)return'';
+      return`<div class="act-item">
+        <div style="flex-shrink:0">${c.user?cuAvatar(c.user,26):''}</div>
+        <div class="act-body">
+          <span class="act-author">${esc(author)}</span>
+          <span class="act-time">${esc(ts)}</span>
+          <div class="act-text" style="white-space:pre-wrap">${esc(text)}</div>
+        </div>
+      </div>`;}).filter(Boolean).join('')
+    :'<div style="font-family:var(--mono);font-size:11px;color:var(--dim);padding:8px 0">No comments yet.</div>';
 
-  const timeTracked = fullTask.time_spent
-    ? `${Math.floor(parseInt(fullTask.time_spent)/3600000)}h ${Math.floor((parseInt(fullTask.time_spent)%3600000)/60000)}m`
-    : '—';
-
-  document.getElementById('cuPanelBody').innerHTML = `
+  document.getElementById('cuPanelBody').innerHTML=`
+    <!-- Status + Priority + Tags -->
     <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px">
-      ${sc(fullTask.status?.status)} ${pc(fullTask.priority)} ${tags}
+      ${cuStatusChip(fullTask.status?.status)} ${cuPrioChip(fullTask.priority)} ${tags}
     </div>
 
+    <!-- Core metadata grid -->
     <div class="dgrid" style="margin-bottom:18px">
       <div class="dgi" style="grid-column:1/-1">
         <div class="dgi-l">Assignees</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:7px">${assigneeHtml}</div>
       </div>
+      ${fullTask.creator?`<div class="dgi"><div class="dgi-l">Created By</div><div style="display:flex;align-items:center;gap:7px;margin-top:4px">${cuAvatar(fullTask.creator,20)}<div class="dgi-v">${esc(fullTask.creator.username||fullTask.creator.email||'—')}</div></div></div>`:''}
       <div class="dgi"><div class="dgi-l">List</div><div class="dgi-v">${esc(fullTask._listName||'—')}</div></div>
-      <div class="dgi"><div class="dgi-l">Space</div><div class="dgi-v">${esc(fullTask._spaceName||'—')}</div></div>
-      <div class="dgi"><div class="dgi-l">Due Date</div><div class="dgi-v" style="color:${fullTask.due_date&&Date.now()>parseInt(fullTask.due_date)?'var(--g5)':'var(--text)'}">${due}</div></div>
-      <div class="dgi"><div class="dgi-l">Time Tracked</div><div class="dgi-v">${timeTracked}</div></div>
+      <div class="dgi"><div class="dgi-l">Folder / Space</div><div class="dgi-v" style="font-size:11px">${esc(fullTask._folderName||'—')} / ${esc(fullTask._spaceName||'—')}</div></div>
+      <div class="dgi"><div class="dgi-l">Start Date</div><div class="dgi-v">${start}</div></div>
+      <div class="dgi"><div class="dgi-l">Due Date</div><div class="dgi-v" style="color:${fullTask.due_date&&Date.now()>parseInt(fullTask.due_date)?'var(--g5)':'var(--text)'}">${due}${fullTask.due_date&&Date.now()>parseInt(fullTask.due_date)?' ⚠ Overdue':''}</div></div>
+      <div class="dgi"><div class="dgi-l">Time Tracked</div><div class="dgi-v" style="font-family:var(--mono)">${timeTracked}</div></div>
+      <div class="dgi"><div class="dgi-l">Time Estimate</div><div class="dgi-v" style="font-family:var(--mono)">${timeEst}</div></div>
       <div class="dgi"><div class="dgi-l">Created</div><div class="dgi-v" style="font-family:var(--mono);font-size:11px">${created}</div></div>
-      <div class="dgi"><div class="dgi-l">Updated</div><div class="dgi-v" style="font-family:var(--mono);font-size:11px">${updated}</div></div>
-      ${fullTask.creator ? `<div class="dgi"><div class="dgi-l">Created by</div><div class="dgi-v">${esc(fullTask.creator.username||fullTask.creator.email||'—')}</div></div>` : ''}
-      ${customFields}
+      <div class="dgi"><div class="dgi-l">Last Updated</div><div class="dgi-v" style="font-family:var(--mono);font-size:11px">${updated}</div></div>
+      ${cfHtml}
     </div>
 
-    ${descHtml ? `<div class="dsec"><div class="dsec-title">Description</div>${descHtml}</div>` : ''}
+    <!-- Description -->
+    ${(fullTask.description||'').trim()?`<div class="dsec"><div class="dsec-title">Description</div><div class="dtext" style="white-space:pre-wrap;line-height:1.8">${esc(fullTask.description||'')}</div></div>`:''}
 
-    ${checklistHtml ? `<div class="dsec"><div class="dsec-title">Checklists</div>${checklistHtml}</div>` : ''}
+    <!-- Subtasks -->
+    ${subHtml?`<div class="dsec"><div class="dsec-title">Subtasks (${(fullTask.subtasks||[]).length})</div>${subHtml}</div>`:''}
 
+    <!-- Checklists -->
+    ${clHtml?`<div class="dsec"><div class="dsec-title">Checklists</div>${clHtml}</div>`:''}
+
+    <!-- Dependencies -->
+    ${depHtml?`<div class="dsec"><div class="dsec-title">Dependencies</div>${depHtml}</div>`:''}
+
+    <!-- Comments -->
     <div class="dsec">
       <div class="dsec-title">Comments (${comments.length})</div>
       ${commentsHtml}
     </div>`;
 }
 
-function closeCuPanel() {
+function closeCuPanel(){
   document.getElementById('cuOverlay').classList.remove('on');
   document.getElementById('cuPanel').classList.remove('on');
 }
