@@ -482,6 +482,89 @@ body.light .panel{background:var(--bg1)}
 body.light .fi{background:rgba(255,255,255,.9);color:var(--text)}
 body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
 
+/* ── THEME: MIDNIGHT BLUE ── */
+body.theme-midnight{
+  --bg:#020818;--bg1:#040c20;--bg2:#060f28;--bg3:#091430;--bg4:#0c1a3a;
+  --bd:#0e2050;--bd2:#122860;--bd3:#183070;
+  --dim:#1a3880;--mute:#2a50a0;--fog:#4070c0;--mist:#6090d8;--ghost:#90b8f0;--text:#e0eeff;
+  --g1:#2563eb;--g2:#06b6d4;--g3:#f59e0b;--g4:#10b981;--g5:#ef4444;--g6:#8b5cf6;
+}
+body.theme-midnight{background:var(--bg);color:var(--text)}
+body.theme-midnight .topbar{background:rgba(2,8,24,.95);border-bottom-color:rgba(37,99,235,.3)}
+body.theme-midnight .sidebar{background:rgba(2,8,24,.85)}
+body.theme-midnight .panel,.theme-midnight .panel{background:var(--bg1)}
+body.theme-midnight .fi{background:var(--bg2);color:var(--text)}
+body.theme-midnight .fi2{background:var(--bg2);color:var(--text)}
+
+/* ── THEME: FOREST (deep green) ── */
+body.theme-forest{
+  --bg:#020d06;--bg1:#031109;--bg2:#04160b;--bg3:#061c0f;--bg4:#082314;
+  --bd:#0d3018;--bd2:#124020;--bd3:#185030;
+  --dim:#1a5028;--mute:#286840;--fog:#3a9060;--mist:#55b87a;--ghost:#90d8a8;--text:#e0f4e8;
+  --g1:#16a34a;--g2:#06b6d4;--g3:#f59e0b;--g4:#22c55e;--g5:#ef4444;--g6:#a855f7;
+}
+body.theme-forest{background:var(--bg);color:var(--text)}
+body.theme-forest .topbar{background:rgba(2,13,6,.95);border-bottom-color:rgba(22,163,74,.3)}
+body.theme-forest .sidebar{background:rgba(2,13,6,.85)}
+body.theme-forest .panel{background:var(--bg1)}
+body.theme-forest .fi{background:var(--bg2);color:var(--text)}
+body.theme-forest .fi2{background:var(--bg2);color:var(--text)}
+
+/* ── THEME: CRIMSON ── */
+body.theme-crimson{
+  --bg:#0d0204;--bg1:#140306;--bg2:#1a0409;--bg3:#20050b;--bg4:#28060e;
+  --bd:#400810;--bd2:#580a16;--bd3:#700c1c;
+  --dim:#800e20;--mute:#a01228;--fog:#c83040;--mist:#e06070;--ghost:#f0a0a8;--text:#ffeef0;
+  --g1:#dc2626;--g2:#f97316;--g3:#fbbf24;--g4:#10b981;--g5:#ef4444;--g6:#ec4899;
+}
+body.theme-crimson{background:var(--bg);color:var(--text)}
+body.theme-crimson .topbar{background:rgba(13,2,4,.95);border-bottom-color:rgba(220,38,38,.3)}
+body.theme-crimson .sidebar{background:rgba(13,2,4,.85)}
+body.theme-crimson .panel{background:var(--bg1)}
+body.theme-crimson .fi{background:var(--bg2);color:var(--text)}
+body.theme-crimson .fi2{background:var(--bg2);color:var(--text)}
+
+/* ── THEME: GOLDEN (amber/dark) ── */
+body.theme-golden{
+  --bg:#0d0800;--bg1:#140d00;--bg2:#1c1200;--bg3:#241800;--bg4:#2e1f00;
+  --bd:#402800;--bd2:#583800;--bd3:#704800;
+  --dim:#805800;--mute:#a07800;--fog:#c8a030;--mist:#e0c060;--ghost:#f0d890;--text:#fff8e0;
+  --g1:#d97706;--g2:#f59e0b;--g3:#fbbf24;--g4:#10b981;--g5:#ef4444;--g6:#ec4899;
+}
+body.theme-golden{background:var(--bg);color:var(--text)}
+body.theme-golden .topbar{background:rgba(13,8,0,.95);border-bottom-color:rgba(217,119,6,.3)}
+body.theme-golden .sidebar{background:rgba(13,8,0,.85)}
+body.theme-golden .panel{background:var(--bg1)}
+body.theme-golden .fi{background:var(--bg2);color:var(--text)}
+body.theme-golden .fi2{background:var(--bg2);color:var(--text)}
+
+/* ── THEME: SLATE (neutral dark) ── */
+body.theme-slate{
+  --bg:#0c0c10;--bg1:#111116;--bg2:#16161c;--bg3:#1c1c24;--bg4:#22222c;
+  --bd:#2c2c3a;--bd2:#383848;--bd3:#444458;
+  --dim:#505068;--mute:#686880;--fog:#8888a0;--mist:#a8a8c0;--ghost:#d0d0e0;--text:#f0f0f8;
+  --g1:#6366f1;--g2:#22d3ee;--g3:#f59e0b;--g4:#10b981;--g5:#ef4444;--g6:#ec4899;
+}
+body.theme-slate{background:var(--bg);color:var(--text)}
+body.theme-slate .topbar{background:rgba(12,12,16,.95);border-bottom-color:rgba(99,102,241,.3)}
+body.theme-slate .sidebar{background:rgba(12,12,16,.85)}
+body.theme-slate .panel{background:var(--bg1)}
+body.theme-slate .fi{background:var(--bg2);color:var(--text)}
+body.theme-slate .fi2{background:var(--bg2);color:var(--text)}
+
+/* Theme picker modal */
+.theme-modal{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.theme-modal.on{display:flex}
+.theme-modal-box{background:var(--bg2);border:1px solid var(--bd2);border-radius:20px;padding:32px;max-width:560px;width:100%;box-shadow:var(--sh2)}
+.theme-modal-title{font-family:var(--disp);font-size:16px;font-weight:800;letter-spacing:2px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:20px}
+.theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.theme-swatch{border-radius:12px;overflow:hidden;cursor:pointer;border:2px solid transparent;transition:all .2s;position:relative}
+.theme-swatch:hover{transform:translateY(-3px);box-shadow:var(--sh2)}
+.theme-swatch.active{border-color:var(--g2);box-shadow:0 0 0 3px rgba(6,182,212,.3)}
+.theme-swatch-preview{height:70px;display:flex;flex-direction:column;gap:3px;padding:8px}
+.theme-swatch-bar{height:4px;border-radius:2px;margin-top:auto}
+.theme-swatch-label{background:var(--bg3);padding:6px 10px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--mist);text-align:center}
+
 .user-pill-wrap{position:relative}
 .profile-menu{position:absolute;top:calc(100% + 10px);right:0;background:var(--bg2);border:1px solid var(--bd2);border-radius:14px;padding:6px;min-width:210px;box-shadow:var(--sh2);z-index:9999;display:none;flex-direction:column;gap:2px;backdrop-filter:blur(20px);}
 .profile-menu.on{display:flex}
@@ -706,8 +789,7 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
             <div class="pm-name" id="pmName">—</div>
             <div class="pm-email" id="pmEmail">—</div>
           </div>
-          <div class="pm-item" onclick="setTheme('dark');closeProfileMenu()"><span class="pm-icon">🌙</span> Dark Mode</div>
-          <div class="pm-item" onclick="setTheme('light');closeProfileMenu()"><span class="pm-icon">☀️</span> Light Mode</div>
+          <div class="pm-item" onclick="openThemeModal();closeProfileMenu()"><span class="pm-icon">🎨</span> Themes</div>
           <div class="pm-divider"></div>
           <div class="pm-item" onclick="refreshAll();closeProfileMenu()"><span class="pm-icon">↻</span> Refresh Data</div>
           <div class="pm-item" onclick="showNatasha();closeProfileMenu()"><span class="pm-icon">🏏</span> Say Hi to Natasha</div>
@@ -847,6 +929,26 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
         </div>
 
         <!-- CLICKUP -->
+        <style>
+        /* ClickUp section: easy readable font overrides */
+        #v-clickup table td,
+        #v-clickup .tc-title,
+        #cuPanelBody .act-text,
+        #cuPanelBody .dgi-v,
+        #cuPanelBody .dtext {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif !important;
+          font-size: 13px !important;
+          line-height: 1.6 !important;
+          font-weight: 500 !important;
+        }
+        #v-clickup .tc-title { font-size: 13px !important; font-weight: 600 !important; }
+        #cuPanelBody .act-author { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif !important; font-size:13px !important; }
+        #cuPanelBody h1,#cuPanelBody h2,#cuPanelBody h3 { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif !important; }
+        /* Board cards text */
+        #cuBody [style*="font-size:11px;font-weight:700"] { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif !important; font-size:12px !important; }
+        /* Group view list names */
+        #cuBody .sprint-name { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif !important; letter-spacing:0 !important; }
+        </style>
         <div id="v-clickup" style="display:none">
           <div class="ph">
             <div><h1>CLICKUP</h1><p id="cu-sub">Synced from ClickUp workspace</p></div>
@@ -885,7 +987,7 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
             </div>
           </div>
           <div class="pb2" id="cuPanelBody"></div>
-          <div class="pf2"><button class="btn btn-g" onclick="closeCuPanel()">Close</button></div>
+          <div class="pf2" id="cuPanelFooter"><button class="btn btn-g" onclick="closeCuPanel()">Close</button></div>
         </div>
 
                 <!-- IMPORT (admin only) -->
@@ -930,6 +1032,17 @@ body.light .fi2{background:rgba(255,255,255,.9);color:var(--text)}
 
       </div>
     </div>
+  </div>
+</div>
+
+<!-- THEME PICKER MODAL -->
+<div class="theme-modal" id="themeModal" onclick="if(event.target===this)closeThemeModal()">
+  <div class="theme-modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div class="theme-modal-title">🎨 CHOOSE THEME</div>
+      <button class="btn btn-g btn-sm" onclick="closeThemeModal()">✕</button>
+    </div>
+    <div class="theme-grid" id="themeGrid"></div>
   </div>
 </div>
 
@@ -2451,12 +2564,63 @@ async function postComment(bugId){
   }catch(e){toast(e.message,'err');}
 }
 
-function setTheme(mode){
-  document.body.classList.toggle('light',mode==='light');
-  try{localStorage.setItem('hwt_theme',mode);}catch{}
-  toast(mode==='light'?'☀️ Light mode on':'🌙 Dark mode on','info');
+// ── MULTI-THEME SYSTEM ──────────────────────────────────────────────────
+const THEMES = [
+  { id:'dark',     label:'Default',   bg:'#06060f', accent:'#7c3aed', text:'#eeeef8', g1:'#7c3aed', g2:'#06b6d4' },
+  { id:'light',    label:'Light',     bg:'#f0f2fa', accent:'#7c3aed', text:'#0a0a40', g1:'#7c3aed', g2:'#06b6d4' },
+  { id:'midnight', label:'Midnight',  bg:'#020818', accent:'#2563eb', text:'#e0eeff', g1:'#2563eb', g2:'#06b6d4' },
+  { id:'forest',   label:'Forest',    bg:'#020d06', accent:'#16a34a', text:'#e0f4e8', g1:'#16a34a', g2:'#06b6d4' },
+  { id:'crimson',  label:'Crimson',   bg:'#0d0204', accent:'#dc2626', text:'#ffeef0', g1:'#dc2626', g2:'#f97316' },
+  { id:'golden',   label:'Golden',    bg:'#0d0800', accent:'#d97706', text:'#fff8e0', g1:'#d97706', g2:'#f59e0b' },
+  { id:'slate',    label:'Slate',     bg:'#0c0c10', accent:'#6366f1', text:'#f0f0f8', g1:'#6366f1', g2:'#22d3ee' },
+];
+
+function setTheme(id){
+  // Remove all theme classes
+  THEMES.forEach(t => document.body.classList.remove('light','theme-'+t.id));
+  if(id==='light') document.body.classList.add('light');
+  else if(id!=='dark') document.body.classList.add('theme-'+id);
+  try{ localStorage.setItem('hwt_theme', id); }catch(e){}
+  const t=THEMES.find(t=>t.id===id)||THEMES[0];
+  toast('🎨 '+t.label+' theme applied','info');
+  // Update active swatch if modal is open
+  document.querySelectorAll('.theme-swatch').forEach(el=>el.classList.toggle('active',el.dataset.themeId===id));
 }
-function loadTheme(){try{const t=localStorage.getItem('hwt_theme');if(t==='light')document.body.classList.add('light');}catch{}}
+
+function loadTheme(){
+  try{
+    const saved=localStorage.getItem('hwt_theme')||'dark';
+    setTheme(saved);
+  }catch(e){}
+}
+
+function openThemeModal(){
+  const grid=document.getElementById('themeGrid');
+  if(!grid)return;
+  const current=localStorage.getItem('hwt_theme')||'dark';
+  grid.innerHTML=THEMES.map(t=>`
+    <div class="theme-swatch${t.id===current?' active':''}" data-theme-id="${t.id}" onclick="setTheme('${t.id}')" title="${t.label}">
+      <div class="theme-swatch-preview" style="background:${t.bg}">
+        <div style="display:flex;gap:3px">
+          <div style="width:18px;height:5px;border-radius:2px;background:${t.g1};opacity:.9"></div>
+          <div style="width:12px;height:5px;border-radius:2px;background:${t.g2};opacity:.7"></div>
+        </div>
+        <div style="font-family:var(--mono);font-size:7px;color:${t.text};opacity:.7;margin-top:4px;letter-spacing:1px">AaBbCc</div>
+        <div style="display:flex;gap:2px;margin-top:3px">
+          <div style="flex:1;height:3px;border-radius:1px;background:${t.accent};opacity:.8"></div>
+          <div style="flex:1;height:3px;border-radius:1px;background:${t.g2};opacity:.5"></div>
+          <div style="flex:1;height:3px;border-radius:1px;background:${t.text};opacity:.15"></div>
+        </div>
+        <div class="theme-swatch-bar" style="background:${t.g1};box-shadow:0 0 6px ${t.g1}66"></div>
+      </div>
+      <div class="theme-swatch-label">${t.label}</div>
+    </div>`).join('');
+  document.getElementById('themeModal').classList.add('on');
+}
+
+function closeThemeModal(){
+  document.getElementById('themeModal').classList.remove('on');
+}
 
 function toggleProfileMenu(e){
   e.stopPropagation();
@@ -3216,6 +3380,11 @@ async function openCuTask(taskId){
   document.getElementById('cuPanelTitle').textContent=task.name||'Task';
   document.getElementById('cuPanelId').textContent=task.custom_id||task.id?.slice(-6)||'';
   document.getElementById('cuPanelBody').innerHTML='<div style="padding:32px;text-align:center"><span class="spin" style="width:20px;height:20px;border-width:2px"></span></div>';
+  // Set footer with Open in ClickUp button
+  const _cuUrl=task.url||'';
+  document.getElementById('cuPanelFooter').innerHTML=`
+    <button class="btn btn-g" onclick="closeCuPanel()">Close</button>
+    ${_cuUrl?`<a href="${_cuUrl}" target="_blank" rel="noopener" class="btn btn-v" style="text-decoration:none">🟣 Open in ClickUp ↗</a>`:''}`;
   document.getElementById('cuOverlay').classList.add('on');
   document.getElementById('cuPanel').classList.add('on');
 
