@@ -1118,7 +1118,8 @@ function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   const icon = document.getElementById('themeIcon');
   if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
-  localStorage.setItem(THEME_KEY, theme);
+  localStorage.setItem(LAST_EMAIL_KEY, G.user.email);
+  } catch(e) {}
 }
 function toggleTheme() {
   const cur = document.documentElement.getAttribute('data-theme') || 'dark';
@@ -1154,7 +1155,6 @@ function saveSession() {
     localStorage.setItem(LAST_EMAIL_KEY, G.user.email);
    } catch(e) {
       clearSession(); G.user = null; G.sessionToken = null;
-      // re-initialize removed — GSI already initialized above
     }
 
 function loadSession() {
@@ -2181,7 +2181,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 });
-}
 </script>
 </body>
 </html>
