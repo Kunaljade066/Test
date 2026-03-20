@@ -771,10 +771,15 @@ select option { background: var(--s2); }
     <button class="hist-filter-btn"    id="hf-impact" onclick="setHistFilter('impact')">⚡ Impact</button>
     <button class="hist-filter-btn"    id="hf-prd"    onclick="setHistFilter('prd')">📋 PRD</button>
   </div>
+  <div style="padding:8px 10px;border-bottom:1px solid var(--bd);flex-shrink:0;">
+    <input type="text" id="histSearch" placeholder="Search history…" oninput="renderHistoryDrawer()"
+      style="width:100%;padding:6px 10px;font-size:11px;background:var(--s3);border:1px solid var(--bd2);color:var(--text);border-radius:6px;outline:none;font-family:var(--mono);">
+  </div>
   <div class="hist-list" id="histList">
     <div class="hist-empty">No history yet.<br>Run an analysis to see it here.</div>
   </div>
-  <div style="padding:10px 12px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;">
+  <div style="padding:8px 12px;border-top:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;gap:6px;flex-shrink:0;">
+    <button class="btn btn-ghost btn-xs" onclick="debugHistory()" style="color:var(--blue2);border-color:rgba(61,142,255,.25);">🔍 Debug</button>
     <button class="btn btn-ghost btn-xs" onclick="clearHistory()" style="color:var(--red2);border-color:rgba(255,45,85,.25);">🗑 Clear History</button>
   </div>
 </div>
@@ -1284,7 +1289,77 @@ async function idbClearEmail(email) {
   } catch(e) {}
 }
 
-// ══ HISTORY FUNCTIONS (IndexedDB-backed, lifetime, unlimited) ══
+// ══ MIGRATION: localStorage → IndexedDB ══
+// Scans ALL localStorage keys and imports history to IDB.
+// Smart: re-runs if IDB is empty (handles fresh installs after IDB switch).
+async function migrateLocalStorageHistory(email) {
+  const flagKey    = `qabp_migrated_v2_${email.replace(/[^a-z0-9]/gi,'_')}`;
+  const alreadyRan = localStorage.getItem(flagKey);
+  const existing   = await idbGetAll(email);
+
+  // Skip only if migration already ran AND there are entries in IDB.
+  // If IDB is empty (user first logged in after IDB switch), always retry.
+  if (alreadyRan && existing.length > 0) return 0;
+
+  let migrated   = 0;
+  const alreadyIn = new Set(existing.map(e => String(e.ts || e.id)));
+  const emailSlug = email.replace(/[^a-z0-9]/gi,'_');
+  const emailUser = email.split('@')[0];
+
+  // Collect every possible localStorage key — covers all past versions
+  const candidateKeys = new Set([
+    `qabp_hist_${emailSlug}`,
+    `qabp_history_${emailSlug}`,
+    `qaBlueprint_history_${emailSlug}`,
+    `qabp_hist_${emailUser}`,
+  ]);
+
+  // Scan ALL localStorage keys — catch any format we haven't seen before
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k) continue;
+    const isHistKey = k.includes('hist') || k.includes('history');
+    const matchesUser = emailSlug.length >= 4 && k.includes(emailSlug.substring(0,4));
+    const matchesEmail = k.includes(emailUser.substring(0, Math.min(6, emailUser.length)));
+    if (isHistKey && (matchesUser || matchesEmail)) candidateKeys.add(k);
+  }
+
+  for (const key of candidateKeys) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw || raw.length < 10) continue;
+      const entries = JSON.parse(raw);
+      if (!Array.isArray(entries) || !entries.length) continue;
+
+      for (const e of entries) {
+        if (!e.output && !e.input) continue;
+        const tsKey = String(e.ts || e.id || '');
+        if (tsKey && alreadyIn.has(tsKey)) continue; // no duplicates
+
+        const ts = e.ts || e.id || Date.now();
+        const idbEntry = {
+          idbKey:    `${email}::${ts}::${Math.random().toString(36).slice(2)}`,
+          email,
+          id:        e.id || ts,
+          type:      e.type || 'impact',
+          title:     e.title || 'Recovered entry',
+          input:     e.input  || {},
+          output:    e.output || {},
+          ts,
+          provider:  e.provider || null,
+          dateStr:   e.dateStr || new Date(ts).toLocaleString('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'short',timeStyle:'short'}),
+          _migrated: true,
+        };
+        await idbPut(idbEntry);
+        alreadyIn.add(tsKey);
+        migrated++;
+      }
+    } catch(err) {}
+  }
+
+  localStorage.setItem(flagKey, Date.now().toString());
+  return migrated;
+}
 async function addHistoryEntry(type, input, output, title) {
   const email = G.user?.email;
   if (!email) return;
@@ -1322,36 +1397,103 @@ async function deleteHistoryEntry(idbKey) {
   await idbDelete(idbKey);
   renderHistoryDrawer();
 }
+
+// Debug + Force-Recover history
+async function debugHistory() {
+  const email  = resolveHistEmail();
+  const idbAll = email ? await idbGetAll(email) : [];
+
+  const lsKeys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && (k.includes('hist') || k.includes('history'))) lsKeys.push(k);
+  }
+  const lsTotal = lsKeys.reduce((sum, k) => {
+    try { const v = localStorage.getItem(k); const a = v ? JSON.parse(v) : []; return sum + (Array.isArray(a) ? a.length : 0); } catch { return sum; }
+  }, 0);
+
+  const flagKey  = email ? `qabp_migrated_v2_${email.replace(/[^a-z0-9]/gi,'_')}` : null;
+  const migrated = flagKey ? localStorage.getItem(flagKey) : null;
+
+  const lines = [
+    `Email: ${email || 'NOT RESOLVED'}`,
+    `IndexedDB entries: ${idbAll.length}`,
+    `localStorage history keys: ${lsKeys.length ? lsKeys.join(', ') : 'none'}`,
+    `localStorage history entries: ${lsTotal}`,
+    `Migration flag: ${migrated ? 'done at ' + new Date(+migrated).toLocaleString() : 'NOT RUN'}`,
+    '',
+    idbAll.length === 0 && lsTotal > 0
+      ? `ISSUE: Found ${lsTotal} entries in localStorage but 0 in IndexedDB.`
+      : idbAll.length > 0
+      ? `OK: ${idbAll.length} entries in IndexedDB.`
+      : 'No history found in either location.',
+    '',
+    'Click OK to force-recover ALL history now.'
+  ];
+
+  const go = window.confirm(lines.join('\n'));
+  if (go && email) {
+    // Reset flag so migration runs fresh
+    if (flagKey) localStorage.removeItem(flagKey);
+    const count = await migrateLocalStorageHistory(email);
+    await renderHistoryDrawer();
+    toast(count > 0 ? `Recovered ${count} entries` : 'No new entries found in localStorage', count > 0 ? 'ok' : 'info');
+  }
+}
 function setHistFilter(f) {
   G.histFilter = f;
   ['all','impact','prd'].forEach(k => document.getElementById('hf-'+k)?.classList.toggle('on', k === f));
   renderHistoryDrawer(); // async — fire and forget is fine here
 }
 async function renderHistoryDrawer() {
-  const all     = await getHistory();
-  const entries = G.histFilter === 'all' ? all : all.filter(e => e.type === G.histFilter);
-  const list    = document.getElementById('histList');
-  const cnt     = document.getElementById('histCnt');
+  const all       = await getHistory();
+  const searchVal = (document.getElementById('histSearch')?.value || '').toLowerCase().trim();
+  let   entries   = G.histFilter === 'all' ? all : all.filter(e => e.type === G.histFilter);
+
+  // Apply search filter if any
+  if (searchVal) {
+    entries = entries.filter(e =>
+      (e.title      || '').toLowerCase().includes(searchVal) ||
+      (e.output?.summary       || '').toLowerCase().includes(searchVal) ||
+      (e.output?.feature_name  || '').toLowerCase().includes(searchVal) ||
+      (e.input?.desc           || '').toLowerCase().includes(searchVal) ||
+      (e.input?.txt            || '').toLowerCase().includes(searchVal) ||
+      (e.dateStr               || '').toLowerCase().includes(searchVal)
+    );
+  }
+
+  const list = document.getElementById('histList');
+  const cnt  = document.getElementById('histCnt');
   if (cnt) cnt.textContent = all.length;
   const lbl = document.getElementById('histUserLabel');
-  if (lbl && G.user) lbl.textContent = `${G.user.email.split('@')[0]} · ${all.length} entries (lifetime)`;
+  if (lbl && G.user) lbl.textContent = `${G.user.email.split('@')[0]} · ${all.length} total`;
+
   if (!entries.length) {
-    list.innerHTML = `<div class="hist-empty">${all.length ? 'No entries for this filter.' : 'No history yet.<br>Run an analysis to see it here.'}</div>`;
+    if (all.length === 0) {
+      list.innerHTML = `<div class="hist-empty">No history yet.<br>Run an analysis to see it here.<br><br><span style="color:var(--dim);font-size:10px;">If you had history before, click 🔍 Debug below.</span></div>`;
+    } else if (searchVal) {
+      list.innerHTML = `<div class="hist-empty">No results for "<b style="color:var(--text)">${escHtml(searchVal)}</b>"</div>`;
+    } else {
+      list.innerHTML = `<div class="hist-empty">No entries for this filter.</div>`;
+    }
     return;
   }
+
   list.innerHTML = entries.map(e => {
     const pm = PROVIDER_META[e.provider];
     const pBadge = pm ? `<span class="provider-badge on ${pm.cls}" style="font-size:8px;padding:1px 5px;">${pm.label}</span>` : '';
     const safeKey = (e.idbKey || String(e.id)).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const tcCount = e.output?.test_cases?.length || 0;
+    const migratedBadge = e._migrated ? `<span style="font-family:var(--mono);font-size:8px;color:var(--mute);padding:1px 5px;background:var(--s3);border-radius:3px;">migrated</span>` : '';
     return `<div class="hist-item" onclick="restoreHistory('${safeKey}')">
       <div class="hist-item-top">
         <span class="hist-item-type ${e.type === 'impact' ? 'ht-impact' : 'ht-prd'}">${e.type === 'impact' ? '⚡ Impact' : '📋 PRD'}</span>
         <span class="hist-item-title">${escHtml(e.title)}</span>
-        ${pBadge}
+        ${pBadge}${migratedBadge}
         <button class="hist-item-del" onclick="event.stopPropagation();deleteHistoryEntry('${safeKey}')" title="Delete">✕</button>
       </div>
-      <div class="hist-item-meta">${e.dateStr} · ${e.output?.test_cases?.length || 0} test cases</div>
-      <div class="hist-item-preview">${escHtml(e.output?.summary || e.output?.feature_name || '—')}</div>
+      <div class="hist-item-meta">${e.dateStr}${tcCount ? ` · ${tcCount} TCs` : ''}</div>
+      <div class="hist-item-preview">${escHtml(e.output?.summary || e.output?.feature_name || e.input?.desc || '—')}</div>
     </div>`;
   }).join('');
 }
@@ -1516,8 +1658,23 @@ function onLoginSuccess() {
   document.getElementById('uNm').textContent = (G.user.name || G.user.email).split(' ')[0];
   const rt = document.getElementById('uRole');
   rt.textContent = G.user.role; rt.className = `role-tag role-${G.user.role}`;
-  renderHistoryDrawer();
-  // FIX 7: Load KB after login, not before — avoids auth errors during session restore
+
+  // Show drawer placeholder immediately
+  const histList = document.getElementById('histList');
+  if (histList) histList.innerHTML = '<div class="hist-empty" style="opacity:.5;">Loading history…</div>';
+  if (document.getElementById('histCnt')) document.getElementById('histCnt').textContent = '…';
+
+  // Run migration then render — async, non-blocking
+  migrateLocalStorageHistory(G.user.email).then(async count => {
+    if (count > 0) {
+      // Small delay so user sees the toast
+      setTimeout(() => toast(`↩ Recovered ${count} old history entries`, 'ok'), 600);
+    }
+    await renderHistoryDrawer();
+  }).catch(async () => {
+    await renderHistoryDrawer();
+  });
+
   loadKB();
   toast(`Welcome back, ${(G.user.name || '').split(' ')[0]} 👋`, 'ok');
 }
