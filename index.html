@@ -7,8 +7,9 @@
 <!-- FIX 1: Inline SVG favicon — eliminates the 404 entirely, no external file needed -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23ff2d55'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-size='20'>🏏</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<!-- FIX 2: Load Google GSI only once, not twice -->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- NO Google GSI script — using pure OAuth2 popup flow instead.
+     This means zero dependency on Google's One Tap / FedCM APIs which keep changing.
+     Pure id_token flow via popup works on all domains including Vercel, forever. -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <style>
@@ -1120,9 +1121,9 @@ select option { background: var(--s2); }
 
 const WORKER = 'https://gameanalyzer.kunaljadework.workers.dev';
 
-// FIX 3: Track whether Google SDK has been initialized — prevents double-init warning
-let gsiInitialized = false;
-
+// ══ Pure OAuth2 — NO Google GSI / One Tap dependency ══
+// This approach works on every domain forever regardless of FedCM changes.
+// We open a plain Google OAuth2 popup, read the id_token from the hash, done.
 let GOOGLE_CLIENT = '';
 let ALLOWED       = '';
 
@@ -1164,14 +1165,16 @@ function toggleTheme() {
 }
 
 let G = {
-  user: null, kb: [], prdFile: null, importChunks: [],
+  user: null, kb: [], kbCount: 0, kbAreas: [], kbTypes: {},
+  prdFile: null, importChunks: [],
   lastImpact: null, lastPRD: null, histFilter: 'all',
   lastProvider: null, sessionToken: null, configLoaded: false,
 };
 
-// FIX 4: Session expiry aligned to worker (8h) — previously 30 days caused
-// silent 401s after session expired on the worker side
-const SESSION_KEY    = 'qabp_session_v7';
+// ══ SESSION ══
+// Auth session: 7.5h localStorage (matches worker's 8h expiry)
+// History: IndexedDB lifetime — never expires, no entry cap, survives sign-out
+const SESSION_KEY    = 'qabp_session_v8';
 const LAST_EMAIL_KEY = 'qabp_last_email';
 
 function saveSession() {
@@ -1189,7 +1192,7 @@ function loadSession() {
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw);
-    // FIX: Match worker's 8h expiry exactly — was 30 days causing silent auth failures
+    // 7.5h — slightly under worker's 8h so we never hit a stale token
     if (!s.user || !s.savedAt || (Date.now() - s.savedAt) > 7.5 * 60 * 60 * 1000) {
       localStorage.removeItem(SESSION_KEY); return null;
     }
@@ -1199,54 +1202,139 @@ function loadSession() {
 
 function clearSession() {
   localStorage.removeItem(SESSION_KEY);
+  // NOTE: intentionally keep LAST_EMAIL_KEY and all IndexedDB history on sign-out
 }
 
 function resolveHistEmail() {
   return G.user?.email || localStorage.getItem(LAST_EMAIL_KEY) || null;
 }
 
-function histKey(email) { return `qabp_hist_${(email||'').replace(/[^a-z0-9]/gi,'_')}`; }
-function loadHistory(email) {
-  try { const r = localStorage.getItem(histKey(email)); return r ? JSON.parse(r) : []; } catch(e) { return []; }
-}
-function saveHistory(email, entries) {
-  try { localStorage.setItem(histKey(email), JSON.stringify(entries.slice(0, 50))); } catch(e) {}
-}
-function addHistoryEntry(type, input, output, title) {
-  if (!G.user?.email) return;
-  const entries = loadHistory(G.user.email);
-  entries.unshift({
-    id: Date.now(), type, title: title || 'Untitled', input, output,
-    ts: Date.now(), provider: G.lastProvider,
-    dateStr: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' })
+// ══ INDEXEDDB HISTORY — lifetime, unlimited entries ══
+// Why IndexedDB vs localStorage:
+//   - localStorage cap is ~5MB total across all keys — easily blown with 600+ KB entries
+//   - IndexedDB gives 50MB+ per origin, handles large JSON results fine
+//   - History never expires, never truncated, persists across sign-out/sign-in
+const IDB_NAME    = 'qabp_history_v2';
+const IDB_STORE   = 'entries';
+let   _idb        = null;
+
+function openIDB() {
+  if (_idb) return Promise.resolve(_idb);
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        const store = db.createObjectStore(IDB_STORE, { keyPath: 'idbKey' });
+        store.createIndex('email', 'email', { unique: false });
+        store.createIndex('ts',    'ts',    { unique: false });
+      }
+    };
+    req.onsuccess = e => { _idb = e.target.result; resolve(_idb); };
+    req.onerror   = e => reject(e.target.error);
   });
-  saveHistory(G.user.email, entries);
+}
+
+async function idbGetAll(email) {
+  try {
+    const db    = await openIDB();
+    const tx    = db.transaction(IDB_STORE, 'readonly');
+    const index = tx.objectStore(IDB_STORE).index('email');
+    return new Promise((resolve, reject) => {
+      const req = index.getAll(email);
+      req.onsuccess = e => resolve((e.target.result || []).sort((a,b) => b.ts - a.ts));
+      req.onerror   = e => reject(e.target.error);
+    });
+  } catch(e) { return []; }
+}
+
+async function idbPut(entry) {
+  try {
+    const db = await openIDB();
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(entry);
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = resolve; tx.onerror = e => reject(e.target.error);
+    });
+  } catch(e) {}
+}
+
+async function idbDelete(idbKey) {
+  try {
+    const db = await openIDB();
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).delete(idbKey);
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = resolve; tx.onerror = e => reject(e.target.error);
+    });
+  } catch(e) {}
+}
+
+async function idbClearEmail(email) {
+  try {
+    const db    = await openIDB();
+    const tx    = db.transaction(IDB_STORE, 'readwrite');
+    const store = tx.objectStore(IDB_STORE);
+    const index = store.index('email');
+    const req   = index.getAllKeys(email);
+    req.onsuccess = e => { (e.target.result||[]).forEach(k => store.delete(k)); };
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = resolve; tx.onerror = e => reject(e.target.error);
+    });
+  } catch(e) {}
+}
+
+// ══ HISTORY FUNCTIONS (IndexedDB-backed, lifetime, unlimited) ══
+async function addHistoryEntry(type, input, output, title) {
+  const email = G.user?.email;
+  if (!email) return;
+  const entry = {
+    idbKey:   `${email}::${Date.now()}::${Math.random().toString(36).slice(2)}`,
+    email,
+    id:       Date.now(),
+    type,
+    title:    title || 'Untitled',
+    input,
+    output,
+    ts:       Date.now(),
+    provider: G.lastProvider,
+    dateStr:  new Date().toLocaleString('en-IN', { timeZone:'Asia/Kolkata', dateStyle:'short', timeStyle:'short' })
+  };
+  await idbPut(entry);
   renderHistoryDrawer();
 }
-function getHistory() { return G.user?.email ? loadHistory(G.user.email) : []; }
-function clearHistory() {
-  if (!G.user?.email || !confirm('Clear all your history?')) return;
-  localStorage.removeItem(histKey(G.user.email));
-  renderHistoryDrawer(); toast('History cleared', 'ok');
+
+async function getHistory() {
+  const email = resolveHistEmail();
+  if (!email) return [];
+  return await idbGetAll(email);
 }
-function deleteHistoryEntry(id) {
-  if (!G.user?.email) return;
-  saveHistory(G.user.email, loadHistory(G.user.email).filter(e => e.id !== id));
+
+async function clearHistory() {
+  const email = G.user?.email;
+  if (!email || !confirm('Clear all your history? This cannot be undone.')) return;
+  await idbClearEmail(email);
+  renderHistoryDrawer();
+  toast('History cleared', 'ok');
+}
+
+async function deleteHistoryEntry(idbKey) {
+  await idbDelete(idbKey);
   renderHistoryDrawer();
 }
 function setHistFilter(f) {
   G.histFilter = f;
   ['all','impact','prd'].forEach(k => document.getElementById('hf-'+k)?.classList.toggle('on', k === f));
-  renderHistoryDrawer();
+  renderHistoryDrawer(); // async — fire and forget is fine here
 }
-function renderHistoryDrawer() {
-  const all     = getHistory();
+async function renderHistoryDrawer() {
+  const all     = await getHistory();
   const entries = G.histFilter === 'all' ? all : all.filter(e => e.type === G.histFilter);
   const list    = document.getElementById('histList');
   const cnt     = document.getElementById('histCnt');
   if (cnt) cnt.textContent = all.length;
   const lbl = document.getElementById('histUserLabel');
-  if (lbl && G.user) lbl.textContent = G.user.email.split('@')[0];
+  if (lbl && G.user) lbl.textContent = `${G.user.email.split('@')[0]} · ${all.length} entries (lifetime)`;
   if (!entries.length) {
     list.innerHTML = `<div class="hist-empty">${all.length ? 'No entries for this filter.' : 'No history yet.<br>Run an analysis to see it here.'}</div>`;
     return;
@@ -1254,20 +1342,22 @@ function renderHistoryDrawer() {
   list.innerHTML = entries.map(e => {
     const pm = PROVIDER_META[e.provider];
     const pBadge = pm ? `<span class="provider-badge on ${pm.cls}" style="font-size:8px;padding:1px 5px;">${pm.label}</span>` : '';
-    return `<div class="hist-item" onclick="restoreHistory(${e.id})">
+    const safeKey = (e.idbKey || String(e.id)).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div class="hist-item" onclick="restoreHistory('${safeKey}')">
       <div class="hist-item-top">
         <span class="hist-item-type ${e.type === 'impact' ? 'ht-impact' : 'ht-prd'}">${e.type === 'impact' ? '⚡ Impact' : '📋 PRD'}</span>
         <span class="hist-item-title">${escHtml(e.title)}</span>
         ${pBadge}
-        <button class="hist-item-del" onclick="event.stopPropagation();deleteHistoryEntry(${e.id})" title="Delete">✕</button>
+        <button class="hist-item-del" onclick="event.stopPropagation();deleteHistoryEntry('${safeKey}')" title="Delete">✕</button>
       </div>
       <div class="hist-item-meta">${e.dateStr} · ${e.output?.test_cases?.length || 0} test cases</div>
       <div class="hist-item-preview">${escHtml(e.output?.summary || e.output?.feature_name || '—')}</div>
     </div>`;
   }).join('');
 }
-function restoreHistory(id) {
-  const entry = getHistory().find(e => e.id === id);
+async function restoreHistory(keyOrId) {
+  const all   = await getHistory();
+  const entry = all.find(e => (e.idbKey && e.idbKey === keyOrId) || String(e.id) === String(keyOrId));
   if (!entry) return;
   closeHistory();
   if (entry.type === 'impact') {
@@ -1342,65 +1432,51 @@ async function fetchConfig() {
   }
 }
 
-// FIX 5: Single GSI init function — all paths call this one place
-// Prevents the "initialize() called multiple times" warning
-function initGSI(callback) {
-  if (!G.configLoaded) return;
-  if (typeof google === 'undefined') return;
-  if (!gsiInitialized) {
-    google.accounts.id.initialize({
-      client_id:             GOOGLE_CLIENT,
-      callback:              callback || handleGoogleCred,
-      auto_select:           false,
-      cancel_on_tap_outside: false,
-    });
-    gsiInitialized = true;
-  }
-}
-
+// ══ PURE OAUTH2 POPUP — zero GSI / One Tap / FedCM dependency ══
+// Works on every domain forever. No SDK to break. Google can change One Tap all they want.
+// Flow: open oauth2 popup → read id_token from hash fragment → verify on worker → done.
 function doGoogleSignIn() {
   if (!G.configLoaded) { loginErr('App config not loaded yet, please wait…'); return; }
-  if (typeof google === 'undefined') { loginErr('Google SDK not loaded. Check your internet connection.'); return; }
-
-  // Ensure initialized (safe to call multiple times — guarded by flag above)
-  initGSI();
-
   document.getElementById('googleSignInBtn').disabled = true;
-
-  google.accounts.id.prompt(notification => {
+  const nonce = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  const url = 'https://accounts.google.com/o/oauth2/v2/auth'
+    + '?client_id='     + encodeURIComponent(GOOGLE_CLIENT)
+    + '&redirect_uri='  + encodeURIComponent(location.origin + location.pathname)
+    + '&response_type=id_token'
+    + '&scope=openid%20email%20profile'
+    + '&nonce='         + nonce
+    + '&hd='            + encodeURIComponent(ALLOWED)
+    + '&prompt=select_account';
+  const popup = window.open(url, 'gauth', 'width=500,height=620,left=200,top=80,scrollbars=yes');
+  if (!popup) {
     document.getElementById('googleSignInBtn').disabled = false;
-    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-      // FIX 6: Use popup flow for FedCM-deprecated environments (Vercel domains)
-      const url = `https://accounts.google.com/o/oauth2/v2/auth`
-        + `?client_id=${GOOGLE_CLIENT}`
-        + `&redirect_uri=${encodeURIComponent(location.origin + location.pathname)}`
-        + `&response_type=id_token`
-        + `&scope=openid%20email%20profile`
-        + `&nonce=${Math.random().toString(36).slice(2)}`
-        + `&hd=${ALLOWED}`;
-      const popup = window.open(url, 'gauth', 'width=480,height=580,left=200,top=100');
-      if (!popup) { loginErr('Popup blocked. Please allow popups for this site and try again.'); return; }
-      const timer = setInterval(() => {
-        try {
-          const h = popup?.location?.hash || '';
-          if (h.includes('id_token')) {
-            clearInterval(timer); popup.close();
-            const p = new URLSearchParams(h.slice(1));
-            handleGoogleCred({ credential: p.get('id_token') });
-          }
-        } catch(e) {}
-        if (!popup || popup.closed) clearInterval(timer);
-      }, 500);
+    loginErr('Popup was blocked. Please allow popups for this site and try again.');
+    return;
+  }
+  const timer = setInterval(() => {
+    try {
+      // Cross-origin check: will throw if still on accounts.google.com — that's fine
+      const h = popup.location.hash || '';
+      if (h.includes('id_token')) {
+        clearInterval(timer);
+        popup.close();
+        const params = new URLSearchParams(h.startsWith('#') ? h.slice(1) : h);
+        const token  = params.get('id_token');
+        if (token) { handleGoogleToken(token); }
+        else { loginErr('No id_token in response. Try again.'); document.getElementById('googleSignInBtn').disabled = false; }
+      }
+      // Detect if user closed popup without signing in
+      if (popup.closed) { clearInterval(timer); document.getElementById('googleSignInBtn').disabled = false; }
+    } catch(crossOriginErr) {
+      // Still on google.com — this is expected, keep polling
+      if (popup.closed) { clearInterval(timer); document.getElementById('googleSignInBtn').disabled = false; }
     }
-  });
+  }, 400);
 }
 
-async function handleGoogleCred(response) {
-  const token = response.credential;
-  if (!token) { loginErr('No credential received.'); return; }
+async function handleGoogleToken(token) {
   document.getElementById('loginSpinner').style.display = 'block';
   document.getElementById('loginErr').classList.remove('on');
-  document.getElementById('googleSignInBtn').disabled = true;
   try {
     const res  = await fetch(WORKER + '/auth/verify', {
       method:  'POST',
@@ -1454,8 +1530,7 @@ function applyRole(role) {
 
 function doSignOut() {
   if (!confirm('Sign out?')) return;
-  try { google.accounts.id.disableAutoSelect(); } catch(e) {}
-  gsiInitialized = false; // FIX: Reset so next login re-inits cleanly
+  // History (IndexedDB) is intentionally preserved — lifetime storage
   clearSession(); G.user = null; G.sessionToken = null; location.reload();
 }
 
@@ -1508,9 +1583,12 @@ async function loadKB() {
   try {
     const d = await wFetch('/kb');
     G.kb = d.entries || [];
+    // For viewer role, store count + areas from response even though entries array is empty
+    G.kbCount  = d.count  ?? G.kb.length;
+    G.kbAreas  = d.areas  || [];
+    G.kbTypes  = d.types  || {};
     updateKBUI();
-    const cnt = d.count ?? G.kb.length;
-    setCloud('ok', `☁ ${cnt}`);
+    setCloud('ok', `☁ ${G.kbCount}`);
   } catch(e) {
     if (e.message !== 'Session expired') {
       setCloud('err', 'error'); toast(e.message, 'err');
@@ -1519,7 +1597,7 @@ async function loadKB() {
 }
 
 function updateKBUI() {
-  const n = G.kb.length;
+  const n = G.kbCount ?? G.kb.length;
   document.getElementById('kbCnt').textContent   = n;
   document.getElementById('kbTotal').textContent = n;
   const panel = document.getElementById('kbCtxPanel');
@@ -1527,18 +1605,22 @@ function updateKBUI() {
     panel.innerHTML = '<div class="info-row"><span class="info-dot" style="color:var(--mute)">○</span> KB empty — add entries to improve AI output</div>';
     return;
   }
-  const tc = G.kb.filter(e=>e.type==='test_cases').length;
-  const co = G.kb.filter(e=>e.type==='code').length;
-  const pr = G.kb.filter(e=>e.type==='prd').length;
-  const no = G.kb.filter(e=>e.type==='note').length;
-  const fe = G.kb.filter(e=>e.type==='feat').length;
+  // Use real entry counts if admin (has full entries), else use type summary from viewer response
+  const tc = G.kb.length ? G.kb.filter(e=>e.type==='test_cases').length : (G.kbTypes?.test_cases||0);
+  const co = G.kb.length ? G.kb.filter(e=>e.type==='code').length       : (G.kbTypes?.code||0);
+  const pr = G.kb.length ? G.kb.filter(e=>e.type==='prd').length        : (G.kbTypes?.prd||0);
+  const no = G.kb.length ? G.kb.filter(e=>e.type==='note').length       : (G.kbTypes?.note||0);
+  const fe = G.kb.length ? G.kb.filter(e=>e.type==='feat').length       : (G.kbTypes?.feat||0);
+  const areaSnippet = G.kbAreas?.slice(0,8).join(', ');
   panel.innerHTML = `
-    <div class="info-row"><span class="info-dot">✓</span> <b style="color:var(--jade)">${n} KB entries</b> injected server-side into every analysis</div>
+    <div class="info-row"><span class="info-dot">✓</span> <b style="color:var(--jade)">${n} KB entries</b> — ranked by relevance, injected server-side into every analysis</div>
     ${tc ? `<div class="info-row"><span class="info-dot">›</span> ${tc} test case set${tc>1?'s':''}</div>` : ''}
     ${pr ? `<div class="info-row"><span class="info-dot">›</span> ${pr} PRD / spec</div>` : ''}
     ${fe ? `<div class="info-row"><span class="info-dot">›</span> ${fe} feature doc${fe>1?'s':''}</div>` : ''}
     ${co ? `<div class="info-row"><span class="info-dot">›</span> ${co} code snippet${co>1?'s':''}</div>` : ''}
     ${no ? `<div class="info-row"><span class="info-dot">›</span> ${no} QA note${no>1?'s':''}</div>` : ''}
+    ${areaSnippet ? `<div class="info-row"><span class="info-dot" style="color:var(--mute)">›</span> <span style="color:var(--dim);font-size:10px;">Areas: ${areaSnippet}${G.kbAreas.length>8?' …':''}
+</span></div>` : ''}
   `;
 }
 
@@ -1821,18 +1903,10 @@ async function runImpact() {
   const lbl    = document.getElementById('iLbl');
   const ticker = setInterval(() => { lbl.textContent = steps[si=(si+1)%steps.length]; }, 2200);
 
-  const prompt = `You are a PRINCIPAL QA ENGINEER at Hitwicket — a mobile cricket strategy game (Android + iOS).
+  const prompt = `You are a PRINCIPAL QA ENGINEER at Hitwicket — a mobile cricket strategy game (Android + iOS) with 600+ KB entries about every feature, bug pattern, and edge case in the system.
 
-You have expert-level knowledge of the entire Hitwicket tech stack:
-- GAMEPLAY: Super Ability (SA) system with mana/threshold mechanics, Match Engine (batting/bowling/fielding AI), Player Stats (OVR, PER, form), Squad/Lineup builder, Training system
-- PROGRESSION: League Mode, Trophy Road, Season Pass, Alliance, PvP matchmaking
-- ECONOMY: Store (chests, EPB/SPB player scouts, offers, bundles), Auction house, in-app purchases
-- SOCIAL: Alliance chat, PvP challenges, HW TV (replays), Player Scout system
-- PLATFORM: iOS (Game Center, Sign-in with Apple), Android (Play Games, Google Sign-In), WhatsApp/Facebook auth
-- ONBOARDING: FTUE (First Time User Experience) with all tutorial steps
-- INFRASTRUCTURE: Push notifications, offline mode, network retry logic, Analytics events
+CRITICAL: The KB context below contains hundreds of real Hitwicket test cases, PRDs, bug reports, and feature docs. You MUST read ALL of it and cross-reference every relevant entry against the change below. Do NOT produce generic test cases — every TC must reference actual Hitwicket systems, screens, and known bug patterns from the KB.
 
-A developer made the following change:
 CHANGE TYPE: ${type}
 PLATFORM: ${platform}
 FEATURE TAGS: ${tags.join(', ')||'not specified'}
@@ -1840,58 +1914,70 @@ FEATURE TAGS: ${tags.join(', ')||'not specified'}
 CHANGE DESCRIPTION:
 ${descSafe}
 
-Your task: perform an EXHAUSTIVE QA impact analysis. Every field must be FULLY detailed — no short answers.
+TASK: Perform an EXHAUSTIVE QA impact analysis using every relevant KB entry. Generate the maximum possible test cases covering all affected areas, all known bug patterns related to this change, all platform-specific concerns, and all cross-feature interactions.
 
-Return ONLY a valid JSON object (no markdown, no code fences, nothing before {, nothing after }):
+Return ONLY a valid JSON object (nothing before {, nothing after }):
 
 {
-  "summary": "A thorough 4-5 sentence executive summary covering: what changed, all systems that could be affected, key risks, platform-specific concerns, and the critical path for testing. Be specific about Hitwicket screen names and flows.",
+  "summary": "5-6 sentence executive summary: what changed, every system affected, platform-specific risks, known historical bugs this touches from KB, critical test path, and deployment risk level. Name actual Hitwicket screens and service names.",
   "risk_score": "CRITICAL|HIGH|MEDIUM|LOW",
   "impact_areas": [
     {
-      "title": "Exact impacted area name",
+      "title": "Exact Hitwicket feature/system name",
       "severity": "critical|high|medium|low",
       "items": [
-        "Detailed check item 1 — reference exact screen name, button, or flow in Hitwicket",
-        "Detailed check item 2 — include expected behavior and what could break",
-        "Detailed check item 3",
-        "Detailed check item 4"
+        "Specific check referencing exact screen name, button label, or API in Hitwicket",
+        "What could break and the exact failure mode",
+        "Known historical bug pattern from KB that could regress",
+        "Cross-system interaction to verify",
+        "Platform-specific concern (Android vs iOS)",
+        "Edge case specific to this area"
       ]
     }
   ],
   "test_cases": [
     {
       "id": "TC-001",
-      "feature": "Exact Hitwicket feature/screen name",
-      "title": "Full descriptive test case title — what is being verified",
-      "category": "Functional|Regression|Edge Case|UI|Performance|Integration",
-      "preconditions": "Exact setup state required: account type, player state, mana level, screen to start from, any prerequisite actions",
-      "steps": "1. Navigate to [exact screen]\\n2. [Exact action with specific element name]\\n3. [Next action]\\n4. [Verification step]",
-      "expected": "Precise expected outcome — what the user sees, what data should be stored, what events fire, what the UI shows",
-      "break_point": "Exact condition that would cause this test to fail — the specific failure mode",
-      "systems": "SA Manager, Match Engine (comma-separated Hitwicket systems involved)",
+      "feature": "Exact Hitwicket feature/screen name from KB",
+      "title": "Full descriptive title — specific, not generic",
+      "category": "Functional|Regression|Edge Case|UI|Performance|Integration|Security",
+      "preconditions": "Exact game state: account level, player OVR, mana amount, current screen, any required setup steps",
+      "steps": "1. Navigate to [exact screen name]\\n2. [Exact UI action with element name]\\n3. [Next step with specifics]\\n4. [Verification step]\\n5. [Check secondary effects]",
+      "expected": "Precise outcome: exact UI text, data value, animation state, backend event, notification triggered",
+      "break_point": "Exact failure condition and the specific bug this would expose",
+      "systems": "Comma-separated list of actual Hitwicket backend services/managers involved",
       "edge_case": "Yes|No",
       "priority": "P0|P1|P2|P3"
     }
   ],
-  "edge_cases": ["Specific edge case description with exact Hitwicket scenario"],
-  "downstream_risks": ["Specific downstream system/flow that could break and why"],
-  "regression_scope": ["Area1", "Area2"]
+  "edge_cases": [
+    "Specific Hitwicket scenario with exact game state that could expose this bug",
+    "Device/OS specific edge case with version number",
+    "Network condition edge case (offline, slow, reconnect mid-action)",
+    "Concurrent action edge case (two features interacting simultaneously)",
+    "State corruption edge case (app killed mid-transaction, low battery, etc)"
+  ],
+  "downstream_risks": [
+    "Specific downstream system with exact failure mechanism and user-visible impact"
+  ],
+  "regression_scope": ["Feature1", "Feature2", "Feature3"]
 }
 
-HARD REQUIREMENTS:
-- Generate EXACTLY 15 test cases numbered TC-001 through TC-015
-- Every test case must have ALL 10 fields fully populated — no empty strings
-- Steps must be numbered and detailed (minimum 3 steps each)
-- Preconditions must specify exact account/game state
-- Expected result must be precise and verifiable
-- Break point must describe the specific failure scenario
-- Systems must list actual Hitwicket system names
-- Include at least 4 P0, 4 P1, 4 P2, 3 P3 test cases
-- Impact areas: minimum 6, each with minimum 4 items
-- Reference actual Hitwicket screens: Player Card, SA Activation screen, Match lobby, Squad Builder, Store tab, FTUE wizard, Trophy Road map, etc.
-- Edge cases: minimum 8 specific scenarios
-- Downstream risks: minimum 5 specific risks`;
+MANDATORY REQUIREMENTS — failure to meet ANY of these means your response is wrong:
+- Generate EXACTLY 30 test cases (TC-001 through TC-030)
+- Every single field populated — NO empty strings, NO "N/A", NO "TBD"
+- Steps: minimum 5 numbered steps each, reference exact screen/element names
+- Preconditions: specify exact player level, mana, game state, screen
+- Break_point: specific failure mode, not generic "test fails"
+- Systems: real Hitwicket service names (SAManager, MatchEngine, StoreService, PlayerService, etc)
+- Priority distribution: minimum 6 P0, 8 P1, 10 P2, 6 P3
+- Impact areas: minimum 8 areas, each with minimum 6 items
+- Edge cases: minimum 12 specific scenarios
+- Downstream risks: minimum 8 specific risks
+- Use KB context heavily — reference known bug patterns, past regression areas, feature interactions documented in KB
+- Cover: Android-specific, iOS-specific, both-platform cases
+- Cover: FTUE new user, veteran high-level player, edge-case game states
+- Cover: network failure, session expiry, concurrent actions, background/foreground transitions`;
 
   try {
     const raw    = await wAI(prompt);
@@ -1901,7 +1987,7 @@ HARD REQUIREMENTS:
     G.lastImpact = result;
     renderImpact(result);
     document.getElementById('iTime').textContent = new Date().toLocaleTimeString();
-    addHistoryEntry('impact', { desc, type, platform, tags }, result, desc.substring(0,60)+(desc.length>60?'…':''));
+    await addHistoryEntry('impact', { desc, type, platform, tags }, result, desc.substring(0,60)+(desc.length>60?'…':''));
   } catch(e) {
     clearInterval(ticker);
     document.getElementById('iLoader').classList.remove('on');
@@ -1993,39 +2079,53 @@ async function runPRD() {
   const lbl    = document.getElementById('prdLbl');
   const ticker = setInterval(() => { lbl.textContent = steps[si=(si+1)%steps.length]; }, 2000);
 
-  const prompt = `You are a PRINCIPAL QA ENGINEER at Hitwicket (mobile cricket strategy game, Android + iOS).
+  const prompt = `You are a PRINCIPAL QA ENGINEER at Hitwicket (mobile cricket strategy game, Android + iOS) with access to 600+ KB entries covering every feature, known bug, historical regression, and test pattern in the entire Hitwicket ecosystem.
 
-Analyze the following PRD / feature specification and generate a COMPREHENSIVE, DETAILED test suite. Every single test case must be fully filled out — no empty fields, no placeholder text.
+CRITICAL: The KB context injected into this prompt contains real Hitwicket test cases, PRDs, bug reports, and feature docs. Read ALL of it. Cross-reference this PRD against every related KB entry. Your test cases must reflect actual Hitwicket knowledge — not generic mobile app testing.
 
 PRD CONTENT:
-${G.prdFile?.type === 'pdf' ? `[PDF FILE: ${G.prdFile.name} — analyze based on filename and KB context]` : contentSafe}
+${G.prdFile?.type === 'pdf' ? `[PDF: ${G.prdFile.name} — use filename + KB context to infer feature details]` : contentSafe}
 
-${focus ? `SPECIAL FOCUS: ${focus}` : ''}
+${focus ? `SPECIAL FOCUS AREAS: ${focus}` : ''}
 PLATFORM: ${platform}
 PRIORITY SYSTEM: ${prio}
 
-Return ONLY valid JSON (no markdown, no code fences, nothing before {, nothing after }):
+TASK: Generate a comprehensive, production-ready test suite using ALL relevant KB context. Every test case must be specific to Hitwicket's actual codebase, screens, and known bug patterns.
+
+Return ONLY valid JSON (nothing before {, nothing after }):
 
 {
-  "feature_name": "Exact feature name from the PRD",
+  "feature_name": "Exact feature name from PRD",
   "test_cases": [
     {
       "id": "TC-001",
-      "feature": "Sub-feature or component name",
-      "title": "Full descriptive title of what is being tested",
+      "feature": "Exact sub-feature or Hitwicket screen name",
+      "title": "Specific, non-generic test case title describing exactly what is verified",
       "category": "Functional|UI|Regression|Edge Case|Performance|Integration|Security",
-      "preconditions": "Exact prerequisite state — account type, game state, data setup needed",
-      "steps": "1. [Exact step]\\n2. [Next step]\\n3. [Verification step]\\n4. [Check result]",
-      "expected_result": "Precise verifiable outcome — what the user sees, data saved, UI state",
-      "break_point": "The exact condition or failure mode that would make this test fail",
-      "systems": "Affected Hitwicket systems (e.g. SAManager, StoreService, MatchEngine)",
+      "preconditions": "Exact game state: account level, player roster state, currency amounts, screen to navigate to, any prerequisite actions needed",
+      "steps": "1. [Exact screen name and navigation path]\\n2. [Exact UI element to interact with]\\n3. [Specific input or action with values]\\n4. [Verification step with exact expected value]\\n5. [Check secondary system effects]",
+      "expected_result": "Precise outcome: exact UI state, values displayed, animations triggered, backend data saved, analytics events fired",
+      "break_point": "Exact condition and failure mode — what specific bug or regression this would catch",
+      "systems": "Real Hitwicket service names (SAManager, MatchEngine, StoreService, PlayerService, LeagueService, etc)",
       "edge_case": "Yes|No",
       "priority": "${prio === 'P0-P3' ? 'P0|P1|P2|P3' : 'Critical|High|Medium|Low'}"
     }
   ]
 }
 
-REQUIREMENTS: Generate 20 test cases. ALL fields fully populated. Steps minimum 4. Cover happy path, negative, boundary, UI states. Include Android and iOS specific cases. Distribute: ~4 P0, ~6 P1, ~6 P2, ~4 P3.`;
+MANDATORY — every requirement must be met:
+- Generate EXACTLY 30 test cases (TC-001 through TC-030)
+- ALL fields fully populated, no empty strings, no "N/A", no generic placeholders
+- Steps: minimum 5 numbered steps, exact screen names and UI element names
+- Preconditions: exact game/account state (e.g. "Player with OVR 85+, 3 SA charges, in League Season 5")
+- Expected_result: specific verifiable outcome, not "feature works correctly"
+- Break_point: exact failure mode, not "test fails"
+- Systems: real Hitwicket backend service names
+- Priority: ${prio === 'P0-P3' ? '~6 P0, ~9 P1, ~9 P2, ~6 P3' : '~6 Critical, ~9 High, ~9 Medium, ~6 Low'}
+- Coverage: happy path, error flows, boundary values, empty states, loading states, network failure, session expiry
+- Platform: include Android-specific AND iOS-specific cases where behavior differs
+- Use KB knowledge: reference known bug patterns and regression areas relevant to this feature
+- User types: new FTUE user, mid-game player, high-level veteran, edge-case states`;
 
   try {
     const raw    = await wAI(prompt);
@@ -2033,7 +2133,7 @@ REQUIREMENTS: Generate 20 test cases. ALL fields fully populated. Steps minimum 
     const result = parseAIJson(raw);
     G.lastPRD = result;
     renderPRD(result);
-    addHistoryEntry('prd', { txt: txt.substring(0,500), prio, platform, focus }, result, result.feature_name || txt.substring(0,50) || 'PRD Analysis');
+    await addHistoryEntry('prd', { txt: txt.substring(0,500), prio, platform, focus }, result, result.feature_name || txt.substring(0,50) || 'PRD Analysis');
   } catch(e) {
     clearInterval(ticker);
     document.getElementById('prdLoader').classList.remove('on');
@@ -2244,34 +2344,36 @@ window.addEventListener('DOMContentLoaded', async () => {
     wrap.appendChild(s);
   });
 
-  // FIX 9: fetchConfig first, then try session restore — never double-init GSI
+  // Pre-open IndexedDB so first history access is instant
+  openIDB().catch(() => {});
+
+  // Load config (google client ID + allowed domain) from worker
   try {
     await fetchConfig();
   } catch(e) {
-    return; // Error already shown in login screen
+    return; // Error shown in login card
   }
 
+  // Try to restore existing session — no GSI needed
   const saved = loadSession();
   if (saved?.user && saved?.sessionToken) {
-    // Try to restore session without touching GSI at all
     G.user         = saved.user;
     G.sessionToken = saved.sessionToken;
     try {
-      await wFetch('/kb'); // Validate session is still alive
-      saveSession();       // Refresh the savedAt timestamp
+      await wFetch('/kb'); // Validate token is still alive on worker
+      saveSession();       // Refresh savedAt timestamp
       onLoginSuccess();
       toast('Session restored ✓', 'ok');
     } catch(e) {
-      // Session invalid — clear and show login
+      // Session dead — clear and let user sign in fresh via OAuth popup
       clearSession(); G.user = null; G.sessionToken = null;
-      // Only init GSI here when we actually need login (NOT inside onLoginSuccess)
-      initGSI();
+      // No GSI to init — button click goes straight to OAuth popup
     }
-  } else {
-    // No saved session — init GSI ready for manual login
-    initGSI();
   }
+  // If no session or session restore failed, login screen is already visible.
+  // User clicks "Sign in with Google" → doGoogleSignIn() → pure OAuth2 popup.
 });
+
 </script>
 </body>
 </html>
