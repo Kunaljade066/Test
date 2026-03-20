@@ -3204,3 +3204,110 @@ function closeCuPanel() {
 // ══════════════════════════════════════════
 // IMPORT BUGS — Admin CSV
 // ══════════════════════════════════════════
+let _importRows = [];
+
+function importHandleDrop(e) {
+  e.preventDefault();
+  const dz = document.getElementById('importDropZone');
+  if(dz){ dz.style.borderColor='var(--bd2)'; dz.style.background='rgba(124,58,237,.04)'; }
+  const file = e.dataTransfer?.files?.[0];
+  if (file) importHandleFile(file);
+}
+
+function importHandleFile(file) {
+  if (!file || !file.name.endsWith('.csv')) { toast('Please select a .csv file', 'err'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const lines = ev.target.result.split(/\r?\n/).filter(l => l.trim());
+      if (lines.length < 2) { toast('CSV needs header + at least 1 data row', 'err'); return; }
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g,''));
+      _importRows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const vals = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+        const row = {};
+        headers.forEach((h, idx) => { row[h] = (vals[idx]||'').replace(/^"|"$/g,'').trim(); });
+        if (!row.title) continue;
+        _importRows.push(row);
+      }
+      if (!_importRows.length) { toast('No rows with a title found', 'err'); return; }
+      importShowPreview();
+    } catch(err) { toast('CSV parse error: ' + err.message, 'err'); }
+  };
+  reader.readAsText(file);
+}
+
+function importShowPreview() {
+  document.getElementById('importPreviewLabel').textContent = `Preview — ${_importRows.length} bug${_importRows.length!==1?'s':''} ready to import`;
+  let h = '<table><thead><tr><th>#</th><th>Title</th><th>Priority</th><th>Status</th><th>Feature</th><th>Sprint</th></tr></thead><tbody>';
+  _importRows.slice(0,10).forEach((row,i) => {
+    h += `<tr><td class="tc-id">${i+1}</td><td class="tc-title">${esc(row.title||'')}</td><td>${pChip(row.priority||'Medium')}</td><td>${stChip(row.status||'Open')}</td><td>${esc(row.feature||'—')}</td><td>${esc(row.sprint||'—')}</td></tr>`;
+  });
+  if(_importRows.length>10) h+=`<tr><td colspan="6" style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--dim);padding:10px">…and ${_importRows.length-10} more</td></tr>`;
+  h += '</tbody></table>';
+  document.getElementById('importPreviewTable').innerHTML = h;
+  document.getElementById('importPreview').style.display = 'block';
+}
+
+function importReset() {
+  _importRows = [];
+  document.getElementById('importPreview').style.display = 'none';
+  document.getElementById('importProgress').style.display = 'none';
+  const fi = document.getElementById('importFileInput'); if(fi) fi.value = '';
+}
+
+async function importSubmit() {
+  if (!_importRows.length) return;
+  if (S.user?.role !== 'admin') { toast('Admin only', 'err'); return; }
+  if (!confirm(`Import ${_importRows.length} bug${_importRows.length!==1?'s':''}? This cannot be undone.`)) return;
+  document.getElementById('importPreview').style.display = 'none';
+  document.getElementById('importProgress').style.display = 'block';
+  const bar = document.getElementById('importProgressBar');
+  const lbl = document.getElementById('importProgressLabel');
+  let done = 0, failed = 0;
+  for (const row of _importRows) {
+    const data = {
+      title:    row.title,
+      priority: row.priority  || 'Medium',
+      status:   row.status    || 'Open',
+      severity: row.severity  || '',
+      feature:  row.feature   || '',
+      sprint:   row.sprint    || '',
+      build:    row.build     || '',
+      device:   row.device    || '',
+      steps:    row.steps     || row['steps to reproduce'] || '',
+      actual:   row.actual    || row['actual result']      || '',
+      expected: row.expected  || row['expected result']    || '',
+      reporter: row.reporter  || S.user?.name || '',
+      reporter_email:   S.user?.email   || '',
+      reporter_picture: S.user?.picture || '',
+      assignees: [], app_url: APP_URL,
+    };
+    try { await api('/bugs', 'POST', data); done++; } catch(e) { failed++; }
+    bar.style.width = Math.round(((done+failed)/_importRows.length)*100) + '%';
+    lbl.textContent = `Importing… ${done+failed} / ${_importRows.length}`;
+  }
+  lbl.textContent = `✅ Done — ${done} imported${failed ? `, ${failed} failed` : ''}`;
+  toast(`Imported ${done} bugs ✓`, 'ok');
+  importReset();
+  await refreshAll();
+}
+</script>
+
+<div id="natashaIntro" class="gone">
+  <div class="natasha-wrap">
+    <div class="natasha-bubble">
+      <div class="natasha-name-tag">NATASHA</div>
+      <div class="natasha-text" id="natashaText">Welcome back! Ready to squash some bugs today? 🏏</div>
+      <button class="natasha-ok" onclick="dismissNatasha()">LET'S GO!</button>
+    </div>
+    <div class="natasha-char-wrap">
+      <img id="natashaImg" src="natasha.png" alt="Natasha"
+        onerror="this.style.display='none';document.getElementById('natashaEmoji').style.display='block'"
+      >
+      <div id="natashaEmoji" style="display:none;font-size:80px;line-height:1;padding-bottom:8px;filter:drop-shadow(0 4px 12px rgba(124,58,237,.4))">🏏</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
