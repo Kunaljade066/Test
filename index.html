@@ -1324,7 +1324,7 @@ async function fetchConfig() {
   }
 }
 
-function doGoogleSignIn() {
+  function doGoogleSignIn() {
   if (!G.configLoaded) { loginErr('App config not loaded yet, please wait…'); return; }
   if (typeof google === 'undefined') { loginErr('Google SDK not loaded. Check your internet connection.'); return; }
   google.accounts.id.prompt(notification => {
@@ -1350,7 +1350,7 @@ function doGoogleSignIn() {
       }, 500);
     }
   });
-
+}
 
 async function handleGoogleCred(response) {
   const token = response.credential;
