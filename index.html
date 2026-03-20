@@ -1267,18 +1267,25 @@ const saveSession=()=>{try{if(S.user)localStorage.setItem(SK,JSON.stringify({use
 const loadSession=()=>{try{const r=JSON.parse(localStorage.getItem(SK)||'null');if(!r||!r.user||Date.now()-r.ts>8*3600*1000){localStorage.removeItem(SK);return null;}return r;}catch{return null;}};
 const clearSession=()=>localStorage.removeItem(SK);
 
-// ── FAST BUG SYNC ─────────────────────────────────────────
+// ── BUG SYNC — polls every 5 min, only when tab is visible ──────────────
+// Reduces KV reads from ~5,760/day to ~288/day per user
 let _syncTimer=null;
+const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
 function startFastSync(){
   if(_syncTimer) clearInterval(_syncTimer);
   _syncTimer=setInterval(async()=>{
+    // Skip if tab is hidden — no point refreshing data nobody sees
+    if(document.hidden) return;
     if(!S.user?.idToken) return;
     try{
       const r=await fetch(WORKER+'/bugs',{headers:{'Content-Type':'application/json','X-Google-Token':S.user.idToken}});
       if(!r.ok) return;
       const d=await r.json();
       const fresh=d.bugs||[];
-      if(fresh.length!==S.bugs.length||(fresh[0]?.id!==S.bugs[0]?.id)){
+      // Only update state if something actually changed
+      const changed = fresh.length!==S.bugs.length || (fresh[0]?.id!==S.bugs[0]?.id) || (fresh[fresh.length-1]?.updated_at!==S.bugs[S.bugs.length-1]?.updated_at);
+      if(changed){
         fresh.forEach(b=>{if(!b.assignees)b.assignees=b.assignee_email?[{name:b.assignee||'',email:b.assignee_email,picture:b.assignee_picture||''}]:[];});
         S.bugs=fresh;
         updateSbBadges();populateDropdowns();applyF();
@@ -1287,14 +1294,17 @@ function startFastSync(){
         else if(S.view==='board')renderBoard();
       }
     }catch(e){}
-  },15000);
+  }, SYNC_INTERVAL);
 }
 
-// ── LIVE PRESENCE ─────────────────────────────────────────
+// ── LIVE PRESENCE — fetch once on load, then every 15 min ───────────────
+// Was: every 90s = 960 KV reads/day. Now: every 15min = 96 reads/day
 let _presenceTimer=null;
 async function startLivePresence(){
   await updateLiveCount();
-  _presenceTimer=setInterval(updateLiveCount,90000);
+  _presenceTimer=setInterval(()=>{
+    if(!document.hidden) updateLiveCount();
+  }, 15 * 60 * 1000); // 15 minutes
 }
 async function updateLiveCount(){
   if(!S.user?.idToken) return;
@@ -1344,7 +1354,7 @@ function scheduleTokenRefresh() {
     } catch(e) {
       console.warn('[session] silent refresh failed:', e.message);
     }
-  }, 45 * 60 * 1000);
+  }, 90 * 60 * 1000); // 90 min — was 45min, halves auth/verify KV reads
 }
 
 async function ensureFreshToken() {
@@ -1352,7 +1362,7 @@ async function ensureFreshToken() {
   const sess = loadSession();
   if (!sess) return;
   const age = Date.now() - (sess.ts || 0);
-  if (age > 50 * 60 * 1000) {
+  if (age > 80 * 60 * 1000) { // raised from 50→80min to reduce /auth/verify hits
     try {
       const r = await fetch(WORKER+'/auth/verify', {
         method: 'POST',
@@ -1624,6 +1634,16 @@ function launchConfetti(duration=3500){
   window.addEventListener('resize',onResize,{once:true});
 }
 
+// ── DEBOUNCED REFRESH — coalesces rapid successive refreshAll() calls ────
+// Prevents multiple KV reads when several saves happen close together
+let _refreshDebounceTimer = null;
+function debouncedRefresh(delayMs = 2000) {
+  clearTimeout(_refreshDebounceTimer);
+  _refreshDebounceTimer = setTimeout(() => {
+    refreshAll().catch(() => {});
+  }, delayMs);
+}
+
 function signOut(){
   closeProfileMenu();
   if(!confirm('Sign out?'))return;
@@ -1641,6 +1661,7 @@ function signOut(){
 async function api(path,method='GET',body=null){
   if(!S.user)throw new Error('Not logged in');
   await ensureFreshToken();
+  trackKV(1); // count every worker call (each hits KV at minimum once)
   const r=await fetch(WORKER+path,{method,headers:{'Content-Type':'application/json','X-Google-Token':S.user.idToken},body:body?JSON.stringify(body):undefined});
   const d=await r.json();
   if(r.status===401){
@@ -1661,10 +1682,20 @@ async function api(path,method='GET',body=null){
   return d;
 }
 
+// Track KV read count for the session (displayed in pip tooltip)
+let _kvReads = 0;
+const _kvSession = {start: Date.now()};
+
+function trackKV(n=1){ _kvReads+=n; }
+
 function setCloud(s,l){
   const p=document.getElementById('pip'),lb=document.getElementById('pipLbl');
   p.className='pip '+s;lb.textContent=l;
   lb.style.color=s==='ok'?'var(--g4)':s==='err'?'var(--g5)':s==='busy'?'var(--g3)':'var(--mute)';
+  // Update tooltip with KV stats
+  const elapsedH = (Date.now()-_kvSession.start)/3600000;
+  const projDay  = elapsedH>0 ? Math.round(_kvReads/elapsedH*24) : 0;
+  if(lb) lb.title = `KV reads this session: ${_kvReads} (~${projDay}/day projected)`;
 }
 
 // ══════════════════════════════════════════
@@ -2862,7 +2893,7 @@ async function saveBug(){
       if(idx>=0){Object.assign(S.bugs[idx],{status:data.status,assignees});}
       updateSbBadges();applyF();
       if(S.view==='home')renderHome();
-      setTimeout(()=>refreshAll().catch(()=>{}),100);
+      debouncedRefresh(2000);
       return;
     }else{
       const title=document.getElementById('f-title')?.value?.trim();
@@ -2898,7 +2929,7 @@ async function saveBug(){
         updateSbBadges();populateDropdowns();applyF();
         if(S.view==='home')renderHome();
         else if(S.view==='board')renderBoard();
-        setTimeout(()=>refreshAll().catch(()=>{}),100);
+        debouncedRefresh(2000);
         return;
       }else{
         res=await api('/bugs','POST',data);
@@ -2922,7 +2953,7 @@ async function saveBug(){
         }
 
         showNatasha(_nm[Math.floor(Math.random()*_nm.length)],_createMood);
-        setTimeout(()=>refreshAll().catch(()=>{}), 100);
+        debouncedRefresh(2000);
         return;
       }
     }
