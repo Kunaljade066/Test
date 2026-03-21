@@ -3825,3 +3825,21 @@ async function runMigration() {
 }
 
 </script>
+
+<div id="natashaIntro" class="gone">
+  <div class="natasha-wrap">
+    <div class="natasha-bubble">
+      <div class="natasha-name-tag">NATASHA</div>
+      <div class="natasha-text" id="natashaText">Welcome back! Ready to squash some bugs today? 🏏</div>
+      <button class="natasha-ok" onclick="dismissNatasha()">LET'S GO!</button>
+    </div>
+    <div class="natasha-char-wrap">
+      <img id="natashaImg" src="natasha.png" alt="Natasha"
+        onerror="this.style.display='none';document.getElementById('natashaEmoji').style.display='block'"
+      >
+      <div id="natashaEmoji" style="display:none;font-size:80px;line-height:1;padding-bottom:8px;filter:drop-shadow(0 4px 12px rgba(124,58,237,.4))">🏏</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
