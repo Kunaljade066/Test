@@ -1276,16 +1276,22 @@ const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
 function startFastSync(){
   if(_syncTimer) clearInterval(_syncTimer);
   _syncTimer=setInterval(async()=>{
-    // Skip if tab is hidden — no point refreshing data nobody sees
     if(document.hidden) return;
     if(!S.user?.idToken) return;
     try{
       const r=await fetch(WORKER+'/bugs',{headers:{'Content-Type':'application/json','X-Google-Token':S.user.idToken}});
-      if(!r.ok) return;
+      if(!r.ok) return; // never touch S.bugs on any error
       const d=await r.json();
       const fresh=d.bugs||[];
-      // Only update state if something actually changed
-      const changed = fresh.length!==S.bugs.length || (fresh[0]?.id!==S.bugs[0]?.id) || (fresh[fresh.length-1]?.updated_at!==S.bugs[S.bugs.length-1]?.updated_at);
+
+      // SAFETY GUARD: never overwrite with empty or suspiciously fewer bugs
+      // Protects against D1 hiccups, auth errors returning empty arrays
+      if(fresh.length===0 && S.bugs.length>0) return;
+      if(S.bugs.length>5 && fresh.length < S.bugs.length*0.8) return;
+
+      const changed = fresh.length!==S.bugs.length
+        || (fresh[0]?.id!==S.bugs[0]?.id)
+        || (fresh[fresh.length-1]?.updated_at!==S.bugs[S.bugs.length-1]?.updated_at);
       if(changed){
         fresh.forEach(b=>{if(!b.assignees)b.assignees=b.assignee_email?[{name:b.assignee||'',email:b.assignee_email,picture:b.assignee_picture||''}]:[];});
         S.bugs=fresh;
@@ -1774,7 +1780,18 @@ async function refreshAll(){
   try{
     const [bugsD,sprintsD,teamD]=await Promise.all([api('/bugs'),api('/sprints'),api('/team')]);
     const _rawSprints=sprintsD.sprints||[];
-    S.bugs=bugsD.bugs||[];S.sprints=_rawSprints.filter(s=>s.name!==DD_CONFIG_KEY);S.teamMembers=teamD.members||[];
+    const freshBugs=bugsD.bugs||[];
+
+    // SAFETY GUARD: don't wipe existing bugs if response looks wrong
+    if(freshBugs.length===0 && S.bugs.length>0){
+      setCloud('err','⚠ sync issue');
+      toast('⚠ Sync returned 0 bugs — keeping current data. Check connection.','err');
+      return;
+    }
+
+    S.bugs=freshBugs;
+    S.sprints=_rawSprints.filter(s=>s.name!==DD_CONFIG_KEY);
+    S.teamMembers=teamD.members||[];
     loadDDConfigFromSprints(_rawSprints);
     S.bugs.forEach(b=>{if(!b.assignees)b.assignees=b.assignee_email?[{name:b.assignee||'',email:b.assignee_email,picture:b.assignee_picture||''}]:[];});
     updateSbBadges();populateDropdowns();applyF();populateBoardSprint();
