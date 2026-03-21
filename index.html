@@ -1067,7 +1067,7 @@ body.theme-slate .fi2{background:var(--bg2);color:var(--text)}
 // ══════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════
-const WORKER    = 'https://bugpulse-worker.kunal-249.workers.dev/';
+const WORKER    = 'https://frosty-wood-37ecbugiq-workerjs.kunal-249.workers.dev';
 // ── CHANGED: let so fetchConfig() can override if worker has /config ──
 let GOOGLE_ID = '714484298488-ucn9blv0cr5ol2h0v9p6irbrj87murce.apps.googleusercontent.com';
 let ALLOWED   = 'hitwicket.com';
@@ -1673,6 +1673,14 @@ function signOut(){
 // ══════════════════════════════════════════
 async function api(path,method='GET',body=null){
   if(!S.user)throw new Error('Not logged in');
+  // Guard: if idToken is missing the worker will reject with 401
+  // This happens if session was restored without a valid token
+  if(!S.user.idToken){
+    // Try to re-auth from saved session
+    const sess=loadSession();
+    if(sess?.user?.idToken) S.user.idToken=sess.user.idToken;
+    else { clearSession(); location.reload(); throw new Error('Session expired — please sign in again'); }
+  }
   await ensureFreshToken();
   trackKV(1); // count every worker call (each hits KV at minimum once)
   const r=await fetch(WORKER+path,{method,headers:{'Content-Type':'application/json','X-Google-Token':S.user.idToken},body:body?JSON.stringify(body):undefined});
@@ -3023,14 +3031,20 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePanel();closeI
 // INIT  ← CHANGED: await fetchConfig() first
 // ══════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
-  // Must check OAuth fragment FIRST before anything else wipes the hash
-  if (checkOAuthFragment()) return;
-
+  // Always run these regardless of auth path
   loadTheme();
-  setLoad(20, 'CHECKING SESSION');
   document.addEventListener('click', e => { if(!e.target.closest('.user-pill-wrap')) closeProfileMenu(); });
 
-  // ── CHANGED: fetch config (safe — never throws, falls back to hardcoded ID) ──
+  // Check OAuth fragment FIRST before hash gets wiped
+  // Still call fetchConfig so GOOGLE_ID is populated for future use
+  if (checkOAuthFragment()) {
+    await fetchConfig(); // populate GOOGLE_ID even on redirect return
+    return;
+  }
+
+  setLoad(20, 'CHECKING SESSION');
+
+  // ── fetch config (safe — never throws, falls back to hardcoded ID) ──
   await fetchConfig();
 
   const sess = loadSession();
