@@ -1000,7 +1000,7 @@ body.theme-slate .fi2{background:var(--bg2);color:var(--text)}
             <div class="tw-hd"><span class="tw-hd-t">CSV IMPORT</span></div>
             <div style="padding:22px">
               <div class="info-banner" style="margin-bottom:16px">
-                📋 CSV headers: <b>title</b> (required), priority, status, feature, sprint, steps, actual, expected, build, device, severity
+                📋 CSV headers: <b>title</b> (required), priority, status, feature, sprint, steps, actual, expected, build, device, severity, attachment
               </div>
               <div id="importDropZone"
                 style="border:2px dashed var(--bd2);border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(124,58,237,.04)"
@@ -1067,7 +1067,7 @@ body.theme-slate .fi2{background:var(--bg2);color:var(--text)}
 // ══════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════
-const WORKER    = 'https://bugpulse-worker.kunal-249.workers.dev';
+const WORKER    = 'https://frosty-wood-37ecbugiq-workerjs.kunal-249.workers.dev';
 // ── CHANGED: let so fetchConfig() can override if worker has /config ──
 let GOOGLE_ID = '714484298488-ucn9blv0cr5ol2h0v9p6irbrj87murce.apps.googleusercontent.com';
 let ALLOWED   = 'hitwicket.com';
@@ -2986,7 +2986,7 @@ async function delBug(id){
 function exportCSV(){
   const src=S.filtered.length?S.filtered:S.bugs;
   if(!src.length){toast('No data','err');return;}
-  const keys=['id','title','priority','severity','status','pod','assignees','reporter','feature','sprint','build','device','steps','actual'];
+  const keys=['id','title','priority','severity','status','pod','assignees','reporter','feature','sprint','build','device','steps','actual','expected','attachment'];
   const csv=[keys.join(','),...src.map(b=>keys.map(k=>k==='assignees'?`"${(b.assignees||[]).map(a=>a.name).join('; ')}"`:`"${String(b[k]||'').replace(/"/g,'""')}"`).join(','))].join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`hw_bugs_${new Date().toISOString().slice(0,10)}.csv`;a.style.display='none';document.body.appendChild(a);a.click();a.remove();
   toast(`Exported ${src.length} bugs ✓`,'ok');
@@ -3625,6 +3625,7 @@ async function importSubmit() {
   let done = 0, failed = 0;
   for (const row of _importRows) {
     const data = {
+      // id intentionally omitted — worker generates a fresh HW-XXXXX id
       title:    row.title,
       priority: row.priority  || 'Medium',
       status:   row.status    || 'Open',
@@ -3639,6 +3640,7 @@ async function importSubmit() {
       reporter: row.reporter  || S.user?.name || '',
       reporter_email:   S.user?.email   || '',
       reporter_picture: S.user?.picture || '',
+      attachment: row.attachment || '',
       assignees: [], app_url: APP_URL,
     };
     try { await api('/bugs', 'POST', data); done++; } catch(e) { failed++; }
