@@ -3342,7 +3342,7 @@ function cuBuildFilters() {
   if(prSel) prSel.innerHTML='<option value="">All Priorities</option>'+prios.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
 
   const aMap={};
-  _cuTasks.forEach(t=>(t.assignees||[]).forEach(a=>{if(a.id)aMap[a.id]=a.username||a.email||a.id;}));
+  _cuTasks.forEach(t=>(t.assignees||[]).forEach(a=>{if(a.id)aMap[String(a.id)]=a.username||a.email||String(a.id);}));
   const aSel=document.getElementById('cu-assignee-sel');
   if(aSel) aSel.innerHTML='<option value="">All Assignees</option>'+Object.entries(aMap).map(([id,name])=>`<option value="${esc(id)}">${esc(name)}</option>`).join('');
 }
@@ -3357,7 +3357,7 @@ function cuApplyFilters() {
     if(lv&&t._listId!==lv) return false;
     if(sv&&(t.status?.status||'')!==sv) return false;
     if(pv&&(t.priority?.priority||'')!==pv) return false;
-    if(av&&!(t.assignees||[]).some(a=>a.id===av)) return false;
+    if(av&&!(t.assignees||[]).some(a=>String(a.id)===String(av))) return false;
     if(q){const hay=[t.name,t.custom_id,t.id,t.status?.status,(t.assignees||[]).map(a=>a.username||a.email).join(' '),t._listName,t._spaceName,t.description||''].join(' ').toLowerCase();if(!hay.includes(q))return false;}
     return true;
   });
@@ -3840,4 +3840,3 @@ async function importSubmit() {
 </div>
 </body>
 </html>
-   
