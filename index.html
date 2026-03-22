@@ -1318,33 +1318,12 @@ function startFastSync(){
 // ── LIVE PRESENCE — fetch once on load, then every 15 min ───────────────
 // Was: every 90s = 960 KV reads/day. Now: every 15min = 96 reads/day
 let _presenceTimer=null;
-const LIVE_WINDOW_MS = 3 * 60 * 1000; // 3 min window — must be > heartbeat interval
-
-// Heartbeat: re-verify token so worker updates lastSeen in KV for this user
-async function sendHeartbeat(){
-  if(!S.user?.idToken) return;
-  try{
-    const r = await fetch(WORKER+'/auth/verify',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({id_token: S.user.idToken})
-    });
-    const d = await r.json();
-    if(d.ok){ S.user={...d, idToken:S.user.idToken}; saveSession(); }
-  }catch(e){}
-}
-
 async function startLivePresence(){
-  await sendHeartbeat(); // stamp ourselves online right now
   await updateLiveCount();
-  // Heartbeat every 2 min while tab is open
-  setInterval(()=>{ if(!document.hidden) sendHeartbeat(); }, 2 * 60 * 1000);
-  // Refresh displayed count every 2 min
   _presenceTimer=setInterval(()=>{
     if(!document.hidden) updateLiveCount();
-  }, 2 * 60 * 1000);
+  }, 15 * 60 * 1000);
 }
-
 async function updateLiveCount(){
   if(!S.user?.idToken) return;
   try{
@@ -1356,23 +1335,19 @@ async function updateLiveCount(){
     const wrap=document.getElementById('liveWrap');
     if(!lbl||!wrap)return;
 
-    const now=Date.now();
-
-    // "Live now" = lastSeen updated within LIVE_WINDOW_MS (set by heartbeat)
-    const liveNow=members.filter(m=>{
+    const now=Date.now(), DAY_MS=24*60*60*1000;
+    const todayIST=new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'2-digit',year:'numeric'});
+    const activeToday=members.filter(m=>{
       if(!m.lastSeen) return false;
-      const t=new Date(m.lastSeen).getTime();
-      return !isNaN(t) && (now - t) < LIVE_WINDOW_MS;
+      const d=new Date(m.lastSeen);
+      if(!isNaN(d.getTime())) return (now-d.getTime())<DAY_MS;
+      return m.lastSeen.split(',')[0]?.trim()===todayIST;
     });
-
-    // Always at least 1 (current user — their heartbeat just ran)
-    const n = Math.max(liveNow.length, 1);
-    lbl.textContent = n===1 ? '1 online' : `${n} online`;
+    const n=activeToday.length||members.length||1;
+    lbl.textContent=n===1?'1 online':`${n} online`;
     wrap.style.display='flex';
-    const names = liveNow.length
-      ? liveNow.map(m=>m.name).join(', ')
-      : (S.user.name||'You');
-    wrap.title = 'Online now: ' + names;
+    const names=(activeToday.length?activeToday:members).map(m=>m.name).join(', ')||S.user.name;
+    wrap.title='Team online: '+names;
   }catch(e){}
 }
 
