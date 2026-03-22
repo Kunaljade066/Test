@@ -1318,26 +1318,28 @@ function startFastSync(){
 // ── LIVE PRESENCE — fetch once on load, then every 15 min ───────────────
 // Was: every 90s = 960 KV reads/day. Now: every 15min = 96 reads/day
 let _presenceTimer=null;
-const LIVE_WINDOW_MS = 5 * 60 * 1000; // 5 min = "currently on site"
+const LIVE_WINDOW_MS = 3 * 60 * 1000; // 3 min window — must be > heartbeat interval
 
-// Send a lightweight heartbeat so our own lastSeen stays fresh
+// Heartbeat: re-verify token so worker updates lastSeen in KV for this user
 async function sendHeartbeat(){
   if(!S.user?.idToken) return;
   try{
-    await fetch(WORKER+'/team',{
+    const r = await fetch(WORKER+'/auth/verify',{
       method:'POST',
-      headers:{'Content-Type':'application/json','X-Google-Token':S.user.idToken},
-      body:JSON.stringify({heartbeat:true})
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id_token: S.user.idToken})
     });
+    const d = await r.json();
+    if(d.ok){ S.user={...d, idToken:S.user.idToken}; saveSession(); }
   }catch(e){}
 }
 
 async function startLivePresence(){
-  await sendHeartbeat(); // mark ourselves online immediately
+  await sendHeartbeat(); // stamp ourselves online right now
   await updateLiveCount();
-  // Heartbeat every 2 min so we appear live while tab is open
+  // Heartbeat every 2 min while tab is open
   setInterval(()=>{ if(!document.hidden) sendHeartbeat(); }, 2 * 60 * 1000);
-  // Refresh count every 2 min
+  // Refresh displayed count every 2 min
   _presenceTimer=setInterval(()=>{
     if(!document.hidden) updateLiveCount();
   }, 2 * 60 * 1000);
@@ -1356,25 +1358,21 @@ async function updateLiveCount(){
 
     const now=Date.now();
 
-    // "Live now" = lastSeen within the last 5 minutes
+    // "Live now" = lastSeen updated within LIVE_WINDOW_MS (set by heartbeat)
     const liveNow=members.filter(m=>{
       if(!m.lastSeen) return false;
       const t=new Date(m.lastSeen).getTime();
       return !isNaN(t) && (now - t) < LIVE_WINDOW_MS;
     });
 
-    const n = liveNow.length;
-    if(n === 0){
-      // Nobody live — hide the indicator (we haven't heartbeated yet or worker
-      // doesn't support POST heartbeat) — fall back to showing just yourself
-      lbl.textContent = '1 online';
-      wrap.style.display='flex';
-      wrap.title = 'Online: ' + (S.user.name||'You');
-    } else {
-      lbl.textContent = n===1 ? '1 online' : `${n} online`;
-      wrap.style.display='flex';
-      wrap.title = 'Online now: ' + liveNow.map(m=>m.name).join(', ');
-    }
+    // Always at least 1 (current user — their heartbeat just ran)
+    const n = Math.max(liveNow.length, 1);
+    lbl.textContent = n===1 ? '1 online' : `${n} online`;
+    wrap.style.display='flex';
+    const names = liveNow.length
+      ? liveNow.map(m=>m.name).join(', ')
+      : (S.user.name||'You');
+    wrap.title = 'Online now: ' + names;
   }catch(e){}
 }
 
