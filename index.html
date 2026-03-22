@@ -609,6 +609,7 @@ body.theme-slate .fi2{background:var(--bg2);color:var(--text)}
   table{font-size:11px;min-width:0}
   thead th:nth-child(n+7),tbody td:nth-child(n+7){display:none}
   .tc-id{display:none!important}
+  .mob-hide-id{display:none!important}
   .tc-title{max-width:140px}
   /* Cards */
   .hq-card{padding:10px 12px}
@@ -800,7 +801,7 @@ body.cursor-default textarea{cursor:text!important}
             <div class="pm-email" id="pmEmail">—</div>
           </div>
           <div class="pm-item" onclick="openThemeModal();closeProfileMenu()"><span class="pm-icon">🎨</span> Themes</div>
-          <div class="pm-item" onclick="toggleCursorPref()" title="Toggle between cricket bat cursor and system default"><span class="pm-icon" id="cursorPrefLabel">🖱 Default Cursor</span></div>
+          <div class="pm-item" onclick="toggleCursorPref()" title="Toggle cricket bat / system cursor"><span class="pm-icon" id="cursorPrefIcon">🖱</span> <span id="cursorPrefLabel">Default Cursor</span></div>
           <div class="pm-divider"></div>
           <div class="pm-item" onclick="refreshAll();closeProfileMenu()"><span class="pm-icon">↻</span> Refresh Data</div>
           <div class="pm-item" onclick="showNatasha();closeProfileMenu()"><span class="pm-icon">🏏</span> Say Hi to Natasha</div>
@@ -1963,7 +1964,7 @@ function renderHome(){
 function emptySmall(icon,msg){return`<div style="padding:20px;text-align:center"><div style="font-size:28px;opacity:.2;margin-bottom:6px">${icon}</div><div style="font-family:var(--mono);font-size:11px;color:var(--dim)">${msg}</div></div>`;}
 function homeBugRow(bug){
   return`<div class="home-bug-row" onclick="openDetail('${bug.id}')">
-    <span style="font-family:var(--mono);font-size:10px;color:var(--g1);flex-shrink:0;width:110px;letter-spacing:.5px">${esc(bug.id||'')}</span>
+    <span class="mob-hide-id" style="font-family:var(--mono);font-size:10px;color:var(--g1);flex-shrink:0;width:110px;letter-spacing:.5px">${esc(bug.id||'')}</span>
     <span style="flex:1;font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.2px">${esc(bug.title||'')}</span>
     <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
       ${pChip(bug.priority)}${stChip(bug.status)}${avStack(bug.assignees||[],20)}
@@ -2140,7 +2141,7 @@ function showInlineDrawer(title, bugs, refreshFn){
 
   const rows = bugs.length
     ? bugs.map(bug=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid rgba(255,255,255,.03);cursor:pointer;transition:background .1s" onclick="openDetail('${bug.id}')" onmouseenter="this.style.background='rgba(124,58,237,.06)'" onmouseleave="this.style.background=''">
-        <span style="font-family:var(--mono);font-size:10px;color:var(--g1);flex-shrink:0;width:100px">${esc(bug.id)}</span>
+        <span class="mob-hide-id" style="font-family:var(--mono);font-size:10px;color:var(--g1);flex-shrink:0;width:100px">${esc(bug.id)}</span>
         <span style="flex:1;font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(bug.title||'')}</span>
         <div style="display:flex;gap:4px;flex-shrink:0">${pChip(bug.priority)}${stChip(bug.status)}${avStack(bug.assignees||[],18)}</div>
       </div>`).join('')
@@ -3122,7 +3123,9 @@ function applyCursorPref(pref, save=true) {
     document.body.classList.remove('cursor-default');
   }
   const lbl = document.getElementById('cursorPrefLabel');
-  if (lbl) lbl.textContent = pref === 'default' ? '🏏 Cricket Cursor' : '🖱 Default Cursor';
+  const ico = document.getElementById('cursorPrefIcon');
+  if (lbl) lbl.textContent = pref === 'default' ? 'Cricket Cursor' : 'Default Cursor';
+  if (ico) ico.textContent = pref === 'default' ? '🏏' : '🖱';
   if (save) {
     try { localStorage.setItem(CURSOR_KEY(S.user?.email), pref); } catch(e) {}
     toast(pref === 'default' ? '🖱 Default cursor active' : '🏏 Cricket cursor active', 'ok');
@@ -3837,3 +3840,4 @@ async function importSubmit() {
 </div>
 </body>
 </html>
+   
