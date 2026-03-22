@@ -1318,12 +1318,31 @@ function startFastSync(){
 // ── LIVE PRESENCE — fetch once on load, then every 15 min ───────────────
 // Was: every 90s = 960 KV reads/day. Now: every 15min = 96 reads/day
 let _presenceTimer=null;
+const LIVE_WINDOW_MS = 5 * 60 * 1000; // 5 min = "currently on site"
+
+// Send a lightweight heartbeat so our own lastSeen stays fresh
+async function sendHeartbeat(){
+  if(!S.user?.idToken) return;
+  try{
+    await fetch(WORKER+'/team',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Google-Token':S.user.idToken},
+      body:JSON.stringify({heartbeat:true})
+    });
+  }catch(e){}
+}
+
 async function startLivePresence(){
+  await sendHeartbeat(); // mark ourselves online immediately
   await updateLiveCount();
+  // Heartbeat every 2 min so we appear live while tab is open
+  setInterval(()=>{ if(!document.hidden) sendHeartbeat(); }, 2 * 60 * 1000);
+  // Refresh count every 2 min
   _presenceTimer=setInterval(()=>{
     if(!document.hidden) updateLiveCount();
-  }, 15 * 60 * 1000); // 15 minutes
+  }, 2 * 60 * 1000);
 }
+
 async function updateLiveCount(){
   if(!S.user?.idToken) return;
   try{
@@ -1335,21 +1354,27 @@ async function updateLiveCount(){
     const wrap=document.getElementById('liveWrap');
     if(!lbl||!wrap)return;
 
-    // Robust active-today: try ISO parse first, fallback to IST string split
-    const now=Date.now(), DAY_MS=24*60*60*1000;
-    const todayIST=new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'2-digit',year:'numeric'});
-    const activeToday=members.filter(m=>{
+    const now=Date.now();
+
+    // "Live now" = lastSeen within the last 5 minutes
+    const liveNow=members.filter(m=>{
       if(!m.lastSeen) return false;
-      const d=new Date(m.lastSeen);
-      if(!isNaN(d.getTime())) return (now-d.getTime())<DAY_MS;
-      return m.lastSeen.split(',')[0]?.trim()===todayIST;
+      const t=new Date(m.lastSeen).getTime();
+      return !isNaN(t) && (now - t) < LIVE_WINDOW_MS;
     });
-    // Fall back to total members if lastSeen data isn't available yet
-    const n=activeToday.length||members.length||1;
-    lbl.textContent=n===1?'1 online':`${n} online`;
-    wrap.style.display='flex';
-    const names=(activeToday.length?activeToday:members).map(m=>m.name).join(', ')||S.user.name;
-    wrap.title='Team online: '+names;
+
+    const n = liveNow.length;
+    if(n === 0){
+      // Nobody live — hide the indicator (we haven't heartbeated yet or worker
+      // doesn't support POST heartbeat) — fall back to showing just yourself
+      lbl.textContent = '1 online';
+      wrap.style.display='flex';
+      wrap.title = 'Online: ' + (S.user.name||'You');
+    } else {
+      lbl.textContent = n===1 ? '1 online' : `${n} online`;
+      wrap.style.display='flex';
+      wrap.title = 'Online now: ' + liveNow.map(m=>m.name).join(', ');
+    }
   }catch(e){}
 }
 
