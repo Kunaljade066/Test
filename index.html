@@ -1,8 +1,3 @@
-==================================================
-Applied  (14): 1a-natashaIntro-position, 1b-natasha-wrap-align, 1c-natasha-bubble-margin, 1d-natashaImg-size, 1e-media-769-overrides, 1f-media-1440-overrides, 1g-mobile-natasha-position, 1h-mobile-bubble-margin, 1i-mobile-img-size, 2-hide-bug-id-mobile, 3a-cursor-css, 3b-cursor-js, 3c-profile-menu-item, 3d-loadCursorPref-call
-Input:  216,859 chars
-Output: 218,749 chars
-==================================================
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3194,6 +3189,36 @@ const CU_TOKEN = 'pk_194617170_NZZKCEMOLFHZOYLIWV9EF6D6T6KDB42X';
 const CU_API   = 'https://api.clickup.com/api/v2';
 let _cuTasks = [], _cuFiltered = [], _cuLists = [], _cuLoaded = false, _cuView = 'list';
 
+// ── ClickUp localStorage cache ──────────────────────────
+const CU_CACHE_KEY = 'hwt_cu_cache_v1';
+const CU_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
+function cuSaveCache(teamName) {
+  try {
+    localStorage.setItem(CU_CACHE_KEY, JSON.stringify({
+      tasks:       _cuTasks,
+      lists:       _cuLists,
+      statusColors:_cuStatusColors,
+      teamName:    teamName || '',
+      ts:          Date.now(),
+    }));
+  } catch(e) { console.warn('[cu-cache] save failed:', e.message); }
+}
+
+function cuLoadCache() {
+  try {
+    const raw = localStorage.getItem(CU_CACHE_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    if (!d.tasks || !d.tasks.length) return false;
+    if (Date.now() - d.ts > CU_CACHE_TTL) return false; // stale
+    _cuTasks        = d.tasks;
+    _cuLists        = d.lists || [];
+    _cuStatusColors = d.statusColors || {};
+    return d.teamName || '';
+  } catch(e) { return false; }
+}
+
 // ── Status colour map (auto-built from real statuses) ──
 let _cuStatusColors = {};
 function cuStatusColor(s) {
@@ -3222,6 +3247,19 @@ async function cuFetch(path) {
 }
 
 async function loadClickUp(force) {
+  // Restore from cache first (instant, no spinner, no API call)
+  if (!force && !_cuLoaded) {
+    const teamName = cuLoadCache();
+    if (teamName !== false && _cuTasks.length) {
+      _cuLoaded = true;
+      cuBuildFilters();
+      _cuFiltered = [..._cuTasks];
+      document.getElementById('cuFilters').style.display = 'flex';
+      document.getElementById('cu-sub').textContent = `${_cuTasks.length} tasks · ${_cuLists.length} lists · ${teamName} (cached)`;
+      cuRender();
+      return;
+    }
+  }
   if (_cuLoaded && !force) { cuApplyFilters(); return; }
   const body = document.getElementById('cuBody');
   if (!body) return;
@@ -3273,6 +3311,7 @@ async function loadClickUp(force) {
     }));
 
     _cuLoaded = true;
+    cuSaveCache(teams[0].name);
     cuBuildFilters();
     _cuFiltered = [..._cuTasks];
     document.getElementById('cuFilters').style.display = 'flex';
