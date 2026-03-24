@@ -1357,38 +1357,84 @@ const clearSession=()=>localStorage.removeItem(SK);
 // ── BUG SYNC — polls every 5 min, only when tab is visible ──────────────
 // Reduces KV reads from ~5,760/day to ~288/day per user
 let _syncTimer=null;
-const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+// ── ADAPTIVE POLLING ────────────────────────────────────────────
+// Active & focused  → 15s  (near real-time for the whole team)
+// Visible but idle  → 60s
+// Tab hidden        → skip entirely (fires on next visibility)
+// Back from hidden  → immediate poll + reset to 15s
+
+const SYNC_FAST   = 15  * 1000;  // 15s  — tab focused & active
+const SYNC_IDLE   = 60  * 1000;  // 60s  — tab visible but idle
+const SYNC_HIDDEN = 5 * 60* 1000;// 5min — tab hidden (fallback)
+
+let _lastActivity = Date.now();
+let _syncInterval = SYNC_FAST;
+
+// Track user activity to distinguish focused vs idle
+['mousemove','keydown','click','scroll','touchstart'].forEach(ev =>
+  document.addEventListener(ev, () => { _lastActivity = Date.now(); }, {passive:true})
+);
+
+function _currentSyncInterval() {
+  if(document.hidden) return SYNC_HIDDEN;
+  const idle = Date.now() - _lastActivity > 60000; // idle after 60s no input
+  return idle ? SYNC_IDLE : SYNC_FAST;
+}
+
+async function _doSync() {
+  if(!S.user?.idToken) return;
+  if(document.hidden) return;
+  try{
+    const r=await fetch(WORKER+'/bugs',{headers:{'Content-Type':'application/json','X-Google-Token':S.user.idToken}});
+    if(!r.ok) return;
+    const d=await r.json();
+    const fresh=d.bugs||[];
+
+    // SAFETY GUARD
+    if(fresh.length===0 && S.bugs.length>0) return;
+    if(S.bugs.length>5 && fresh.length < S.bugs.length*0.8) return;
+
+    const changed = fresh.length!==S.bugs.length
+      || (fresh[0]?.id!==S.bugs[0]?.id)
+      || (fresh[fresh.length-1]?.updated_at!==S.bugs[S.bugs.length-1]?.updated_at);
+
+    if(changed){
+      fresh.forEach(b=>{if(!b.assignees)b.assignees=b.assignee_email?[{name:b.assignee||'',email:b.assignee_email,picture:b.assignee_picture||''}]:[];});
+      S.bugs=fresh;
+      updateSbBadges();populateDropdowns();applyF();
+      renderSlaWarnings();
+      setCloud('ok',`☁ ${S.bugs.length}`);
+      if(S.view==='home')renderHome();
+      else if(S.view==='board')renderBoard();
+      // Subtle "data updated" pulse on the cloud indicator
+      const pip=document.getElementById('pip');
+      if(pip){pip.style.transform='scale(1.8)';setTimeout(()=>pip.style.transform='',400);}
+    }
+  }catch(e){}
+}
+
+function _scheduleSyncTick() {
+  if(_syncTimer) clearTimeout(_syncTimer);
+  const interval = _currentSyncInterval();
+  _syncTimer = setTimeout(async()=>{
+    await _doSync();
+    _scheduleSyncTick(); // reschedule adaptively after each tick
+  }, interval);
+}
 
 function startFastSync(){
-  if(_syncTimer) clearInterval(_syncTimer);
-  _syncTimer=setInterval(async()=>{
-    if(document.hidden) return;
-    if(!S.user?.idToken) return;
-    try{
-      const r=await fetch(WORKER+'/bugs',{headers:{'Content-Type':'application/json','X-Google-Token':S.user.idToken}});
-      if(!r.ok) return; // never touch S.bugs on any error
-      const d=await r.json();
-      const fresh=d.bugs||[];
-
-      // SAFETY GUARD: never overwrite with empty or suspiciously fewer bugs
-      // Protects against D1 hiccups, auth errors returning empty arrays
-      if(fresh.length===0 && S.bugs.length>0) return;
-      if(S.bugs.length>5 && fresh.length < S.bugs.length*0.8) return;
-
-      const changed = fresh.length!==S.bugs.length
-        || (fresh[0]?.id!==S.bugs[0]?.id)
-        || (fresh[fresh.length-1]?.updated_at!==S.bugs[S.bugs.length-1]?.updated_at);
-      if(changed){
-        fresh.forEach(b=>{if(!b.assignees)b.assignees=b.assignee_email?[{name:b.assignee||'',email:b.assignee_email,picture:b.assignee_picture||''}]:[];});
-        S.bugs=fresh;
-        updateSbBadges();populateDropdowns();applyF();
-        setCloud('ok',`☁ ${S.bugs.length}`);
-        if(S.view==='home')renderHome();
-        else if(S.view==='board')renderBoard();
-      }
-    }catch(e){}
-  }, SYNC_INTERVAL);
+  if(_syncTimer) clearTimeout(_syncTimer);
+  _scheduleSyncTick();
 }
+
+// When tab becomes visible again — poll immediately then reset cadence
+document.addEventListener('visibilitychange', ()=>{
+  if(!document.hidden){
+    if(_syncTimer) clearTimeout(_syncTimer);
+    _doSync().then(()=>_scheduleSyncTick());
+  }
+});
 
 // ── LIVE PRESENCE — fetch once on load, then every 15 min ───────────────
 // Was: every 90s = 960 KV reads/day. Now: every 15min = 96 reads/day
