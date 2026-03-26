@@ -776,6 +776,44 @@ thead th:first-child .cb-wrap{display:flex}
 .build-bug-id{font-family:var(--mono);font-size:9px;color:var(--g1);flex-shrink:0;min-width:76px}
 .build-bug-title{font-size:11px;font-weight:600;color:var(--mist);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .build-no-link{font-size:10px;color:var(--dim);font-family:var(--mono)}
+/* ═══ BUILDS PAGE ═══ */
+.builds-page-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:6px}
+.build-page-card{background:var(--bg2);border:1px solid var(--bd);border-radius:14px;overflow:hidden;box-shadow:var(--sh);transition:border-color .2s}
+.build-page-card.is-current{border-color:var(--g2);box-shadow:0 0 0 1px rgba(6,182,212,.3),var(--glow2)}
+.bpc-header{padding:14px 18px;background:var(--bg3);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.bpc-version{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
+.bpc-current-pill{font-family:var(--mono);font-size:8px;letter-spacing:2px;padding:2px 8px;border-radius:20px;background:rgba(6,182,212,.15);color:var(--g2);border:1px solid rgba(6,182,212,.3);text-transform:uppercase}
+.bpc-meta{font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:3px}
+.bpc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--bd)}
+.bpc-stat{padding:12px 8px;text-align:center;border-right:1px solid var(--bd)}
+.bpc-stat:last-child{border-right:none}
+.bpc-stat-n{font-family:var(--disp);font-size:22px;font-weight:800;line-height:1}
+.bpc-stat-l{font-family:var(--mono);font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--mute);margin-top:4px}
+.bpc-body{padding:14px 16px}
+.bpc-notes{font-size:12px;color:var(--mist);line-height:1.7;margin-bottom:12px;padding:10px 12px;background:rgba(124,58,237,.05);border-radius:8px;border-left:2px solid var(--g1)}
+.bpc-link-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.bpc-link-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600;background:rgba(6,182,212,.1);color:var(--g2);border:1px solid rgba(6,182,212,.25);text-decoration:none;transition:background .15s}
+.bpc-link-btn:hover{background:rgba(6,182,212,.2)}
+.bpc-bugs-label{font-family:var(--mono);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--mute);margin-bottom:8px}
+.bpc-bug-list{display:flex;flex-direction:column;gap:3px;max-height:160px;overflow-y:auto}
+.bpc-bug-row{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:7px;background:var(--bg3);cursor:pointer;transition:background .1s}
+.bpc-bug-row:hover{background:rgba(124,58,237,.1)}
+.bpc-bug-id{font-family:var(--mono);font-size:9px;color:var(--g1);flex-shrink:0;min-width:80px}
+.bpc-bug-title{font-size:11px;font-weight:600;color:var(--mist);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bpc-footer{padding:10px 16px;border-top:1px solid var(--bd);display:flex;align-items:center;gap:8px}
+/* Home builds strip */
+.home-builds-strip{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.hbs-header{padding:10px 16px;background:var(--bg3);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.hbs-title{font-family:var(--mono);font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--g2)}
+.hbs-builds{display:flex;gap:0;overflow-x:auto}
+.hbs-builds::-webkit-scrollbar{height:3px}
+.hbs-build{flex-shrink:0;padding:12px 18px;border-right:1px solid var(--bd);cursor:pointer;transition:background .1s;min-width:160px}
+.hbs-build:hover{background:rgba(124,58,237,.07)}
+.hbs-build.current{background:rgba(6,182,212,.06);border-bottom:2px solid var(--g2)}
+.hbs-build-ver{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);margin-bottom:5px}
+.hbs-build-chips{display:flex;gap:4px;flex-wrap:wrap}
+/* Build log form */
+.build-log-form{display:flex;flex-direction:column;gap:14px}
 /* ═══ PATCH 5: SHARE MENU ═══ */
 .share-menu{position:absolute;background:var(--bg2);border:1px solid var(--bd2);border-radius:12px;padding:6px;z-index:9999;box-shadow:var(--sh2);display:none;flex-direction:column;gap:2px;min-width:180px;bottom:calc(100% + 6px);left:0}
 .share-menu.on{display:flex}
@@ -873,6 +911,7 @@ thead th:first-child .cb-wrap{display:flex}
     <div class="mn-item" id="mn-board" onclick="goTab('board')"><span class="mn-icon">⬛</span><span class="mn-label">Board</span></div>
     <button class="mn-fab" onclick="openNew()" title="New Bug">＋</button>
     <div class="mn-item" id="mn-sprints" onclick="goTab('sprints')"><span class="mn-icon">🏃</span><span class="mn-label">Sprints</span></div>
+    <div class="mn-item" id="mn-builds"  onclick="goTab('builds')"><span class="mn-icon">📦</span><span class="mn-label">Builds</span></div>
     <div class="mn-item" id="mn-dashboard" onclick="goTab('dashboard')"><span class="mn-icon">📊</span><span class="mn-label">Stats</span></div>
     <div class="mn-item" id="mn-notifs" onclick="goTab('notifs')"><span class="mn-icon">🔔</span><span class="mn-label">Alerts</span><span class="mn-badge" id="mnNotifBadge" style="display:none">0</span></div>
     <div class="mn-item" id="mn-clickup" onclick="goTab('clickup')"><span class="mn-icon">🟣</span><span class="mn-label">ClickUp</span></div>
@@ -893,6 +932,7 @@ thead th:first-child .cb-wrap{display:flex}
       <div class="tb-tab"    id="tt-board"     onclick="goTab('board')">⬛ Board</div>
       <div class="tb-tab"    id="tt-sprints"   onclick="goTab('sprints')">🏃 Sprints</div>
       <div class="tb-tab"    id="tt-features"  onclick="goTab('features')">🎮 Features</div>
+      <div class="tb-tab"    id="tt-builds"    onclick="goTab('builds')">📦 Builds</div>
       <div class="tb-tab"    id="tt-dashboard" onclick="goTab('dashboard')">📊 Dashboard</div>
       <div class="tb-tab"    id="tt-notifs"    onclick="goTab('notifs')">🔔<span class="tb-badge" id="notifBadge" style="display:none">0</span></div>
       <div class="tb-tab"    id="tt-clickup"   onclick="goTab('clickup')">🟣 ClickUp</div>
@@ -976,6 +1016,7 @@ thead th:first-child .cb-wrap{display:flex}
             </div>
           </div>
           <div class="home-quick" id="homeQuick"></div>
+          <div id="homeBuildsStrip"></div>
           <div class="home-grids">
             <div class="home-section"><div class="home-sec-hd">🔴 Critical &amp; Urgent</div><div id="homeCritical"></div></div>
             <div class="home-section"><div class="home-sec-hd">👤 Assigned to Me</div><div id="homeMine"></div></div>
@@ -1051,6 +1092,18 @@ thead th:first-child .cb-wrap{display:flex}
           <div class="dash-grid" id="dashCharts"></div>
           <div id="dashBuilds"></div>
           <div class="charts-grid" id="dashGraphs"></div>
+        </div>
+
+        <!-- BUILDS -->
+        <div id="v-builds" style="display:none">
+          <div class="ph">
+            <div><h1>BUILDS</h1><p id="builds-sub">Track what's in each build</p></div>
+            <div class="ph-r">
+              <button class="btn btn-v" onclick="openNewBuild()">＋ LOG BUILD</button>
+            </div>
+          </div>
+          <div id="buildsCurrentBanner"></div>
+          <div id="buildsWrap"></div>
         </div>
 
         <!-- NOTIFS -->
@@ -2031,7 +2084,7 @@ function applyF(){
 function goTab(v){
   if(v!=='backlog')closeInlineDrawer();
   S.view=v;
-  ['home','backlog','board','sprints','features','dashboard','notifs','clickup','import'].forEach(n=>{
+  ['home','backlog','board','sprints','features','dashboard','notifs','clickup','import','builds'].forEach(n=>{
     const el=document.getElementById('v-'+n);if(el)el.style.display=n===v?'':'none';
     document.getElementById('tt-'+n)?.classList.toggle('on',n===v);
   });
@@ -2044,6 +2097,7 @@ function goTab(v){
   if(v==='notifs')renderNotifs();
   if(v==='backlog')renderTable();
   if(v==='clickup')loadClickUp();
+  if(v==='builds')renderBuildsPage();
 }
 
 // ══════════════════════════════════════════
@@ -2084,6 +2138,7 @@ function renderHome(){
   document.getElementById('homeMine').innerHTML=miBugs.length?miBugs.map(homeBugRow).join(''):emptySmall('🎯','Nothing assigned!');
   const recent=[...S.bugs].sort((a,b)=>(b.created_ts||0)-(a.created_ts||0)).slice(0,8);
   document.getElementById('homeRecent').innerHTML=recent.length?recent.map(homeBugRow).join(''):emptySmall('🦗','No bugs yet');
+  renderHomeBuildsStrip();
 }
 function emptySmall(icon,msg){return`<div style="padding:20px;text-align:center"><div style="font-size:28px;opacity:.2;margin-bottom:6px">${icon}</div><div style="font-family:var(--mono);font-size:11px;color:var(--dim)">${msg}</div></div>`;}
 function homeBugRow(bug){
@@ -2943,7 +2998,7 @@ function dismissNatasha(){
 }
 
 function syncMobileNav(v){
-  const map={home:'mn-home',backlog:'mn-backlog',board:'mn-board',sprints:'mn-sprints',features:null,dashboard:'mn-dashboard',notifs:'mn-notifs',clickup:'mn-clickup',import:null};
+  const map={home:'mn-home',backlog:'mn-backlog',board:'mn-board',sprints:'mn-sprints',features:null,dashboard:'mn-dashboard',notifs:'mn-notifs',clickup:'mn-clickup',import:null,builds:'mn-builds'};
   document.querySelectorAll('.mn-item').forEach(el=>el.classList.remove('on'));
   const id=map[v];if(id)document.getElementById(id)?.classList.add('on');
 }
@@ -4323,8 +4378,320 @@ async function importSubmit() {
 // ══════════════════════════════════════════
 
 // ══════════════════════════════════════════
-// BUILDS DASHBOARD SECTION
+// BUILDS PAGE — shared team build tracker
 // ══════════════════════════════════════════
+const BUILDS_SPRINT_KEY = '__builds_registry_v1';
+
+async function loadBuildsRegistry() {
+  try {
+    const allSprints = (await api('/sprints')).sprints || [];
+    const cfgSprints = allSprints.filter(s => s.name === BUILDS_SPRINT_KEY);
+    if (!cfgSprints.length) return [];
+    const latest = cfgSprints.sort((a,b) => (b.id||0)-(a.id||0))[0];
+    return JSON.parse(latest.goal || '[]');
+  } catch(e) { console.warn('[builds] load error', e.message); return []; }
+}
+
+async function saveBuildsRegistry(builds) {
+  try {
+    const allSprints = (await api('/sprints')).sprints || [];
+    const old = allSprints.filter(s => s.name === BUILDS_SPRINT_KEY);
+    for (const s of old) { try { await api(`/sprints/${s.id}`, 'DELETE'); } catch(e) {} }
+    await api('/sprints', 'POST', { name: BUILDS_SPRINT_KEY, start: '', end: '', goal: JSON.stringify(builds) });
+  } catch(e) { toast('Failed to save build: ' + e.message, 'err'); throw e; }
+}
+
+function getBuildBugMap() {
+  const map = {};
+  S.bugs.forEach(b => {
+    const bv = (b.build||'').trim();
+    if (!bv) return;
+    if (!map[bv]) map[bv] = [];
+    map[bv].push(b);
+  });
+  return map;
+}
+
+async function renderBuildsPage() {
+  const wrap = document.getElementById('buildsWrap');
+  const banner = document.getElementById('buildsCurrentBanner');
+  if (!wrap) return;
+  wrap.innerHTML = `<div style="padding:40px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim)">Loading builds…</div>`;
+
+  let registry = [];
+  try { registry = await loadBuildsRegistry(); } catch(e) {}
+
+  const bugMap = getBuildBugMap();
+  const allVersions = new Set([...registry.map(r => r.version), ...Object.keys(bugMap)]);
+
+  const builds = [...allVersions].map(version => {
+    const reg = registry.find(r => r.version === version) || {};
+    const bugs = bugMap[version] || [];
+    return { version, notes: reg.notes||'', link: reg.link||(bugs.find(b=>b.build_link)?.build_link||''),
+      is_current: reg.is_current||false, logged_by: reg.logged_by||'', logged_at: reg.logged_at||'',
+      platform: reg.platform||'', bugs };
+  }).sort((a,b) => {
+    if (a.is_current !== b.is_current) return a.is_current ? -1 : 1;
+    return b.version.localeCompare(a.version, undefined, {numeric:true});
+  });
+
+  document.getElementById('builds-sub').textContent = `${builds.length} build${builds.length!==1?'s':''} tracked · ${Object.values(bugMap).flat().length} bugs tagged`;
+
+  if (!builds.length) {
+    if(banner) banner.innerHTML = '';
+    wrap.innerHTML = `<div style="text-align:center;padding:60px 20px">
+      <div style="font-size:48px;opacity:.15;margin-bottom:16px">📦</div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--dim);margin-bottom:20px">No builds logged yet.<br>Click <b style="color:var(--g2)">+ LOG BUILD</b> to add the first one,<br>or tag bugs with a Build version to auto-discover builds.</div>
+      <button class="btn btn-v" onclick="openNewBuild()">＋ LOG BUILD</button>
+    </div>`;
+    return;
+  }
+
+  const cur = builds.find(b => b.is_current);
+  if (cur && banner) {
+    const curOpen = cur.bugs.filter(b => !['Dev Fixed','Done','QA Pass','Closed'].includes(b.status)).length;
+    const curCrit = cur.bugs.filter(b => ['Critical','Urgent'].includes(b.priority) && !['Dev Fixed','Done','QA Pass','Closed'].includes(b.status)).length;
+    banner.innerHTML = `
+      <div style="background:rgba(6,182,212,.07);border:1px solid rgba(6,182,212,.25);border-radius:12px;padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="font-size:28px">📦</div>
+        <div style="flex:1">
+          <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--g2);text-transform:uppercase;margin-bottom:3px">CURRENT BUILD IN TESTING</div>
+          <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text)">${esc(cur.version)}</div>
+          ${cur.platform?`<div style="font-size:11px;color:var(--mute);margin-top:2px">${esc(cur.platform)}</div>`:''}
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <div style="text-align:center"><div style="font-family:var(--disp);font-size:24px;font-weight:800;color:var(--text)">${cur.bugs.length}</div><div style="font-family:var(--mono);font-size:8px;color:var(--mute);letter-spacing:1px">TOTAL</div></div>
+          <div style="text-align:center"><div style="font-family:var(--disp);font-size:24px;font-weight:800;color:var(--g3)">${curOpen}</div><div style="font-family:var(--mono);font-size:8px;color:var(--mute);letter-spacing:1px">OPEN</div></div>
+          <div style="text-align:center"><div style="font-family:var(--disp);font-size:24px;font-weight:800;color:${curCrit>0?'var(--g5)':'var(--g4)'}">${curCrit}</div><div style="font-family:var(--mono);font-size:8px;color:var(--mute);letter-spacing:1px">CRITICAL</div></div>
+        </div>
+        ${cur.link?`<a href="${esc(cur.link)}" target="_blank" rel="noopener" class="btn btn-g btn-sm" style="text-decoration:none">📦 Download</a>`:''}
+      </div>`;
+  } else if (banner) { banner.innerHTML = ''; }
+
+  wrap.innerHTML = `<div class="builds-page-grid">${builds.map(b => buildPageCard(b)).join('')}</div>`;
+}
+
+function buildPageCard(b) {
+  const statusOpen = s => !['Dev Fixed','Done','QA Pass','Closed'].includes(s);
+  const total = b.bugs.length;
+  const open  = b.bugs.filter(bug => statusOpen(bug.status)).length;
+  const fixed = b.bugs.filter(bug => ['Dev Fixed','Done','QA Pass'].includes(bug.status)).length;
+  const crit  = b.bugs.filter(bug => ['Critical','Urgent'].includes(bug.priority) && statusOpen(bug.status)).length;
+  const sorted = [...b.bugs].sort((a,z) => {
+    const ac = ['Critical','Urgent'].includes(a.priority) && statusOpen(a.status);
+    const zc = ['Critical','Urgent'].includes(z.priority) && statusOpen(z.status);
+    if (ac!==zc) return ac?-1:1;
+    if (statusOpen(a.status)!==statusOpen(z.status)) return statusOpen(a.status)?-1:1;
+    return 0;
+  });
+  const bugRows = sorted.slice(0,7).map(bug=>`
+    <div class="bpc-bug-row" onclick="openDetail('${bug.id}')">
+      <span class="bpc-bug-id">${esc(bug.id)}</span>
+      <span class="bpc-bug-title" title="${esc(bug.title||'')}">${esc(bug.title||'')}</span>
+      ${pChip(bug.priority)}${stChip(bug.status)}
+    </div>`).join('');
+  const moreCount = sorted.length - 7;
+  const vEsc = esc(b.version);
+  return `
+    <div class="build-page-card${b.is_current?' is-current':''}">
+      <div class="bpc-header">
+        <div>
+          <div class="bpc-version">🏗 ${vEsc}${b.is_current?'<span class="bpc-current-pill">● CURRENT</span>':''}</div>
+          <div class="bpc-meta">${b.platform?esc(b.platform)+' · ':''}${b.logged_by?'by '+esc(b.logged_by):''}${b.logged_at?' · '+esc(b.logged_at):''}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${!b.is_current?`<button class="btn btn-g btn-xs" onclick="setCurrentBuild('${vEsc}')">📍 Set Current</button>`:''}
+          <button class="btn btn-g btn-xs" onclick="editBuildEntry('${vEsc}')">✏️</button>
+          <button class="btn btn-r btn-xs" onclick="deleteBuildEntry('${vEsc}')">🗑</button>
+        </div>
+      </div>
+      <div class="bpc-stats">
+        <div class="bpc-stat"><div class="bpc-stat-n" style="color:var(--text)">${total}</div><div class="bpc-stat-l">Bugs</div></div>
+        <div class="bpc-stat"><div class="bpc-stat-n" style="color:var(--g3)">${open}</div><div class="bpc-stat-l">Open</div></div>
+        <div class="bpc-stat"><div class="bpc-stat-n" style="color:var(--g4)">${fixed}</div><div class="bpc-stat-l">Fixed</div></div>
+        <div class="bpc-stat"><div class="bpc-stat-n" style="color:${crit>0?'var(--g5)':'var(--dim)'}">${crit}</div><div class="bpc-stat-l">Critical</div></div>
+      </div>
+      <div class="bpc-body">
+        ${b.notes?`<div class="bpc-notes">${esc(b.notes)}</div>`:''}
+        ${b.link?`<div class="bpc-link-row"><a href="${esc(b.link)}" target="_blank" rel="noopener" class="bpc-link-btn">📦 Download / Install ↗</a></div>`:''}
+        ${total?`
+          <div class="bpc-bugs-label">Bugs in this build (${total})</div>
+          <div class="bpc-bug-list">
+            ${bugRows}
+            ${moreCount>0?`<div style="padding:6px 8px;font-family:var(--mono);font-size:9px;color:var(--g2);cursor:pointer" onclick="filterBugsByBuild('${vEsc}')">+${moreCount} more — click to view all →</div>`:''}
+          </div>`
+        :`<div style="font-family:var(--mono);font-size:11px;color:var(--dim);padding:8px 0">No bugs tagged yet.<br><span style="font-size:10px">Tag bugs by setting Build = <b>${vEsc}</b></span></div>`}
+      </div>
+      <div class="bpc-footer">
+        <button class="btn btn-g btn-xs" onclick="filterBugsByBuild('${vEsc}')">📋 All Bugs</button>
+        <button class="btn btn-g btn-xs" onclick="copyBuildReport('${vEsc}')">📋 Copy Report</button>
+      </div>
+    </div>`;
+}
+
+function renderHomeBuildsStrip() {
+  const el = document.getElementById('homeBuildsStrip');
+  if (!el) return;
+  const bugMap = getBuildBugMap();
+  const builds = Object.entries(bugMap).sort((a,b)=>b[1].length-a[1].length).slice(0,6);
+  if (!builds.length) { el.innerHTML = ''; return; }
+  const statusOpen = s => !['Dev Fixed','Done','QA Pass','Closed'].includes(s);
+  el.innerHTML = `
+    <div class="home-builds-strip">
+      <div class="hbs-header">
+        <span class="hbs-title">📦 Builds Overview</span>
+        <button class="btn btn-g btn-xs" onclick="goTab('builds')">Full Tracker →</button>
+      </div>
+      <div class="hbs-builds">
+        ${builds.map(([ver, bugs]) => {
+          const open  = bugs.filter(b=>statusOpen(b.status)).length;
+          const crit  = bugs.filter(b=>['Critical','Urgent'].includes(b.priority)&&statusOpen(b.status)).length;
+          const fixed = bugs.filter(b=>['Dev Fixed','Done','QA Pass'].includes(b.status)).length;
+          return `<div class="hbs-build" onclick="goTab('builds')">
+            <div class="hbs-build-ver">🏗 ${esc(ver)}</div>
+            <div class="hbs-build-chips">
+              <span style="font-family:var(--mono);font-size:9px;color:var(--g3)">${open} open</span>
+              ${crit>0?`<span style="font-family:var(--mono);font-size:9px;color:var(--g5)"> · ${crit} crit</span>`:''}
+              <span style="font-family:var(--mono);font-size:9px;color:var(--g4)"> · ${fixed} fixed</span>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+function openNewBuild() { _openBuildForm(null); }
+function editBuildEntry(version) { _openBuildForm(version); }
+
+async function _openBuildForm(editVersion) {
+  let registry = [];
+  try { registry = await loadBuildsRegistry(); } catch(e) {}
+  const existing = editVersion ? registry.find(r => r.version === editVersion) : null;
+  document.getElementById('panelTitle').textContent = editVersion ? '✏️ EDIT BUILD' : '📦 LOG BUILD';
+  document.getElementById('panelId').textContent = editVersion || 'NEW';
+  document.getElementById('panelFooter').innerHTML = `
+    <button class="btn btn-g" onclick="closePanel()">Cancel</button>
+    <button class="btn btn-v" onclick="saveBuildEntry('${esc(editVersion||'')}')">💾 Save Build</button>`;
+  document.getElementById('panelBody').innerHTML = `
+    <div class="build-log-form">
+      <div class="fg"><label class="fl">Build Version *</label>
+        <input class="fi2" id="bf-version" value="${esc(existing?.version||editVersion||'')}" placeholder="e.g. v3.2.1 or build-204"${editVersion?' readonly style="opacity:.6"':''}>
+      </div>
+      <div class="fg"><label class="fl">Platform / Environment</label>
+        <input class="fi2" id="bf-platform" value="${esc(existing?.platform||'')}" placeholder="Android · iOS · Staging · Production">
+      </div>
+      <div class="fg"><label class="fl">Download Link / APK URL</label>
+        <input class="fi2" id="bf-link" value="${esc(existing?.link||'')}" placeholder="https://drive.google.com/… or Firebase App Distribution">
+      </div>
+      <div class="fg"><label class="fl">Release Notes / What changed</label>
+        <textarea class="fi2" id="bf-notes" rows="3" placeholder="What's new or fixed in this build…">${esc(existing?.notes||'')}</textarea>
+      </div>
+      <div class="notif-toggle-row" style="margin-top:6px">
+        <button class="notif-toggle${(existing?.is_current||!editVersion)?' on':''}" id="bf-current-toggle" onclick="this.classList.toggle('on')"></button>
+        <span class="notif-toggle-label">Mark as <b>current build</b> (shown as active to whole team)</span>
+      </div>
+      <div class="notif-toggle-row">
+        <button class="notif-toggle on" id="bf-notify-toggle" onclick="this.classList.toggle('on')"></button>
+        <span class="notif-toggle-label">Notify team about this build</span>
+      </div>
+    </div>`;
+  openPanel();
+}
+
+async function saveBuildEntry(editVersion) {
+  const version = document.getElementById('bf-version')?.value?.trim();
+  if (!version) { toast('Build version is required','err'); return; }
+  const btn = document.querySelector('#panelFooter .btn-v');
+  if (btn) { btn.disabled=true; btn.innerHTML='<span class="spin"></span>'; }
+  try {
+    let registry = await loadBuildsRegistry();
+    const isCurrent = document.getElementById('bf-current-toggle')?.classList.contains('on');
+    const notifyTeam = document.getElementById('bf-notify-toggle')?.classList.contains('on');
+    if (isCurrent) registry = registry.map(r => ({...r, is_current:false}));
+    const entry = {
+      version,
+      platform: document.getElementById('bf-platform')?.value?.trim()||'',
+      link: document.getElementById('bf-link')?.value?.trim()||'',
+      notes: document.getElementById('bf-notes')?.value?.trim()||'',
+      is_current: isCurrent,
+      logged_by: S.user?.name||'',
+      logged_at: new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',year:'numeric'})
+    };
+    const idx = registry.findIndex(r => r.version === version);
+    if (idx >= 0) registry[idx] = entry; else registry.unshift(entry);
+    await saveBuildsRegistry(registry);
+    if (notifyTeam) {
+      addNotif(`📦 Build: ${version}`, `${entry.platform?entry.platform+' · ':''}${entry.notes?entry.notes.slice(0,80):'New build available'}`, null);
+      toast(`Build ${version} logged & team notified ✓`,'ok');
+    } else {
+      toast(`Build ${version} saved ✓`,'ok');
+    }
+    recordBuild(version);
+    closePanel();
+    renderBuildsPage();
+    if(S.view==='home') renderHomeBuildsStrip();
+  } catch(e) {
+    toast('Error: '+e.message,'err');
+    if(btn){btn.disabled=false;btn.innerHTML='💾 Save Build';}
+  }
+}
+
+async function setCurrentBuild(version) {
+  try {
+    let registry = await loadBuildsRegistry();
+    if (!registry.find(r=>r.version===version)) {
+      const bugMap = getBuildBugMap();
+      const link = (bugMap[version]||[]).find(b=>b.build_link)?.build_link||'';
+      registry.unshift({version,link,notes:'',platform:'',is_current:false,
+        logged_by:S.user?.name||'',logged_at:new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'})});
+    }
+    registry = registry.map(r=>({...r,is_current:r.version===version}));
+    await saveBuildsRegistry(registry);
+    toast(`${version} set as current build ✓`,'ok');
+    renderBuildsPage();
+    if(S.view==='home') renderHomeBuildsStrip();
+  } catch(e) { toast(e.message,'err'); }
+}
+
+async function deleteBuildEntry(version) {
+  if (!confirm(`Remove "${version}" from build registry?\n\nBugs tagged to this build will NOT be deleted.`)) return;
+  try {
+    let registry = await loadBuildsRegistry();
+    registry = registry.filter(r=>r.version!==version);
+    await saveBuildsRegistry(registry);
+    toast(`${version} removed`,'ok');
+    renderBuildsPage();
+  } catch(e) { toast(e.message,'err'); }
+}
+
+function filterBugsByBuild(version) {
+  goTab('backlog');
+  setTimeout(()=>{ const fq=document.getElementById('fq'); if(fq){fq.value=version;applyF();} },120);
+}
+
+function copyBuildReport(version) {
+  const bugMap = getBuildBugMap();
+  const bugs = bugMap[version]||[];
+  const statusOpen = s=>!['Dev Fixed','Done','QA Pass','Closed'].includes(s);
+  const open  = bugs.filter(b=>statusOpen(b.status));
+  const fixed = bugs.filter(b=>!statusOpen(b.status));
+  const crit  = open.filter(b=>['Critical','Urgent'].includes(b.priority));
+  const report = `📦 BUILD REPORT — ${version}
+━━━━━━━━━━━━━━━━━━━━━━━━
+Total bugs : ${bugs.length}
+Open       : ${open.length}
+Fixed      : ${fixed.length}
+Critical   : ${crit.length}
+${crit.length?'\n🚨 CRITICAL OPEN:\n'+crit.map(b=>`  • [${b.id}] ${b.title} — ${(b.assignees||[]).map(a=>a.name).join(', ')||'Unassigned'}`).join('\n'):''}
+${open.filter(b=>!['Critical','Urgent'].includes(b.priority)).length?'\n🔴 OTHER OPEN:\n'+open.filter(b=>!['Critical','Urgent'].includes(b.priority)).map(b=>`  • [${b.id}] ${b.title} (${b.priority})`).join('\n'):''}
+${fixed.length?'\n✅ FIXED:\n'+fixed.map(b=>`  • [${b.id}] ${b.title}`).join('\n'):''}
+
+Generated by BugPulse · ${new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})}`;
+  navigator.clipboard.writeText(report).then(()=>toast('Build report copied ✓','ok')).catch(()=>toast('Copy failed','err'));
+}
+
+// ══════════════════════════════════════════
+// BUILDS DASHBOARD SECTION
 function renderBuildSection() {
   const el = document.getElementById('dashBuilds');
   if(!el) return;
