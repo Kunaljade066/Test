@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#06060f">
 <link rel="preload" href="https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png" as="image">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 /* ═══════════════════════════════════════════════════
@@ -738,6 +739,26 @@ thead th:first-child .cb-wrap{display:flex}
 .sc-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
 .sc-row:last-child{border-bottom:none}
 .sc-desc{font-size:13px;color:var(--mist);font-weight:600}
+/* ═══ PATCH 1: BUILD UPLOAD + TEAM NOTIFICATION ═══ */
+.build-notif-section{background:rgba(6,182,212,.06);border:1px solid rgba(6,182,212,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.build-notif-title{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g2);margin-bottom:10px}
+.notif-toggle-row{display:flex;align-items:center;gap:8px;margin-top:7px}
+.notif-toggle{width:34px;height:18px;border-radius:9px;background:var(--bd2);border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.notif-toggle.on{background:var(--g4)}
+.notif-toggle::after{content:'';position:absolute;top:3px;left:3px;width:12px;height:12px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.notif-toggle.on::after{transform:translateX(16px)}
+.notif-toggle-label{font-size:12px;font-weight:600;color:var(--mist)}
+.build-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:6px;font-family:var(--mono);font-size:10px;font-weight:700;background:rgba(6,182,212,.1);color:var(--g2);border:1px solid rgba(6,182,212,.25)}
+/* ═══ PATCH 4: DASHBOARD GRAPHS ═══ */
+.chart-card{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:18px;box-shadow:var(--sh);position:relative}
+.chart-card canvas{max-height:220px}
+.chart-card-title{font-family:var(--mono);font-size:8px;letter-spacing:3px;text-transform:uppercase;color:var(--mute);margin-bottom:14px}
+.charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:18px}
+/* ═══ PATCH 5: SHARE MENU ═══ */
+.share-menu{position:absolute;background:var(--bg2);border:1px solid var(--bd2);border-radius:12px;padding:6px;z-index:9999;box-shadow:var(--sh2);display:none;flex-direction:column;gap:2px;min-width:180px;bottom:calc(100% + 6px);left:0}
+.share-menu.on{display:flex}
+.share-item{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--mist);transition:background .1s}
+.share-item:hover{background:rgba(124,58,237,.1);color:var(--text)}
 </style>
 </head>
 <body>
@@ -884,6 +905,8 @@ thead th:first-child .cb-wrap{display:flex}
           <div class="pm-item" id="managePodBtn" onclick="openDropdownManager();closeProfileMenu()" style="display:none"><span class="pm-icon">🗂️</span> Manage Dropdowns</div>
           <div class="pm-item" id="importBugsBtn" onclick="goTab('import');closeProfileMenu()" style="display:none"><span class="pm-icon">📥</span> Import Bugs (CSV)</div>
           <div class="pm-divider" id="managePodDivider" style="display:none"></div>
+          <div class="pm-item" onclick="openDayEndReport();closeProfileMenu()"><span class="pm-icon">📊</span> Day-End Report</div>
+          <div class="pm-item" onclick="toggleDayEndSchedule();closeProfileMenu()" id="dayEndScheduleItem"><span class="pm-icon">⏰</span> <span id="dayEndScheduleLabel">Enable Daily Report (6PM)</span></div>
           <div class="pm-item danger" onclick="signOut()"><span class="pm-icon">🚪</span> Sign Out</div>
         </div>
       </div>
@@ -1004,6 +1027,7 @@ thead th:first-child .cb-wrap{display:flex}
           <div class="ph"><div><h1>DASHBOARD</h1></div></div>
           <div class="stats" id="dashStats"></div>
           <div class="dash-grid" id="dashCharts"></div>
+          <div class="charts-grid" id="dashGraphs"></div>
         </div>
 
         <!-- NOTIFS -->
@@ -1357,84 +1381,38 @@ const clearSession=()=>localStorage.removeItem(SK);
 // ── BUG SYNC — polls every 5 min, only when tab is visible ──────────────
 // Reduces KV reads from ~5,760/day to ~288/day per user
 let _syncTimer=null;
-
-// ── ADAPTIVE POLLING ────────────────────────────────────────────
-// Active & focused  → 15s  (near real-time for the whole team)
-// Visible but idle  → 60s
-// Tab hidden        → skip entirely (fires on next visibility)
-// Back from hidden  → immediate poll + reset to 15s
-
-const SYNC_FAST   = 15  * 1000;  // 15s  — tab focused & active
-const SYNC_IDLE   = 60  * 1000;  // 60s  — tab visible but idle
-const SYNC_HIDDEN = 5 * 60* 1000;// 5min — tab hidden (fallback)
-
-let _lastActivity = Date.now();
-let _syncInterval = SYNC_FAST;
-
-// Track user activity to distinguish focused vs idle
-['mousemove','keydown','click','scroll','touchstart'].forEach(ev =>
-  document.addEventListener(ev, () => { _lastActivity = Date.now(); }, {passive:true})
-);
-
-function _currentSyncInterval() {
-  if(document.hidden) return SYNC_HIDDEN;
-  const idle = Date.now() - _lastActivity > 60000; // idle after 60s no input
-  return idle ? SYNC_IDLE : SYNC_FAST;
-}
-
-async function _doSync() {
-  if(!S.user?.idToken) return;
-  if(document.hidden) return;
-  try{
-    const r=await fetch(WORKER+'/bugs',{headers:{'Content-Type':'application/json','X-Google-Token':S.user.idToken}});
-    if(!r.ok) return;
-    const d=await r.json();
-    const fresh=d.bugs||[];
-
-    // SAFETY GUARD
-    if(fresh.length===0 && S.bugs.length>0) return;
-    if(S.bugs.length>5 && fresh.length < S.bugs.length*0.8) return;
-
-    const changed = fresh.length!==S.bugs.length
-      || (fresh[0]?.id!==S.bugs[0]?.id)
-      || (fresh[fresh.length-1]?.updated_at!==S.bugs[S.bugs.length-1]?.updated_at);
-
-    if(changed){
-      fresh.forEach(b=>{if(!b.assignees)b.assignees=b.assignee_email?[{name:b.assignee||'',email:b.assignee_email,picture:b.assignee_picture||''}]:[];});
-      S.bugs=fresh;
-      updateSbBadges();populateDropdowns();applyF();
-      renderSlaWarnings();
-      setCloud('ok',`☁ ${S.bugs.length}`);
-      if(S.view==='home')renderHome();
-      else if(S.view==='board')renderBoard();
-      // Subtle "data updated" pulse on the cloud indicator
-      const pip=document.getElementById('pip');
-      if(pip){pip.style.transform='scale(1.8)';setTimeout(()=>pip.style.transform='',400);}
-    }
-  }catch(e){}
-}
-
-function _scheduleSyncTick() {
-  if(_syncTimer) clearTimeout(_syncTimer);
-  const interval = _currentSyncInterval();
-  _syncTimer = setTimeout(async()=>{
-    await _doSync();
-    _scheduleSyncTick(); // reschedule adaptively after each tick
-  }, interval);
-}
+const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 function startFastSync(){
-  if(_syncTimer) clearTimeout(_syncTimer);
-  _scheduleSyncTick();
-}
+  if(_syncTimer) clearInterval(_syncTimer);
+  _syncTimer=setInterval(async()=>{
+    if(document.hidden) return;
+    if(!S.user?.idToken) return;
+    try{
+      const r=await fetch(WORKER+'/bugs',{headers:{'Content-Type':'application/json','X-Google-Token':S.user.idToken}});
+      if(!r.ok) return; // never touch S.bugs on any error
+      const d=await r.json();
+      const fresh=d.bugs||[];
 
-// When tab becomes visible again — poll immediately then reset cadence
-document.addEventListener('visibilitychange', ()=>{
-  if(!document.hidden){
-    if(_syncTimer) clearTimeout(_syncTimer);
-    _doSync().then(()=>_scheduleSyncTick());
-  }
-});
+      // SAFETY GUARD: never overwrite with empty or suspiciously fewer bugs
+      // Protects against D1 hiccups, auth errors returning empty arrays
+      if(fresh.length===0 && S.bugs.length>0) return;
+      if(S.bugs.length>5 && fresh.length < S.bugs.length*0.8) return;
+
+      const changed = fresh.length!==S.bugs.length
+        || (fresh[0]?.id!==S.bugs[0]?.id)
+        || (fresh[fresh.length-1]?.updated_at!==S.bugs[S.bugs.length-1]?.updated_at);
+      if(changed){
+        fresh.forEach(b=>{if(!b.assignees)b.assignees=b.assignee_email?[{name:b.assignee||'',email:b.assignee_email,picture:b.assignee_picture||''}]:[];});
+        S.bugs=fresh;
+        updateSbBadges();populateDropdowns();applyF();
+        setCloud('ok',`☁ ${S.bugs.length}`);
+        if(S.view==='home')renderHome();
+        else if(S.view==='board')renderBoard();
+      }
+    }catch(e){}
+  }, SYNC_INTERVAL);
+}
 
 // ── LIVE PRESENCE — fetch once on load, then every 15 min ───────────────
 // Was: every 90s = 960 KV reads/day. Now: every 15min = 96 reads/day
@@ -1749,6 +1727,8 @@ function onLogin(){
     setTimeout(launchConfetti, 200);
     startLivePresence();
     checkDeepLink();
+    updateDayEndScheduleLabel();
+    checkDayEndAutoReport();
     const firstName=(S.user.name||'').split(' ')[0]||'there';
     const critCount=S.bugs.filter(b=>['Critical','Urgent'].includes(b.priority)&&!['Dev Fixed','Done','QA Pass','Closed'].includes(b.status)).length;
     const myCount=S.bugs.filter(b=>(b.assignees||[]).some(a=>a.email===S.user?.email)).length;
@@ -2420,6 +2400,7 @@ function renderDashboard(){
     </div>`;
   };
   el.innerHTML=bc('BY PRIORITY',cntBy('priority'),pco,'priority')+bc('BY STATUS',cntBy('status'),sco,'status')+bc('BY ASSIGNEE',cntByAssignee(),'','assignee')+bc('BY FEATURE',cntBy('feature'),{},'feature')+DD_FIELDS.map(f=>bc('BY '+f.label.toUpperCase(),cntBy(f.key),{},f.key)).join('')+bc('BY SPRINT',cntBy('sprint'),{},'sprint')+bc('BY BUILD',cntBy('build'),{},'build');
+  renderDashboardGraphs();
 }
 
 // ══════════════════════════════════════════
@@ -2656,6 +2637,15 @@ function openDetail(id){
   document.getElementById('panelId').textContent=bug.id||'';
   document.getElementById('panelFooter').innerHTML=`
     <button class="btn btn-g" onclick="closePanel()">Close</button>
+    <div style="position:relative">
+      <button class="btn btn-g" onclick="toggleShareMenu(event,'${bug.id}','${esc(bug.title||'').replace(/'/g,"\\'")}')">🔗 Share</button>
+      <div class="share-menu" id="shareMenu-${bug.id}">
+        <div class="share-item" onclick="copyBugLink('${bug.id}')">📋 Copy Link</div>
+        <div class="share-item" onclick="shareBugWhatsApp('${bug.id}','${esc(bug.title||'').replace(/'/g,"\\'")}','${bug.priority||''}')">💬 WhatsApp</div>
+        <div class="share-item" onclick="shareBugSlack('${bug.id}','${esc(bug.title||'').replace(/'/g,"\\'")}')">🟣 Copy Slack Msg</div>
+        <div class="share-item" onclick="copyBugSummary('${bug.id}')">📄 Copy Summary</div>
+      </div>
+    </div>
     <button class="btn btn-g" onclick="openEdit('${bug.id}')">✏️ Edit</button>
     ${S.user?.role==='admin'?`<button class="btn btn-r" onclick="delBug('${bug.id}');closePanel()">🗑 Delete</button>`:''}`;
   document.getElementById('panelBody').innerHTML=`
@@ -2675,6 +2665,7 @@ function openDetail(id){
       <div class="dgi"><div class="dgi-l">Sprint</div><div class="dgi-v">${esc(bug.sprint||'—')}</div></div>
       ${DD_FIELDS.filter(f=>bug[f.key]).map(f=>`<div class="dgi"><div class="dgi-l">${esc(f.label)}</div><div class="dgi-v">${esc(bug[f.key])}</div></div>`).join("")}
       <div class="dgi"><div class="dgi-l">Build</div><div class="dgi-v" style="font-family:var(--mono);font-size:11px">${esc(bug.build||'—')}</div></div>
+      ${bug.build_link?`<div class="dgi"><div class="dgi-l">Build Link</div><div class="dgi-v"><a href="${esc(bug.build_link)}" target="_blank" rel="noopener" style="color:var(--g2);text-decoration:none;font-size:11px;font-family:var(--mono);display:flex;align-items:center;gap:4px">📦 Download / Open ↗</a></div></div>`:''}
       <div class="dgi"><div class="dgi-l">Device / UID</div><div class="dgi-v">${esc(bug.device||'—')}</div></div>
       <div class="dgi"><div class="dgi-l">Created</div><div class="dgi-v" style="font-family:var(--mono);font-size:10px">${esc(bug.created_at||'—')}</div></div>
       <div class="dgi"><div class="dgi-l">Updated</div><div class="dgi-v" style="font-family:var(--mono);font-size:10px">${esc(bug.updated_at||'—')}</div></div>
@@ -2688,7 +2679,7 @@ function openDetail(id){
     ${renderLinks(bug)}
     <div class="dsec">
       <div class="dsec-title">Activity &amp; Comments (${(bug.comments||[]).length})</div>
-      <div>${renderComments(bug.comments||[])}</div>
+      <div>${renderCommentsV2(bug.comments||[], bug.id)}</div>
       <div class="comment-row">
         ${avEl(S.user?.name,S.user?.picture,24)}
         <div class="comment-input-wrap">
@@ -2988,11 +2979,32 @@ function buildBugForm(bug,full){
       <div class="fg fc2"><label class="fl">Assignees</label>${buildMultiAssigneePicker(bug)}</div>
       <div class="fg"><label class="fl">Reporter</label><input class="fi2" id="f-rep" value="${esc(bug?.reporter||S.user?.name||'')}" placeholder="Your name"></div>
       <div class="fg"><label class="fl">Feature</label>
-        <input class="fi2" id="f-feat" value="${esc(bug?.feature||'')}" list="featList" placeholder="e.g. Match Flow">
-        <datalist id="featList">${[...new Set(S.bugs.map(b=>b.feature).filter(Boolean))].map(f=>`<option value="${esc(f)}">`).join('')}</datalist>
+        <div style="position:relative">
+          <input class="fi2" id="f-feat" value="${esc(bug?.feature||'')}"
+            placeholder="e.g. Match Flow"
+            oninput="featureInputFilter(this.value)"
+            onfocus="featureInputFilter(this.value)"
+            autocomplete="off">
+          <div id="featDropdown" style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:9999;background:var(--bg2);border:1px solid var(--bd2);border-radius:10px;box-shadow:var(--sh2);display:none;max-height:220px;overflow-y:auto">
+            <div style="padding:6px 10px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--dim);border-bottom:1px solid var(--bd)">RECENTLY USED</div>
+            ${(()=>{const fu={};S.bugs.forEach(b=>{if(b.feature)fu[b.feature]=Math.max(fu[b.feature]||0,b.created_ts||0);});const sf=Object.entries(fu).sort((a,b2)=>b2[1]-a[1]).map(([f])=>f);return sf.slice(0,6).map(f=>`<div onclick="selectFeature('${esc(f)}')" style="padding:9px 13px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px;transition:background .1s" onmouseenter="this.style.background='rgba(124,58,237,.1)'" onmouseleave="this.style.background=''"><span style="font-size:14px">🕐</span><span>${esc(f)}</span><span style="margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--dim)">${S.bugs.filter(b=>b.feature===f).length} bugs</span></div>`).join('')+sf.slice(6).map(f=>`<div onclick="selectFeature('${esc(f)}')" style="padding:9px 13px;cursor:pointer;font-size:13px;font-weight:600;color:var(--mist);border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px;transition:background .1s" onmouseenter="this.style.background='rgba(124,58,237,.08)'" onmouseleave="this.style.background=''"><span>${esc(f)}</span><span style="margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--dim)">${S.bugs.filter(b=>b.feature===f).length} bugs</span></div>`).join('');})()}
+          </div>
+        </div>
       </div>
       <div class="fg"><label class="fl">Sprint</label><select class="fi2" id="f-sp"><option value="">No Sprint</option>${spOpts}</select></div>
-      <div class="fg"><label class="fl">Build</label><input class="fi2" id="f-build" value="${esc(bug?.build||'')}" placeholder="e.g. v3.2.1"></div>
+      <div class="fg"><label class="fl">Build Version</label><input class="fi2" id="f-build" value="${esc(bug?.build||'')}" placeholder="e.g. v3.2.1" list="buildHistoryList" oninput="onBuildInput(this.value)"><datalist id="buildHistoryList">${getRecentBuilds().map(b=>`<option value="${esc(b)}">`).join('')}</datalist></div>
+      <div class="fg"><label class="fl">Build Link / APK URL <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label><input class="fi2" id="f-build-link" value="${esc(bug?.build_link||'')}" placeholder="https://drive.google.com/… or https://appdistribution/…"></div>
+      <div class="build-notif-section">
+        <div class="build-notif-title">🔔 NOTIFY TEAM ABOUT THIS BUG</div>
+        <div class="notif-toggle-row">
+          <button class="notif-toggle${bug?'':' on'}" id="notifToggle" onclick="toggleNotif(this)"></button>
+          <span class="notif-toggle-label">Notify assignees &amp; reporters</span>
+        </div>
+        <div style="margin-top:8px" id="notifMsgWrap">
+          <label class="fl" style="margin-top:6px">Custom notification message <span style="color:var(--dim);font-weight:400;text-transform:none">(optional)</span></label>
+          <input class="fi2" id="f-notif-msg" placeholder="e.g. Regression found in build v3.2.1 — please retest">
+        </div>
+      </div>
       <div class="fg"><label class="fl">Device / User ID</label><input class="fi2" id="f-dev" value="${esc(bug?.device||'')}" placeholder="e.g. Pixel 8 / UID 12345"></div>
       <div class="fg fc2"><label class="fl">Steps to Reproduce</label>
         <textarea class="fi2" id="f-steps" rows="3" placeholder="1. Open app&#10;2. Tap X&#10;3. Observe Y">${esc(bug?.steps||'')}</textarea>
@@ -3010,6 +3022,10 @@ function buildBugForm(bug,full){
       </div>
       <div class="fg fc2"><label class="fl">Attachment (filename or URL)</label>
         <input class="fi2" id="f-att" value="${esc(bug?.attachment||'')}" placeholder="screenshot.png or https://…">
+      </div>
+      <div class="fg fc2">
+        <label class="fl">Initial Note / Comment <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">(optional — saved with bug)</span></label>
+        <textarea class="fi2" id="f-init-comment" rows="2" placeholder="Any additional context, workaround, or note for the team…"></textarea>
       </div>
     </div>`;
   setTimeout(renderMapTags,0);
@@ -3037,23 +3053,52 @@ function checkDup(txt,curId){
 async function _aiDup(txt,curId,candidates){
   const box=document.getElementById('dupBox'),lst=document.getElementById('dupList');
   if(!box||!lst)return;
+
+  // First pass: keyword scoring — instant, no API needed
+  const words=txt.toLowerCase().split(/\s+/).filter(w=>w.length>3);
+  const scored=candidates.map(c=>({
+    id:c.bug.id,title:c.bug.title,status:c.bug.status,
+    score:words.filter(w=>(c.bug.title+' '+(c.bug.actual||'')+' '+(c.bug.steps||'')).toLowerCase().includes(w)).length,
+    maxWords:words.length
+  })).sort((a,b)=>b.score-a.score);
+
+  const local=scored.filter(r=>r.score>=2||(words.length<=3&&r.score>=1));
+  if(!local.length){box.classList.remove('on');return;}
+
+  box.classList.add('on');
+  lst.innerHTML=`<div style="font-family:var(--mono);font-size:9px;color:var(--mute);margin-bottom:6px;letter-spacing:1px">⚡ KEYWORD MATCH</div>`
+    +local.slice(0,4).map(r=>{
+      const bug=S.bugs.find(b=>b.id===r.id);if(!bug)return'';
+      const pct=Math.min(99,Math.round((r.score/Math.max(r.maxWords,1))*100));
+      return`<div class="dup-item" onclick="openDetail('${bug.id}');closePanel()"><span class="dup-id">${esc(bug.id)}</span><span class="dup-t">${esc(bug.title||'')}</span>${stChip(bug.status)}<span class="dup-pct">${pct}%</span></div>`;
+    }).join('');
+
+  // Second pass: AI enrichment — async, never blocks UI
   try{
-    const list=candidates.map(c=>`${c.bug.id}: ${c.bug.title}${c.bug.actual?' | '+c.bug.actual.slice(0,80):''}`).join('\n');
-    const prompt=`QA duplicate-bug detector. New bug:\n"${txt}"\n\nExisting bugs:\n${list}\n\nRate similarity: HIGH (same root cause >70%), MEDIUM (related 30-70%). Respond ONLY valid JSON array:\n[{"id":"BUG-XXX","similarity":"HIGH","reason":"one line"}]\nReturn [] if nothing qualifies.`;
-    // Route through worker to avoid CORS — Anthropic blocks direct browser calls
-    const res=await fetch(WORKER+'/ai/dup',{method:'POST',headers:{'Content-Type':'application/json','X-Google-Token':S.user?.idToken||''},body:JSON.stringify({prompt})});
+    const list=local.slice(0,5).map(r=>`${r.id}: ${S.bugs.find(b=>b.id===r.id)?.title||''}`).join('\n');
+    const prompt=`You are a QA duplicate detector. New bug: "${txt}"\n\nExisting bugs:\n${list}\n\nReturn ONLY a JSON array (no markdown, no explanation):\n[{"id":"BUG-XXX","similarity":"HIGH","reason":"brief reason"}]\nHIGH = same root cause. MEDIUM = related. Return [] if no match.`;
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),8000);
+    const res=await fetch(WORKER+'/ai/dup',{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json','X-Google-Token':S.user?.idToken||''},body:JSON.stringify({prompt})});
+    clearTimeout(timeout);
+    if(!res.ok)throw new Error('AI unavailable');
     const data=await res.json();
-    const raw=(data.text||'').replace(/```[\s\S]*?```/g,'').trim();
-    const arr=JSON.parse(raw.match(/\[[\s\S]*\]/)?.[0]||'[]');
-    if(!Array.isArray(arr)||!arr.length){box.classList.remove('on');return;}
+    if(data.error)throw new Error(data.error);
+    const raw=(data.text||'').replace(/```[\s\S]*?```/g,'').replace(/`/g,'').trim();
+    const jsonMatch=raw.match(/\[[\s\S]*\]/);
+    if(!jsonMatch)throw new Error('No JSON');
+    const arr=JSON.parse(jsonMatch[0]);
+    if(!Array.isArray(arr)||!arr.length)throw new Error('Empty result');
     box.classList.add('on');
-    lst.innerHTML=`<div style="font-family:var(--mono);font-size:9px;color:var(--g2);margin-bottom:6px;letter-spacing:1px">✨ AI SIMILARITY ANALYSIS</div>`
+    lst.innerHTML=`<div style="font-family:var(--mono);font-size:9px;color:var(--g2);margin-bottom:6px;letter-spacing:1px">✨ AI ANALYSIS</div>`
       +arr.map(r=>{
         const bug=S.bugs.find(b=>b.id===r.id);if(!bug)return'';
         const col=r.similarity==='HIGH'?'var(--g5)':'var(--g3)';
         return`<div class="dup-item" onclick="openDetail('${bug.id}');closePanel()"><span class="dup-id">${esc(bug.id)}</span><span class="dup-t">${esc(bug.title||'')}</span>${stChip(bug.status)}<span style="font-family:var(--mono);font-size:9px;font-weight:700;color:${col};padding:1px 6px;border-radius:8px;border:1px solid ${col};flex-shrink:0">${r.similarity}</span></div><div style="padding:1px 8px 6px;font-family:var(--mono);font-size:9px;color:var(--dim);line-height:1.5">${esc(r.reason||'')}</div>`;
-      }).join('');
-  }catch(e){console.warn('[ai-dup]',e.message);}
+      }).filter(Boolean).join('');
+  }catch(e){
+    console.warn('[ai-dup] AI unavailable, keyword results shown:',e.message);
+  }
 }
 
 function openPanel(){document.getElementById('overlay').classList.add('on');document.getElementById('panel').classList.add('on');}
@@ -3135,6 +3180,7 @@ async function saveBug(){
         device:document.getElementById('f-dev')?.value||'',
         steps:document.getElementById('f-steps')?.value||'',repro:document.getElementById('f-repro')?.value||'',expected:document.getElementById('f-expected')?.value||'',actual:document.getElementById('f-actual')?.value||'',
         attachment:document.getElementById('f-att')?.value||'',
+        build_link:document.getElementById('f-build-link')?.value||'',
         ...ddVals,
         app_url:APP_URL,
       };
@@ -3182,6 +3228,16 @@ async function saveBug(){
           S.page=1;
           if(S.view==='home') renderHome();
           else { S.view='backlog'; goTab('backlog'); applyF(); }
+        }
+        // Patch 1: record build + notify team
+        recordBuild(data.build);
+        if(document.getElementById('notifToggle')?.classList.contains('on')) {
+          sendBugNotification(res?.bug||data, document.getElementById('f-notif-msg')?.value||'');
+        }
+        // Patch 6: post initial comment if provided
+        const initComment = document.getElementById('f-init-comment')?.value?.trim();
+        if(initComment && res?.bug?.id) {
+          await api(`/bugs/${res.bug.id}/comment`, 'POST', {text: initComment}).catch(()=>{});
         }
 
         showNatasha(_nm[Math.floor(Math.random()*_nm.length)],_createMood);
@@ -4241,6 +4297,333 @@ async function importSubmit() {
 // ══════════════════════════════════════════
 // D1 MIGRATION TOOL (admin only, one-time)
 // ══════════════════════════════════════════
+
+// ══════════════════════════════════════════
+// PATCH 1 — BUILD UPLOAD / LINK + NOTIFICATIONS
+// ══════════════════════════════════════════
+function getRecentBuilds() {
+  try { return JSON.parse(localStorage.getItem('hwt_build_history')||'[]'); } catch { return []; }
+}
+function recordBuild(buildStr) {
+  if(!buildStr) return;
+  try {
+    const builds = getRecentBuilds().filter(b=>b!==buildStr);
+    builds.unshift(buildStr);
+    localStorage.setItem('hwt_build_history', JSON.stringify(builds.slice(0,20)));
+  } catch(e) {}
+}
+function onBuildInput(val) { /* auto-suggest via datalist */ }
+function toggleNotif(btn) {
+  btn.classList.toggle('on');
+  const wrap = document.getElementById('notifMsgWrap');
+  if(wrap) wrap.style.opacity = btn.classList.contains('on') ? '1' : '0.4';
+}
+async function sendBugNotification(bug, customMsg) {
+  const assignees = bug.assignees || [];
+  const msg = customMsg || `New bug reported: "${(bug.title||'').slice(0,60)}"`;
+  assignees.forEach(a => {
+    if(a.email && a.email !== S.user?.email) addNotif(`🐛 Bug assigned: ${bug.id||''}`, msg, bug.id);
+  });
+  addNotif(`📢 Bug filed: ${bug.id||''}`, `${msg} · Build: ${bug.build||'—'}`, bug.id);
+  toast('Team notified ✓','ok');
+}
+
+// ══════════════════════════════════════════
+// PATCH 2 — DAY-END REPORT
+// ══════════════════════════════════════════
+const DAY_END_REPORT_KEY = 'hwt_dayend_v1';
+function getTodayIST() {
+  return new Date().toLocaleDateString('en-IN', {timeZone:'Asia/Kolkata', day:'2-digit', month:'2-digit', year:'numeric'});
+}
+function getTodayBugs() {
+  const todayStr = new Date().toLocaleDateString('en-IN', {timeZone:'Asia/Kolkata'});
+  return S.bugs.filter(b => {
+    if(!b.created_at) return false;
+    return b.created_at.includes(todayStr) || b.created_at.startsWith(new Date().toISOString().slice(0,10));
+  });
+}
+function getUpdatedTodayBugs() {
+  const todayStr = new Date().toLocaleDateString('en-IN', {timeZone:'Asia/Kolkata'});
+  return S.bugs.filter(b => b.updated_at && b.updated_at.includes(todayStr));
+}
+function openDayEndReport() {
+  const todayBugs = getTodayBugs();
+  const updatedBugs = getUpdatedTodayBugs();
+  const resolvedToday = updatedBugs.filter(b => ['Dev Fixed','Done','QA Pass'].includes(b.status));
+  const critOpen = S.bugs.filter(b => ['Critical','Urgent'].includes(b.priority) && !['Dev Fixed','Done','QA Pass','Closed'].includes(b.status));
+  const dateStr = new Date().toLocaleDateString('en-IN', {timeZone:'Asia/Kolkata', weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  document.getElementById('panelTitle').textContent = '📊 DAY-END REPORT';
+  document.getElementById('panelId').textContent = getTodayIST();
+  document.getElementById('panelFooter').innerHTML = `
+    <button class="btn btn-g" onclick="closePanel()">Close</button>
+    <button class="btn btn-v" onclick="copyDayEndReport()">📋 Copy Report</button>`;
+  document.getElementById('panelBody').innerHTML = `
+    <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:12px;padding:16px 18px;margin-bottom:18px">
+      <div style="font-family:var(--disp);font-size:11px;font-weight:800;letter-spacing:2px;color:var(--g2);margin-bottom:4px">DAILY BUG REPORT</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--mute)">${dateStr}</div>
+    </div>
+    <div class="dash-grid" style="margin-bottom:18px;margin-top:0">
+      <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:var(--g5);font-size:36px">${todayBugs.length}</div><div class="sc-l" style="margin-top:6px">BUGS FILED TODAY</div></div>
+      <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:var(--g4);font-size:36px">${resolvedToday.length}</div><div class="sc-l" style="margin-top:6px">RESOLVED TODAY</div></div>
+      <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:var(--g3);font-size:36px">${critOpen.length}</div><div class="sc-l" style="margin-top:6px">CRITICAL OPEN</div></div>
+      <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:var(--text);font-size:36px">${S.bugs.length}</div><div class="sc-l" style="margin-top:6px">TOTAL ACTIVE</div></div>
+    </div>
+    ${todayBugs.length ? `<div class="dsec"><div class="dsec-title">🐛 BUGS FILED TODAY (${todayBugs.length})</div>
+      <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;overflow:hidden">
+        ${todayBugs.map(b=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid rgba(255,255,255,.03);cursor:pointer" onclick="closePanel();openDetail('${b.id}')">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--g1);flex-shrink:0;width:100px">${esc(b.id)}</span>
+          <span style="flex:1;font-size:12px;font-weight:700;color:var(--text)">${esc(b.title||'')}</span>
+          ${pChip(b.priority)}${stChip(b.status)}</div>`).join('')}
+      </div></div>` : ''}
+    ${resolvedToday.length ? `<div class="dsec"><div class="dsec-title">✅ RESOLVED TODAY (${resolvedToday.length})</div>
+      <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;overflow:hidden">
+        ${resolvedToday.map(b=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid rgba(255,255,255,.03)">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--g1);flex-shrink:0;width:100px">${esc(b.id)}</span>
+          <span style="flex:1;font-size:12px;font-weight:700;color:var(--text)">${esc(b.title||'')}</span>
+          ${stChip(b.status)}</div>`).join('')}
+      </div></div>` : ''}
+    ${critOpen.length ? `<div class="dsec"><div class="dsec-title" style="color:var(--g5)">🚨 CRITICAL / URGENT STILL OPEN (${critOpen.length})</div>
+      <div style="background:rgba(239,68,68,.04);border:1px solid rgba(239,68,68,.2);border-radius:8px;overflow:hidden">
+        ${critOpen.slice(0,10).map(b=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid rgba(239,68,68,.08);cursor:pointer" onclick="closePanel();openDetail('${b.id}')">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--g5);flex-shrink:0;width:100px">${esc(b.id)}</span>
+          <span style="flex:1;font-size:12px;font-weight:700;color:var(--text)">${esc(b.title||'')}</span>
+          ${pChip(b.priority)}${avStack(b.assignees||[],18)}</div>`).join('')}
+      </div></div>` : ''}
+    <div style="margin-top:14px;background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:14px;font-family:var(--mono);font-size:10px;color:var(--dim);white-space:pre-wrap;line-height:1.9" id="dayEndReportText">${generateReportText(todayBugs,resolvedToday,critOpen,dateStr)}</div>`;
+  openPanel();
+}
+function generateReportText(todayBugs, resolvedToday, critOpen, dateStr) {
+  return `📊 BUG REPORT — ${dateStr}
+━━━━━━━━━━━━━━━━━━━━━━━━
+🐛 Filed today  : ${todayBugs.length}
+✅ Resolved     : ${resolvedToday.length}
+🚨 Critical open: ${critOpen.length}
+📋 Total active : ${S.bugs.length}
+${todayBugs.length ? '\n🐛 TODAY\'S BUGS:\n'+todayBugs.map(b=>`  • [${b.id}] ${b.title} (${b.priority})`).join('\n') : ''}
+${resolvedToday.length ? '\n✅ RESOLVED:\n'+resolvedToday.map(b=>`  • [${b.id}] ${b.title}`).join('\n') : ''}
+${critOpen.length ? '\n🚨 STILL CRITICAL:\n'+critOpen.slice(0,8).map(b=>`  • [${b.id}] ${b.title} — ${(b.assignees||[]).map(a=>a.name).join(', ')||'Unassigned'}`).join('\n') : ''}
+
+Generated by BugPulse · ${new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})}`;
+}
+function copyDayEndReport() {
+  const txt = document.getElementById('dayEndReportText')?.textContent;
+  if(!txt) return;
+  navigator.clipboard.writeText(txt).then(()=>toast('Report copied to clipboard ✓','ok')).catch(()=>toast('Copy failed','err'));
+}
+function toggleDayEndSchedule() {
+  const enabled = localStorage.getItem(DAY_END_REPORT_KEY) === '1';
+  localStorage.setItem(DAY_END_REPORT_KEY, enabled ? '0' : '1');
+  updateDayEndScheduleLabel();
+  toast(enabled ? 'Daily report disabled' : 'Daily report enabled — triggers at 6PM IST', 'ok');
+}
+function updateDayEndScheduleLabel() {
+  const enabled = localStorage.getItem(DAY_END_REPORT_KEY) === '1';
+  const el = document.getElementById('dayEndScheduleLabel');
+  if(el) el.textContent = enabled ? 'Disable Daily Report (6PM)' : 'Enable Daily Report (6PM)';
+}
+function checkDayEndAutoReport() {
+  if(localStorage.getItem(DAY_END_REPORT_KEY) !== '1') return;
+  const shown = localStorage.getItem('hwt_dayend_shown');
+  const today = getTodayIST();
+  if(shown === today) return;
+  const istHour = parseInt(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata',hour:'numeric',hour12:false}));
+  if(istHour >= 18) {
+    localStorage.setItem('hwt_dayend_shown', today);
+    setTimeout(()=>{ showNatasha('📊 Time for the day-end bug report! Tap 📊 in the menu.','cool'); }, 3000);
+  }
+}
+
+// ══════════════════════════════════════════
+// PATCH 3 — FEATURE INPUT DROPDOWN
+// ══════════════════════════════════════════
+function featureInputFilter(q) {
+  const dd = document.getElementById('featDropdown');
+  if(!dd) return;
+  const allFeats = [...new Set(S.bugs.map(b=>b.feature).filter(Boolean))];
+  const filtered = q ? allFeats.filter(f=>f.toLowerCase().includes(q.toLowerCase())) : allFeats;
+  if(!filtered.length) { dd.style.display='none'; return; }
+  dd.style.display = 'block';
+  document.addEventListener('click', e => {
+    if(!e.target.closest('#f-feat') && !e.target.closest('#featDropdown')) dd.style.display='none';
+  }, {once:true});
+}
+function selectFeature(name) {
+  const inp = document.getElementById('f-feat');
+  if(inp) inp.value = name;
+  const dd = document.getElementById('featDropdown');
+  if(dd) dd.style.display='none';
+}
+
+// ══════════════════════════════════════════
+// PATCH 4 — DASHBOARD CHARTS (Chart.js)
+// ══════════════════════════════════════════
+let _chartInstances = {};
+function destroyChart(id) {
+  if(_chartInstances[id]) { _chartInstances[id].destroy(); delete _chartInstances[id]; }
+}
+function renderDashboardGraphs() {
+  const el = document.getElementById('dashGraphs');
+  if(!el || typeof Chart === 'undefined') return;
+  el.innerHTML = `
+    <div class="chart-card">
+      <div class="chart-card-title">📊 BUGS BY STATUS</div>
+      <canvas id="chartStatus"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">🎯 PRIORITY BREAKDOWN</div>
+      <canvas id="chartPriority"></canvas>
+    </div>
+    <div class="chart-card" style="grid-column:1/-1">
+      <div class="chart-card-title">📅 BUGS OVER TIME (last 30 days)</div>
+      <canvas id="chartTimeline" style="max-height:180px"></canvas>
+    </div>`;
+  setTimeout(() => { renderStatusChart(); renderPriorityChart(); renderTimelineChart(); }, 50);
+}
+function renderStatusChart() {
+  destroyChart('status');
+  const statusColors = {'Open':'#a78bfa','In Progress':'#06b6d4','In Review':'#f59e0b','Dev Fixed':'#6ee7b7','Done':'#10b981','Bugged':'#ef4444','QA Pass':'#34d399','Closed':'#4b5563','Non-Recreatable':'#9ca3af','Not a bug':'#6b7280'};
+  const labels = Object.keys(statusColors).filter(s => S.bugs.filter(b=>b.status===s).length > 0);
+  const data = labels.map(s => S.bugs.filter(b=>b.status===s).length);
+  const colors = labels.map(s => statusColors[s]||'#666');
+  const ctx = document.getElementById('chartStatus');
+  if(!ctx) return;
+  _chartInstances['status'] = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderColor: 'rgba(0,0,0,0)', borderWidth: 0 }] },
+    options: { responsive:true, maintainAspectRatio:true,
+      plugins: { legend: { position:'right', labels:{ color:'#9090c0', font:{size:10}, boxWidth:10, padding:8 } } }
+    }
+  });
+}
+function renderPriorityChart() {
+  destroyChart('priority');
+  const prios = ['Critical','Urgent','High','Medium','Low'];
+  const colors = ['#ef4444','#ef4444','#f59e0b','#10b981','#06b6d4'];
+  const data = prios.map(p => S.bugs.filter(b=>b.priority===p).length);
+  const ctx = document.getElementById('chartPriority');
+  if(!ctx) return;
+  _chartInstances['priority'] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: prios, datasets: [{ data, backgroundColor: colors.map(c=>c+'33'), borderColor: colors, borderWidth: 2, borderRadius: 6 }] },
+    options: { responsive:true, maintainAspectRatio:true,
+      plugins: { legend:{display:false} },
+      scales: {
+        x:{ ticks:{color:'#6868a0',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'} },
+        y:{ ticks:{color:'#6868a0',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'}, beginAtZero:true }
+      }
+    }
+  });
+}
+function renderTimelineChart() {
+  destroyChart('timeline');
+  const days = 30;
+  const labels = [], data = [];
+  for(let i=days-1; i>=0; i--) {
+    const d = new Date(Date.now() - i*86400000);
+    labels.push(d.toLocaleDateString('en-IN', {day:'2-digit',month:'short'}));
+    const dayStr = d.toISOString().slice(0,10);
+    data.push(S.bugs.filter(b => (b.created_at&&b.created_at.startsWith(dayStr)) || (b.created_ts&&new Date(b.created_ts).toISOString().slice(0,10)===dayStr)).length);
+  }
+  const ctx = document.getElementById('chartTimeline');
+  if(!ctx) return;
+  _chartInstances['timeline'] = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [{ label:'Bugs Filed', data, borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,.12)', pointBackgroundColor:'#7c3aed', pointRadius:3, tension:0.4, fill:true }] },
+    options: { responsive:true, maintainAspectRatio:true,
+      plugins: { legend:{display:false} },
+      scales: {
+        x:{ ticks:{color:'#6868a0',font:{size:9},maxTicksLimit:10,maxRotation:0}, grid:{color:'rgba(255,255,255,.04)'} },
+        y:{ ticks:{color:'#6868a0',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'}, beginAtZero:true }
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════
+// PATCH 5 — SHARE BUG LINK
+// ══════════════════════════════════════════
+function toggleShareMenu(e, bugId, title) {
+  e.stopPropagation();
+  const menu = document.getElementById(`shareMenu-${bugId}`);
+  if(!menu) return;
+  menu.classList.toggle('on');
+  if(menu.classList.contains('on')) document.addEventListener('click', ()=>menu.classList.remove('on'), {once:true});
+}
+function copyBugLink(bugId) {
+  const url = `${APP_URL}?bug=${bugId}`;
+  navigator.clipboard.writeText(url).then(()=>toast('Link copied ✓','ok')).catch(()=>toast('Copy failed','err'));
+}
+function shareBugWhatsApp(bugId, title, priority) {
+  const url = `${APP_URL}?bug=${bugId}`;
+  const msg = `🐛 *BugPulse — ${bugId}*\n*${title}*\nPriority: ${priority}\n\nView: ${url}`;
+  window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank');
+}
+function shareBugSlack(bugId, title) {
+  const url = `${APP_URL}?bug=${bugId}`;
+  const msg = `:bug: *${bugId}* — ${title}\n<${url}|View in BugPulse>`;
+  navigator.clipboard.writeText(msg).then(()=>toast('Slack message copied ✓','ok')).catch(()=>toast('Copy failed','err'));
+}
+function copyBugSummary(bugId) {
+  const bug = S.bugs.find(b=>b.id===bugId);
+  if(!bug) return;
+  const assignees = (bug.assignees||[]).map(a=>a.name).join(', ')||'Unassigned';
+  const summary = `Bug: ${bug.id}\nTitle: ${bug.title||''}\nPriority: ${bug.priority||''} | Status: ${bug.status||''}\nAssignee: ${assignees}\nFeature: ${bug.feature||'—'}\nBuild: ${bug.build||'—'}\nSteps: ${bug.steps||'—'}\nActual: ${bug.actual||'—'}`;
+  navigator.clipboard.writeText(summary).then(()=>toast('Summary copied ✓','ok')).catch(()=>toast('Copy failed','err'));
+}
+
+// ══════════════════════════════════════════
+// PATCH 6 — COMMENT EDITING
+// ══════════════════════════════════════════
+function renderCommentsV2(comments, bugId) {
+  if(!comments.length) return '<div style="font-family:var(--mono);font-size:11px;color:var(--dim);padding:10px 0">No activity yet.</div>';
+  return comments.map((c, idx) => {
+    const isOwn = c.author_email === S.user?.email;
+    const isActivity = c.type === 'activity';
+    return `<div class="act-item" id="comment-${idx}">
+      ${avEl(c.author, c.author_picture, 24)}
+      <div class="act-body" style="flex:1">
+        <span class="act-author">${esc(c.author||'?')}</span>
+        <span class="act-time">${esc(c.ts||'')}${c.edited?' <span style="color:var(--dim);font-size:9px;font-family:var(--mono)">(edited)</span>':''}</span>
+        ${isActivity
+          ? `<div><span class="act-badge">${esc(c.text||'')}</span></div>`
+          : `<div class="act-text" id="comment-text-${idx}">${renderMentionText(c.text||'')}</div>
+             <div id="comment-edit-${idx}" style="display:none;margin-top:6px">
+               <textarea class="fi2" id="comment-edit-input-${idx}" rows="2" style="min-height:52px">${esc(c.text||'')}</textarea>
+               <div style="display:flex;gap:6px;margin-top:5px;justify-content:flex-end">
+                 <button class="btn btn-g btn-xs" onclick="cancelEditComment(${idx})">Cancel</button>
+                 <button class="btn btn-v btn-xs" onclick="saveEditComment('${bugId}',${idx})">Save</button>
+               </div>
+             </div>
+             ${isOwn ? `<div style="margin-top:4px;display:flex;gap:5px">
+               <button onclick="startEditComment(${idx})" style="background:none;border:none;font-family:var(--mono);font-size:9px;color:var(--dim);cursor:pointer;padding:0;transition:color .1s" onmouseenter="this.style.color='var(--g2)'" onmouseleave="this.style.color='var(--dim)'">✏️ edit</button>
+             </div>` : ''}`}
+      </div>
+    </div>`;
+  }).join('');
+}
+function startEditComment(idx) {
+  document.getElementById(`comment-text-${idx}`)?.style.setProperty('display','none');
+  document.getElementById(`comment-edit-${idx}`)?.style.setProperty('display','block');
+  document.getElementById(`comment-edit-input-${idx}`)?.focus();
+}
+function cancelEditComment(idx) {
+  document.getElementById(`comment-text-${idx}`)?.style.setProperty('display','block');
+  document.getElementById(`comment-edit-${idx}`)?.style.setProperty('display','none');
+}
+async function saveEditComment(bugId, idx) {
+  const newText = document.getElementById(`comment-edit-input-${idx}`)?.value?.trim();
+  if(!newText) { toast('Comment cannot be empty','err'); return; }
+  const bug = S.bugs.find(b=>b.id===bugId);
+  if(!bug) return;
+  const comments = [...(bug.comments||[])];
+  if(!comments[idx]) return;
+  comments[idx] = {...comments[idx], text: newText, edited: true, edited_at: new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})};
+  try {
+    await api(`/bugs/${bugId}`, 'PUT', {...bug, comments});
+    toast('Comment updated ✓','ok');
+    closePanel(); await refreshAll(); openDetail(bugId);
+  } catch(e) { toast(e.message,'err'); }
+}
 
 </script>
 
