@@ -968,7 +968,7 @@ thead th:first-child .cb-wrap{display:flex}
           <div class="pm-item" id="importBugsBtn" onclick="goTab('import');closeProfileMenu()" style="display:none"><span class="pm-icon">📥</span> Import Bugs (CSV)</div>
           <div class="pm-divider" id="managePodDivider" style="display:none"></div>
           <div class="pm-item" onclick="openDayEndReport();closeProfileMenu()"><span class="pm-icon">📊</span> Day-End Report</div>
-          <div class="pm-item" onclick="toggleDayEndSchedule();closeProfileMenu()" id="dayEndScheduleItem"><span class="pm-icon">⏰</span> <span id="dayEndScheduleLabel">Enable Daily Report (6PM)</span></div>
+          <div class="pm-item" onclick="openWebhookSettings();closeProfileMenu()"><span class="pm-icon">🔔</span> Webhook Settings</div>
           <div class="pm-item danger" onclick="signOut()"><span class="pm-icon">🚪</span> Sign Out</div>
         </div>
       </div>
@@ -1109,8 +1109,11 @@ thead th:first-child .cb-wrap{display:flex}
         <!-- NOTIFS -->
         <div id="v-notifs" style="display:none">
           <div class="ph">
-            <div><h1>NOTIFICATIONS</h1></div>
-            <div class="ph-r"><button class="btn btn-g btn-sm" onclick="markAllRead()">Mark all read</button></div>
+            <div><h1>NOTIFICATIONS</h1><p style="font-family:var(--mono);font-size:10px;color:var(--mute);margin-top:3px">In-app alerts · click any bug ID to open</p></div>
+            <div class="ph-r">
+              <button class="btn btn-g btn-sm" onclick="openWebhookSettings()">🔔 Webhook Settings</button>
+              <button class="btn btn-g btn-sm" onclick="markAllRead()">Mark all read</button>
+            </div>
           </div>
           <div class="tw"><div id="notifsWrap"></div></div>
         </div>
@@ -1803,8 +1806,6 @@ function onLogin(){
     setTimeout(launchConfetti, 200);
     startLivePresence();
     checkDeepLink();
-    updateDayEndScheduleLabel();
-    checkDayEndAutoReport();
     const firstName=(S.user.name||'').split(' ')[0]||'there';
     const critCount=S.bugs.filter(b=>['Critical','Urgent'].includes(b.priority)&&!['Dev Fixed','Done','QA Pass','Closed'].includes(b.status)).length;
     const myCount=S.bugs.filter(b=>(b.assignees||[]).some(a=>a.email===S.user?.email)).length;
@@ -2491,7 +2492,14 @@ function renderNotifs(){
   el.innerHTML=S.localNotifs.map(n=>`
     <div class="notif-item ${n.read?'':'unread'}" onclick="clickNotif(${n.id},'${n.bugId||''}')">
       <div style="flex-shrink:0;margin-top:3px">${n.read?'<div style="width:7px;height:7px"></div>':'<div class="notif-dot"></div>'}</div>
-      <div><div class="notif-title">${esc(n.title||'')}</div><div class="notif-meta">${esc(n.body||'')} · ${n.ts}</div></div>
+      <div style="flex:1;min-width:0">
+        <div class="notif-title">${esc(n.title||'')}</div>
+        <div class="notif-meta">${esc(n.body||'')} · ${n.ts}</div>
+        ${n.bugId?`<div style="margin-top:5px;display:flex;gap:6px;align-items:center">
+          <span style="font-family:var(--mono);font-size:9px;color:var(--g1)">${esc(n.bugId)}</span>
+          <button onclick="event.stopPropagation();navigator.clipboard.writeText('${APP_URL}?bug=${n.bugId}').then(()=>toast('Link copied ✓','ok'))" style="background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);color:var(--g2);font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:6px;cursor:pointer">🔗 Copy Link</button>
+        </div>`:''}
+      </div>
     </div>`).join('');
 }
 function clickNotif(id,bugId){
@@ -3075,9 +3083,12 @@ function buildBugForm(bug,full){
       <div class="fg"><label class="fl">Build Link / APK URL <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label><input class="fi2" id="f-build-link" value="${esc(bug?.build_link||'')}" placeholder="https://drive.google.com/… or https://appdistribution/…"></div>
       <div class="build-notif-section">
         <div class="build-notif-title">🔔 NOTIFY TEAM ABOUT THIS BUG</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:8px" id="notifChannelStatus">
+          ${(()=>{const cfg=getWebhookConfig();const ch=[];if(cfg.gchat_url&&cfg.notif_new_bug!==false)ch.push('📢 GChat webhook');ch.push('🔔 In-app');return ch.join(' · ')||'🔔 In-app only';})()}
+        </div>
         <div class="notif-toggle-row">
           <button class="notif-toggle${bug?'':' on'}" id="notifToggle" onclick="toggleNotif(this)"></button>
-          <span class="notif-toggle-label">Notify assignees &amp; reporters</span>
+          <span class="notif-toggle-label">Notify assignees &amp; team</span>
         </div>
         <div style="margin-top:8px" id="notifMsgWrap">
           <label class="fl" style="margin-top:6px">Custom notification message <span style="color:var(--dim);font-weight:400;text-transform:none">(optional)</span></label>
@@ -4622,6 +4633,20 @@ async function saveBuildEntry(editVersion) {
     await saveBuildsRegistry(registry);
     if (notifyTeam) {
       addNotif(`📦 Build: ${version}`, `${entry.platform?entry.platform+' · ':''}${entry.notes?entry.notes.slice(0,80):'New build available'}`, null);
+      // GChat webhook notification for build
+      const cfg = getWebhookConfig();
+      if(cfg.gchat_url && cfg.notif_build_available !== false) {
+        const buildTrackerUrl = APP_URL + '#builds';
+        const downloadLine = entry.link ? `\n📥 Download: ${entry.link}` : '';
+        const gchatText = `📦 *New Build Available — ${version}*\n${entry.platform?'Platform: '+entry.platform+'\n':''}${entry.notes?'Notes: '+entry.notes.slice(0,120)+'\n':''}${downloadLine}\n🔗 Build Tracker: ${buildTrackerUrl}`;
+        await sendGChatWebhook(gchatText);
+      }
+      // Email fallback via mailto if team emails configured
+      if(cfg.team_emails && cfg.team_emails.trim()) {
+        const subject = encodeURIComponent(`[BugPulse] New Build: ${version}`);
+        const body = encodeURIComponent(`New build available: ${version}\n${entry.platform?'Platform: '+entry.platform+'\n':''}${entry.notes?'Notes: '+entry.notes+'\n':''}${entry.link?'Download: '+entry.link+'\n':''}\nView in BugPulse: ${APP_URL}`);
+        window.open(`mailto:${encodeURIComponent(cfg.team_emails)}?subject=${subject}&body=${body}`,'_blank');
+      }
       toast(`Build ${version} logged & team notified ✓`,'ok');
     } else {
       toast(`Build ${version} saved ✓`,'ok');
@@ -4676,15 +4701,16 @@ function copyBuildReport(version) {
   const open  = bugs.filter(b=>statusOpen(b.status));
   const fixed = bugs.filter(b=>!statusOpen(b.status));
   const crit  = open.filter(b=>['Critical','Urgent'].includes(b.priority));
+  const bugLink = id => `${APP_URL}?bug=${id}`;
   const report = `📦 BUILD REPORT — ${version}
 ━━━━━━━━━━━━━━━━━━━━━━━━
 Total bugs : ${bugs.length}
 Open       : ${open.length}
 Fixed      : ${fixed.length}
 Critical   : ${crit.length}
-${crit.length?'\n🚨 CRITICAL OPEN:\n'+crit.map(b=>`  • [${b.id}] ${b.title} — ${(b.assignees||[]).map(a=>a.name).join(', ')||'Unassigned'}`).join('\n'):''}
-${open.filter(b=>!['Critical','Urgent'].includes(b.priority)).length?'\n🔴 OTHER OPEN:\n'+open.filter(b=>!['Critical','Urgent'].includes(b.priority)).map(b=>`  • [${b.id}] ${b.title} (${b.priority})`).join('\n'):''}
-${fixed.length?'\n✅ FIXED:\n'+fixed.map(b=>`  • [${b.id}] ${b.title}`).join('\n'):''}
+${crit.length?'\n🚨 CRITICAL OPEN:\n'+crit.map(b=>`  • [${b.id}] ${b.title} — ${(b.assignees||[]).map(a=>a.name).join(', ')||'Unassigned'}\n    🔗 ${bugLink(b.id)}`).join('\n'):''}
+${open.filter(b=>!['Critical','Urgent'].includes(b.priority)).length?'\n🔴 OTHER OPEN:\n'+open.filter(b=>!['Critical','Urgent'].includes(b.priority)).map(b=>`  • [${b.id}] ${b.title} (${b.priority})\n    🔗 ${bugLink(b.id)}`).join('\n'):''}
+${fixed.length?'\n✅ FIXED:\n'+fixed.map(b=>`  • [${b.id}] ${b.title}\n    🔗 ${bugLink(b.id)}`).join('\n'):''}
 
 Generated by BugPulse · ${new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})}`;
   navigator.clipboard.writeText(report).then(()=>toast('Build report copied ✓','ok')).catch(()=>toast('Copy failed','err'));
@@ -4810,13 +4836,124 @@ function toggleNotif(btn) {
   const wrap = document.getElementById('notifMsgWrap');
   if(wrap) wrap.style.opacity = btn.classList.contains('on') ? '1' : '0.4';
 }
+
+// ══════════════════════════════════════════
+// WEBHOOK SETTINGS — stored per user in localStorage
+// ══════════════════════════════════════════
+const WEBHOOK_KEY = 'hwt_webhooks_v1';
+function getWebhookConfig() {
+  try { return JSON.parse(localStorage.getItem(WEBHOOK_KEY)||'{}'); } catch { return {}; }
+}
+function saveWebhookConfig(cfg) {
+  try { localStorage.setItem(WEBHOOK_KEY, JSON.stringify(cfg)); } catch(e) {}
+}
+
+function openWebhookSettings() {
+  const cfg = getWebhookConfig();
+  document.getElementById('panelTitle').textContent = '🔔 WEBHOOK SETTINGS';
+  document.getElementById('panelId').textContent = 'NOTIFICATIONS';
+  document.getElementById('panelFooter').innerHTML = `
+    <button class="btn btn-g" onclick="closePanel()">Cancel</button>
+    <button class="btn btn-v" onclick="saveWebhookSettings()">💾 Save Settings</button>`;
+  document.getElementById('panelBody').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div style="background:rgba(6,182,212,.06);border:1px solid rgba(6,182,212,.2);border-radius:10px;padding:14px 16px">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g2);margin-bottom:12px">🟢 GOOGLE CHAT WEBHOOK</div>
+        <div class="fg"><label class="fl">GChat Webhook URL</label>
+          <input class="fi2" id="wh-gchat" value="${esc(cfg.gchat_url||'')}" placeholder="https://chat.googleapis.com/v1/spaces/…/messages?key=…">
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:8px;line-height:1.8">Get it from GChat: open a Space → Apps & Integrations → Manage Webhooks → Add</div>
+      </div>
+
+      <div style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:14px 16px">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g1);margin-bottom:12px">🔔 NOTIFY ON EVENTS</div>
+        ${['new_bug','build_available','day_end_report'].map(ev => {
+          const labels = {new_bug:'New Bug Filed / Assigned', build_available:'New Build Available', day_end_report:'Day-End Report'};
+          return `<div class="notif-toggle-row" style="margin-bottom:10px">
+            <button class="notif-toggle${cfg['notif_'+ev]!==false?' on':''}" id="wh-ev-${ev}" onclick="this.classList.toggle('on')"></button>
+            <span class="notif-toggle-label">${labels[ev]}</span>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:14px 16px">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g4);margin-bottom:12px">📧 BUILD EMAIL RECIPIENTS</div>
+        <div class="fg"><label class="fl">Team Emails (comma-separated, for build notifications)</label>
+          <textarea class="fi2" id="wh-emails" rows="2" placeholder="dev@hitwicket.com, qa@hitwicket.com">${esc(cfg.team_emails||'')}</textarea>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:8px;line-height:1.8">Note: Email is via mailto: link (opens your mail client). Webhook is fully automated.</div>
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-g" onclick="testWebhook()">🧪 Test Webhook</button>
+      </div>
+    </div>`;
+  openPanel();
+}
+
+function saveWebhookSettings() {
+  const cfg = {
+    gchat_url: document.getElementById('wh-gchat')?.value?.trim()||'',
+    team_emails: document.getElementById('wh-emails')?.value?.trim()||'',
+    notif_new_bug: document.getElementById('wh-ev-new_bug')?.classList.contains('on'),
+    notif_build_available: document.getElementById('wh-ev-build_available')?.classList.contains('on'),
+    notif_day_end_report: document.getElementById('wh-ev-day_end_report')?.classList.contains('on'),
+  };
+  saveWebhookConfig(cfg);
+  toast('Webhook settings saved ✓','ok');
+  closePanel();
+}
+
+async function sendGChatWebhook(text) {
+  const cfg = getWebhookConfig();
+  if(!cfg.gchat_url) return false;
+  try {
+    await fetch(cfg.gchat_url, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({text})
+    });
+    return true;
+  } catch(e) {
+    console.warn('[gchat webhook]', e.message);
+    return false;
+  }
+}
+
+async function testWebhook() {
+  const url = document.getElementById('wh-gchat')?.value?.trim();
+  if(!url) { toast('Enter a webhook URL first','err'); return; }
+  try {
+    await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text:`🧪 BugPulse test notification from ${S.user?.name||'team'} — webhooks are working! ✅`})
+    });
+    toast('Test sent to GChat ✓','ok');
+  } catch(e) {
+    toast('Webhook failed: '+e.message,'err');
+  }
+}
+
 async function sendBugNotification(bug, customMsg) {
+  const cfg = getWebhookConfig();
   const assignees = bug.assignees || [];
   const msg = customMsg || `New bug reported: "${(bug.title||'').slice(0,60)}"`;
+  const bugUrl = `${APP_URL}?bug=${bug.id||''}`;
+
+  // In-app notifications
   assignees.forEach(a => {
     if(a.email && a.email !== S.user?.email) addNotif(`🐛 Bug assigned: ${bug.id||''}`, msg, bug.id);
   });
   addNotif(`📢 Bug filed: ${bug.id||''}`, `${msg} · Build: ${bug.build||'—'}`, bug.id);
+
+  // GChat webhook
+  if(cfg.gchat_url && cfg.notif_new_bug !== false) {
+    const assigneeNames = assignees.map(a=>a.name).join(', ')||'Unassigned';
+    const gchatText = `🐛 *New Bug Filed — ${bug.id||''}*\n*${bug.title||''}*\nPriority: ${bug.priority||'Medium'} | Status: ${bug.status||'Open'}\nBuild: ${bug.build||'—'} | Assignee: ${assigneeNames}\n🔗 View: ${bugUrl}`;
+    await sendGChatWebhook(gchatText);
+  }
+
   toast('Team notified ✓','ok');
 }
 
@@ -4885,45 +5022,31 @@ function openDayEndReport() {
   openPanel();
 }
 function generateReportText(todayBugs, resolvedToday, critOpen, dateStr) {
+  const bugLink = id => `${APP_URL}?bug=${id}`;
   return `📊 BUG REPORT — ${dateStr}
 ━━━━━━━━━━━━━━━━━━━━━━━━
 🐛 Filed today  : ${todayBugs.length}
 ✅ Resolved     : ${resolvedToday.length}
 🚨 Critical open: ${critOpen.length}
 📋 Total active : ${S.bugs.length}
-${todayBugs.length ? '\n🐛 TODAY\'S BUGS:\n'+todayBugs.map(b=>`  • [${b.id}] ${b.title} (${b.priority})`).join('\n') : ''}
-${resolvedToday.length ? '\n✅ RESOLVED:\n'+resolvedToday.map(b=>`  • [${b.id}] ${b.title}`).join('\n') : ''}
-${critOpen.length ? '\n🚨 STILL CRITICAL:\n'+critOpen.slice(0,8).map(b=>`  • [${b.id}] ${b.title} — ${(b.assignees||[]).map(a=>a.name).join(', ')||'Unassigned'}`).join('\n') : ''}
+${todayBugs.length ? '\n🐛 TODAY\'S BUGS:\n'+todayBugs.map(b=>`  • [${b.id}] ${b.title} (${b.priority})\n    🔗 ${bugLink(b.id)}`).join('\n') : ''}
+${resolvedToday.length ? '\n✅ RESOLVED:\n'+resolvedToday.map(b=>`  • [${b.id}] ${b.title}\n    🔗 ${bugLink(b.id)}`).join('\n') : ''}
+${critOpen.length ? '\n🚨 STILL CRITICAL:\n'+critOpen.slice(0,8).map(b=>`  • [${b.id}] ${b.title} — ${(b.assignees||[]).map(a=>a.name).join(', ')||'Unassigned'}\n    🔗 ${bugLink(b.id)}`).join('\n') : ''}
 
 Generated by BugPulse · ${new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})}`;
 }
-function copyDayEndReport() {
+async function copyDayEndReport() {
   const txt = document.getElementById('dayEndReportText')?.textContent;
   if(!txt) return;
   navigator.clipboard.writeText(txt).then(()=>toast('Report copied to clipboard ✓','ok')).catch(()=>toast('Copy failed','err'));
-}
-function toggleDayEndSchedule() {
-  const enabled = localStorage.getItem(DAY_END_REPORT_KEY) === '1';
-  localStorage.setItem(DAY_END_REPORT_KEY, enabled ? '0' : '1');
-  updateDayEndScheduleLabel();
-  toast(enabled ? 'Daily report disabled' : 'Daily report enabled — triggers at 6PM IST', 'ok');
-}
-function updateDayEndScheduleLabel() {
-  const enabled = localStorage.getItem(DAY_END_REPORT_KEY) === '1';
-  const el = document.getElementById('dayEndScheduleLabel');
-  if(el) el.textContent = enabled ? 'Disable Daily Report (6PM)' : 'Enable Daily Report (6PM)';
-}
-function checkDayEndAutoReport() {
-  if(localStorage.getItem(DAY_END_REPORT_KEY) !== '1') return;
-  const shown = localStorage.getItem('hwt_dayend_shown');
-  const today = getTodayIST();
-  if(shown === today) return;
-  const istHour = parseInt(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata',hour:'numeric',hour12:false}));
-  if(istHour >= 18) {
-    localStorage.setItem('hwt_dayend_shown', today);
-    setTimeout(()=>{ showNatasha('📊 Time for the day-end bug report! Tap 📊 in the menu.','cool'); }, 3000);
+  // Send to GChat if configured
+  const cfg = getWebhookConfig();
+  if(cfg.gchat_url && cfg.notif_day_end_report !== false) {
+    await sendGChatWebhook(txt);
+    toast('Report copied & sent to GChat ✓','ok');
   }
 }
+// Day-end schedule functions removed — manual trigger only via profile menu
 
 // ══════════════════════════════════════════
 // PATCH 3 — FEATURE INPUT DROPDOWN
