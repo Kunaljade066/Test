@@ -4686,27 +4686,40 @@ async function saveBuildEntry(editVersion) {
       }
       // Email via Resend through worker
       if(cfg.team_emails && cfg.team_emails.trim()) {
-        const recipients = cfg.team_emails.split(',').map(e=>e.trim()).filter(Boolean);
+        const recipients = cfg.team_emails.split(',').map(function(e){return e.trim();}).filter(Boolean);
         const buildUrl = APP_URL + '?tab=builds';
-        const downloadSection = entry.link ? `<p><a href="${entry.link}" style="color:#06b6d4">📦 Download / Install Build ↗</a></p>` : '';
-        const emailHtml = `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0d0d20;color:#eeeef8;border-radius:12px;overflow:hidden">
-          <div style="background:linear-gradient(135deg,#7c3aed,#06b6d4);padding:20px 24px">
-            <h2 style="margin:0;font-size:20px;letter-spacing:2px;color:#fff">📦 NEW BUILD: ${entry.version}</h2>
-            ${entry.platform?`<p style="margin:4px 0 0;color:rgba(255,255,255,.7);font-size:12px">${entry.platform}</p>`:''}
-          </div>
-          <div style="padding:20px 24px">
-            ${entry.notes?`<p style="font-size:14px;line-height:1.7;color:#c0c0e0">${entry.notes}</p>`:''}
-            ${downloadSection}
-            <p style="margin-top:16px"><a href="${buildUrl}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">🔗 View Build Tracker in BugPulse</a></p>
-            <p style="margin-top:20px;font-size:11px;color:#484880">Logged by ${S.user?.name||'Team'} · BugPulse · Hitwicket</p>
-          </div>
-        </div>`;
+        const downloadSection = entry.link
+          ? '<p><a href="' + esc(entry.link) + '" style="color:#06b6d4">Download / Install Build</a></p>'
+          : '';
+        const platformLine = entry.platform
+          ? '<p style="margin:4px 0 0;color:rgba(255,255,255,.7);font-size:12px">' + esc(entry.platform) + '</p>'
+          : '';
+        const notesLine = entry.notes
+          ? '<p style="font-size:14px;line-height:1.7;color:#c0c0e0">' + esc(entry.notes) + '</p>'
+          : '';
+        const emailHtml = '<div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0d0d20;color:#eeeef8;border-radius:12px;overflow:hidden">'
+          + '<div style="background:linear-gradient(135deg,#7c3aed,#06b6d4);padding:20px 24px">'
+          + '<h2 style="margin:0;font-size:20px;letter-spacing:2px;color:#fff">New Build: ' + esc(entry.version) + '</h2>'
+          + platformLine
+          + '</div>'
+          + '<div style="padding:20px 24px">'
+          + notesLine
+          + downloadSection
+          + '<p style="margin-top:16px"><a href="' + esc(buildUrl) + '" style="display:inline-block;background:#7c3aed;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">View Build Tracker in BugPulse</a></p>'
+          + '<p style="margin-top:20px;font-size:11px;color:#484880">Logged by ' + esc(S.user&&S.user.name||'Team') + ' · BugPulse · Hitwicket</p>'
+          + '</div></div>';
+        const emailText = 'New build: ' + entry.version
+          + (entry.platform ? '\nPlatform: ' + entry.platform : '')
+          + (entry.notes ? '\nNotes: ' + entry.notes : '')
+          + (entry.link ? '\nDownload: ' + entry.link : '')
+          + '\nView in BugPulse: ' + buildUrl
+          + '\n\nLogged by ' + (S.user&&S.user.name||'Team');
         try {
           await api('/send-email', 'POST', {
             to: recipients,
-            subject: `[BugPulse] New Build Available: ${entry.version}${entry.platform?' ('+entry.platform+')':''}`,
+            subject: '[BugPulse] New Build: ' + entry.version + (entry.platform ? ' (' + entry.platform + ')' : ''),
             html: emailHtml,
-            text: `New build available: ${entry.version}\n${entry.platform?'Platform: '+entry.platform+'\n':''}${entry.notes?'Notes: '+entry.notes+'\n':''}${entry.link?'Download: '+entry.link+'\n':''}\nView in BugPulse: ${buildUrl}\n\nLogged by ${S.user?.name||'Team'}`
+            text: emailText
           });
         } catch(e) { console.warn('[build email]', e.message); }
       toast(`Build ${version} logged & team notified ✓`,'ok');
