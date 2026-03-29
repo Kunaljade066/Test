@@ -4722,6 +4722,7 @@ async function saveBuildEntry(editVersion) {
             text: emailText
           });
         } catch(e) { console.warn('[build email]', e.message); }
+      } // end if(cfg.team_emails)
       toast(`Build ${version} logged & team notified ✓`,'ok');
     } else {
       toast(`Build ${version} saved ✓`,'ok');
