@@ -42,7 +42,7 @@
   --grad2: linear-gradient(135deg, var(--g3), var(--g6));
 
   --disp: 'Orbitron', sans-serif;
-  --body: 'Rajdhani', sans-serif;
+  --body: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, 'Inter', sans-serif;
   --mono: 'JetBrains Mono', monospace;
 
   --sh:  0 4px 32px rgba(124,58,237,.2);
@@ -53,7 +53,7 @@
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-html{max-width:100vw;overflow-x:hidden}body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;overflow-x:hidden;font-size:14px;line-height:1.5;max-width:100vw}
+html{max-width:100vw;overflow-x:hidden}body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;overflow-x:hidden;font-size:14px;line-height:1.6;max-width:100vw;-webkit-font-smoothing:antialiased}
 @media(pointer:fine){body{cursor:none}}
 
 ::-webkit-scrollbar{width:4px;height:4px}
@@ -197,7 +197,7 @@ body.clicking #cur-bat{transform:translate(-50%,-50%) rotate(10deg)}
 .tb-divider{width:1px;height:22px;background:var(--bd);margin:0 6px;flex-shrink:0}
 .tb-tabs{display:flex;flex:1;overflow-x:auto;gap:0}
 .tb-tabs::-webkit-scrollbar{display:none}
-.tb-tab{display:flex;align-items:center;gap:5px;height:54px;padding:0 14px;font-family:var(--body);font-size:12px;font-weight:600;letter-spacing:.5px;color:var(--mute);cursor:none;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;text-transform:uppercase;}
+.tb-tab{display:flex;align-items:center;gap:5px;height:54px;padding:0 14px;font-family:var(--body);font-size:13px;font-weight:600;letter-spacing:.3px;color:var(--mute);cursor:none;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;text-transform:uppercase;}
 .tb-tab:hover{color:var(--ghost)}
 .tb-tab.on{color:var(--text);border-bottom-color:var(--g1);text-shadow:0 0 8px rgba(124,58,237,.4)}
 .tb-badge{background:var(--g5);color:#fff;font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:20px;min-width:16px;text-align:center;box-shadow:0 0 8px rgba(239,68,68,.5);}
@@ -224,7 +224,7 @@ body.clicking #cur-bat{transform:translate(-50%,-50%) rotate(10deg)}
 .sidebar::-webkit-scrollbar{display:none}
 .sb-sec{padding:16px 0 8px}
 .sb-lbl{font-family:var(--mono);font-size:8px;letter-spacing:3px;text-transform:uppercase;color:var(--dim);padding:0 14px 6px;}
-.sb-item{display:flex;align-items:center;gap:8px;padding:7px 14px;font-family:var(--body);font-size:13px;font-weight:600;letter-spacing:.3px;color:var(--mute);cursor:none;border-left:2px solid transparent;transition:all .12s;user-select:none;}
+.sb-item{display:flex;align-items:center;gap:8px;padding:7px 14px;font-family:var(--body);font-size:13px;font-weight:500;letter-spacing:0;color:var(--mute);cursor:none;border-left:2px solid transparent;transition:all .12s;user-select:none;}
 .sb-item:hover{background:rgba(124,58,237,.08);color:var(--ghost)}
 .sb-item.on{background:rgba(124,58,237,.12);color:var(--g2);border-left-color:var(--g1);text-shadow:0 0 8px rgba(6,182,212,.3);}
 .sb-icon{font-size:13px;width:18px;text-align:center;flex-shrink:0}
@@ -834,6 +834,55 @@ thead th:first-child .cb-wrap{display:flex}
 .share-menu.on{display:flex}
 .share-item{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--mist);transition:background .1s}
 .share-item:hover{background:rgba(124,58,237,.1);color:var(--text)}
+/* ── THEME TEXT READABILITY ── */
+body.light {
+  --bg:   #f0f2fa; --bg1: #e8eaf6; --bg2: #eef0fc; --bg3: #e4e6f2; --bg4: #dde0ef;
+  --bd:   #c8ccdd; --bd2: #b8bdd0; --bd3: #a8adbe;
+  --dim:  #7a7fa0; --mute:#5a6080; --fog: #454870; --mist:#2a2d50; --ghost:#181a30; --text:#0a0a40;
+}
+body.light .topbar{background:rgba(240,242,250,.97)!important;border-bottom-color:rgba(124,58,237,.25)!important}
+body.light .sidebar{background:rgba(232,234,246,.95)!important}
+body.light .btn-g{background:var(--bg3);color:var(--mist);border-color:var(--bd)}
+body.light .btn-g:hover{background:rgba(124,58,237,.1);color:var(--g1)}
+body.light .fi,body.light .fi2{background:var(--bg3);color:var(--text);border-color:var(--bd)}
+body.light .tw{background:var(--bg2);border-color:var(--bd)}
+body.light .tw-hd{background:var(--bg3);border-bottom-color:var(--bd)}
+body.light .panel{background:var(--bg2)}
+body.light .shortcuts-box,body.light .theme-modal-box{background:var(--bg2)}
+body.light .profile-menu{background:var(--bg2);border-color:var(--bd)}
+body.light .share-menu{background:var(--bg2);border-color:var(--bd)}
+body.light .build-page-card,body.light .chart-card,body.light .dash-card{background:var(--bg2);border-color:var(--bd)}
+body.light .bpc-header,body.light .hbs-header{background:var(--bg3);border-bottom-color:var(--bd)}
+body.light .bpc-stats{border-bottom-color:var(--bd)}
+body.light .bpc-stat{border-right-color:var(--bd)}
+body.light .bpc-bug-row,body.light .build-bug-row{background:var(--bg3)}
+body.light .bpc-bug-row:hover,body.light .build-bug-row:hover{background:rgba(124,58,237,.1)}
+body.light table{border-color:var(--bd)}
+body.light tbody tr:hover{background:rgba(124,58,237,.06)!important}
+body.light th,body.light td{border-bottom-color:var(--bd)!important;color:var(--text)}
+body.light .act-item{border-bottom-color:var(--bd)}
+body.light .act-text{color:var(--mist)}
+body.light .act-author{color:var(--text)}
+body.light .hq-card{background:var(--bg2);border-color:var(--bd)}
+body.light .home-bug-row{border-bottom-color:var(--bd)}
+body.light .notif-item{border-bottom-color:var(--bd)}
+body.light input[type=time]{background:var(--bg3);color:var(--text);border-color:var(--bd)}
+
+/* Midnight theme text fix */
+body.theme-midnight { --text:#e0eeff; --mist:#b0c8ee; --ghost:#d0e4ff; }
+/* Forest theme text fix */
+body.theme-forest { --text:#e0f4e8; --mist:#b0d8b8; --ghost:#d0f0d8; }
+/* Crimson theme text fix */
+body.theme-crimson { --text:#ffeef0; --mist:#e8b0b8; --ghost:#ffe0e4; }
+/* Golden theme text fix */
+body.theme-golden { --text:#fff8e0; --mist:#e8d890; --ghost:#fff0c0; }
+/* Slate theme text fix */
+body.theme-slate { --text:#f0f0f8; --mist:#c0c0e0; --ghost:#e8e8f8; }
+
+/* Ensure fi2 textarea text is always readable */
+.fi2 { color: var(--text) !important; }
+.fi  { color: var(--text) !important; }
+textarea.fi2, input.fi2 { color: var(--text) !important; }
 </style>
 </head>
 <body>
@@ -1814,6 +1863,7 @@ function onLogin(){
   loadCursorPref();
   loadNotifs();updateNotifBadge();
   scheduleTokenRefresh();
+  initEODScheduler();
   refreshAll().then(()=>{
     startFastSync();
     updateOfflineBanner();
@@ -4538,10 +4588,10 @@ function buildPageCard(b) {
         <div class="bpc-stat"><div class="bpc-stat-n" style="color:${crit>0?'var(--g5)':'var(--dim)'}">${crit}</div><div class="bpc-stat-l">Critical</div></div>
       </div>
       <div class="bpc-body">
-        ${b.notes?`<div class="bpc-notes">${esc(b.notes)}</div>`:''}
+        ${b.notes?`<div class="bpc-notes" style="white-space:pre-wrap;word-break:break-word">${esc(b.notes)}</div>`:''}
         ${b.tasks?`<div style="margin-bottom:10px;padding:10px 12px;background:rgba(6,182,212,.06);border:1px solid rgba(6,182,212,.15);border-radius:8px">
           <div style="font-family:var(--mono);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--g2);margin-bottom:6px">🛠 TASKS DONE</div>
-          <div style="font-size:11px;color:var(--mist);line-height:1.8;white-space:pre-wrap">${esc(b.tasks)}</div>
+          <div style="font-size:11px;color:var(--mist);line-height:1.8;white-space:pre-wrap;word-break:break-word">${esc(b.tasks)}</div>
           ${b.assignee_name?`<div style="margin-top:8px;font-family:var(--mono);font-size:9px;color:var(--dim)">👤 Dev: <span style="color:var(--mist);font-weight:700">${esc(b.assignee_name)}</span></div>`:''}
         </div>`:''}
         ${(!b.tasks && b.assignee_name)?`<div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:10px">👤 Dev: <span style="color:var(--mist);font-weight:700">${esc(b.assignee_name)}</span></div>`:''}
@@ -4692,6 +4742,12 @@ async function saveBuildEntry(editVersion) {
         const notesLine = entry.notes
           ? '<p style="font-size:14px;line-height:1.7;color:#c0c0e0">' + esc(entry.notes) + '</p>'
           : '';
+        const tasksLine = entry.tasks
+          ? '<div style="margin-top:12px;padding:12px 14px;background:rgba(6,182,212,.1);border-radius:8px;border-left:3px solid #06b6d4"><div style="font-size:10px;letter-spacing:2px;color:#06b6d4;text-transform:uppercase;margin-bottom:6px">🛠 TASKS DONE</div><pre style="margin:0;font-size:12px;color:#c0e0e8;line-height:1.8;white-space:pre-wrap;font-family:monospace">' + esc(entry.tasks) + '</pre></div>'
+          : '';
+        const assigneeLine = entry.assignee_name
+          ? '<p style="margin-top:10px;font-size:12px;color:#9090c0">👤 Dev: <b style="color:#c0c0e0">' + esc(entry.assignee_name) + '</b></p>'
+          : '';
         const emailHtml = '<div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0d0d20;color:#eeeef8;border-radius:12px;overflow:hidden">'
           + '<div style="background:linear-gradient(135deg,#7c3aed,#06b6d4);padding:20px 24px">'
           + '<h2 style="margin:0;font-size:20px;letter-spacing:2px;color:#fff">New Build: ' + esc(entry.version) + '</h2>'
@@ -4699,6 +4755,8 @@ async function saveBuildEntry(editVersion) {
           + '</div>'
           + '<div style="padding:20px 24px">'
           + notesLine
+          + tasksLine
+          + assigneeLine
           + downloadSection
           + '<p style="margin-top:16px"><a href="' + esc(buildUrl) + '" style="display:inline-block;background:#7c3aed;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">View Build Tracker in BugPulse</a></p>'
           + '<p style="margin-top:20px;font-size:11px;color:#484880">Logged by ' + esc(S.user&&S.user.name||'Team') + ' · BugPulse · Hitwicket</p>'
@@ -4813,9 +4871,17 @@ Generated by BugPulse · ${new Date().toLocaleString('en-IN',{timeZone:'Asia/Kol
 
 // ══════════════════════════════════════════
 // BUILDS DASHBOARD SECTION
+function toggleBuildCardExpand(cardEl, version) {
+  const notesEl = cardEl.querySelector('[id^="bcd-notes-"]');
+  if (!notesEl) return;
+  const isOpen = notesEl.style.display !== 'none';
+  notesEl.style.display = isOpen ? 'none' : 'block';
+}
+let _buildsDashRegistry = [];
 function renderBuildSection() {
   const el = document.getElementById('dashBuilds');
   if(!el) return;
+  loadBuildsRegistry().then(r => { _buildsDashRegistry = r; }).catch(() => {});
 
   // Group bugs by build, skip empty build strings
   const buildMap = {};
@@ -4873,7 +4939,7 @@ function renderBuildSection() {
       : `<span class="build-no-link">no link</span>`;
 
     return `
-      <div class="build-card" onclick="void(0)">
+      <div class="build-card" onclick="toggleBuildCardExpand(this,'${esc(version)}')">
         <div class="build-card-header">
           <span class="build-card-version">🏗 ${esc(version)}</span>
           ${linkHtml}
@@ -4895,6 +4961,9 @@ function renderBuildSection() {
             <div class="build-stat-n" style="color:${crit>0?'var(--g5)':'var(--dim)'}">${crit}</div>
             <div class="build-stat-l">Crit</div>
           </div>
+        </div>
+        <div id="bcd-notes-${esc(version)}" style="display:none;padding:8px 10px;margin-bottom:8px;background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.2);border-radius:8px;font-size:11px;color:var(--mist);line-height:1.7;white-space:pre-wrap;max-height:120px;overflow-y:auto;word-break:break-word">
+          ${(() => { const reg = _buildsDashRegistry ? _buildsDashRegistry.find(r=>r.version===version) : null; const parts=[]; if(reg && reg.notes) parts.push('📋 ' + esc(reg.notes)); if(reg && reg.tasks) parts.push('🛠 Tasks:\n' + esc(reg.tasks)); return parts.join('\n\n') || '<span style="color:var(--dim);font-size:10px">No release notes added.</span>'; })()}
         </div>
         <div class="build-bugs-list">
           ${bugRows}
@@ -4979,11 +5048,28 @@ function openWebhookSettings() {
         <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:8px;line-height:1.8">Note: Email is via mailto: link (opens your mail client). Webhook is fully automated.</div>
       </div>
 
+      <div style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:14px 16px">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g1);margin-bottom:12px">⏰ EOD REPORT SCHEDULE</div>
+        <div class="fg" style="margin-bottom:10px">
+          <label class="fl">Auto-send EOD report time (Mon–Fri only)</label>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <input type="time" class="fi2" id="wh-eod-time" value="${cfg.eod_time||'21:00'}" style="width:130px">
+            <div class="notif-toggle-row" style="margin:0">
+              <button class="notif-toggle${cfg.eod_schedule_on?' on':''}" id="wh-eod-on" onclick="this.classList.toggle('on')"></button>
+              <span class="notif-toggle-label">Enable auto EOD report</span>
+            </div>
+          </div>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);line-height:1.8">Sends EOD report to GChat webhook at specified time, Mon–Fri. Requires GChat webhook to be set.</div>
+      </div>
+
       <div style="display:flex;gap:8px">
         <button class="btn btn-g" onclick="testWebhook()">🧪 Test Webhook</button>
       </div>
     </div>`;
   openPanel();
+  // Re-init scheduler after panel opens (so toggle state is fresh)
+  setTimeout(initEODScheduler, 100);
 }
 
 function saveWebhookSettings() {
@@ -4993,10 +5079,49 @@ function saveWebhookSettings() {
     notif_new_bug: document.getElementById('wh-ev-new_bug')?.classList.contains('on'),
     notif_build_available: document.getElementById('wh-ev-build_available')?.classList.contains('on'),
     notif_day_end_report: document.getElementById('wh-ev-day_end_report')?.classList.contains('on'),
+    eod_time: document.getElementById('wh-eod-time')?.value||'21:00',
+    eod_schedule_on: document.getElementById('wh-eod-on')?.classList.contains('on'),
   };
   saveWebhookConfig(cfg);
+  initEODScheduler();
   toast('Webhook settings saved ✓','ok');
   closePanel();
+}
+
+// ── EOD scheduler ──────────────────────────────────────────────────────
+let _eodSchedulerTimer = null;
+function initEODScheduler() {
+  if (_eodSchedulerTimer) clearInterval(_eodSchedulerTimer);
+  const cfg = getWebhookConfig();
+  if (!cfg.eod_schedule_on || !cfg.gchat_url) return;
+  // Check every minute
+  _eodSchedulerTimer = setInterval(() => {
+    const now = new Date();
+    const day = now.getDay(); // 0=Sun, 6=Sat
+    if (day === 0 || day === 6) return; // skip weekends
+    const hhmm = now.toLocaleTimeString('en-GB', {timeZone:'Asia/Kolkata', hour:'2-digit', minute:'2-digit'}).slice(0,5);
+    const cfg2 = getWebhookConfig();
+    if (!cfg2.eod_schedule_on) return;
+    const target = cfg2.eod_time || '21:00';
+    if (hhmm === target) {
+      // Fire only once per minute — use a flag stored in sessionStorage
+      const flagKey = 'eod_sent_' + new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kolkata'});
+      if (sessionStorage.getItem(flagKey)) return;
+      sessionStorage.setItem(flagKey, '1');
+      sendAutoEODReport();
+    }
+  }, 60000);
+}
+async function sendAutoEODReport() {
+  const todayBugs = getTodayBugs();
+  const closedToday = getClosedTodayBugs();
+  const updatedBugs = getUpdatedTodayBugs();
+  const resolvedToday = updatedBugs.filter(b => ['Dev Fixed','Done','QA Pass'].includes(b.status));
+  const critOpen = S.bugs.filter(b => ['Critical','Urgent'].includes(b.priority) && !['Dev Fixed','Done','QA Pass','Closed'].includes(b.status));
+  const dateStr = new Date().toLocaleDateString('en-IN', {timeZone:'Asia/Kolkata', weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  const text = generateReportText(todayBugs, resolvedToday, critOpen, dateStr, closedToday);
+  const sent = await sendGChatWebhook(text);
+  if (sent) toast('📊 EOD report auto-sent to GChat ✓','ok');
 }
 
 async function sendGChatWebhook(text) {
@@ -5135,10 +5260,49 @@ function getTodayIST() {
   return new Date().toLocaleDateString('en-IN', {timeZone:'Asia/Kolkata', day:'2-digit', month:'2-digit', year:'numeric'});
 }
 function getTodayBugs() {
-  const todayStr = new Date().toLocaleDateString('en-IN', {timeZone:'Asia/Kolkata'});
+  const now = new Date();
+  const todayISO = now.toLocaleDateString('en-CA', {timeZone:'Asia/Kolkata'}); // YYYY-MM-DD
+  const todayIN  = now.toLocaleDateString('en-IN', {timeZone:'Asia/Kolkata'}); // DD/MM/YYYY
   return S.bugs.filter(b => {
-    if(!b.created_at) return false;
-    return b.created_at.includes(todayStr) || b.created_at.startsWith(new Date().toISOString().slice(0,10));
+    if(!b.created_at && !b.created_ts) return false;
+    // created_at is usually an en-IN locale string or ISO date
+    if(b.created_at) {
+      if(b.created_at.startsWith(todayISO)) return true;
+      if(b.created_at.includes(todayIN)) return true;
+      // also try parsing it as a date
+      try {
+        const d = new Date(b.created_at);
+        if(!isNaN(d.getTime())) {
+          return d.toLocaleDateString('en-CA', {timeZone:'Asia/Kolkata'}) === todayISO;
+        }
+      } catch(e) {}
+    }
+    if(b.created_ts) {
+      try {
+        const d = new Date(b.created_ts);
+        if(!isNaN(d.getTime())) {
+          return d.toLocaleDateString('en-CA', {timeZone:'Asia/Kolkata'}) === todayISO;
+        }
+      } catch(e) {}
+    }
+    return false;
+  });
+}
+function getClosedTodayBugs() {
+  const now = new Date();
+  const todayISO = now.toLocaleDateString('en-CA', {timeZone:'Asia/Kolkata'});
+  const todayIN  = now.toLocaleDateString('en-IN', {timeZone:'Asia/Kolkata'});
+  const closedStatuses = ['Dev Fixed','Done','QA Pass','Closed','Non-Recreatable','Not a bug'];
+  return S.bugs.filter(b => {
+    if(!closedStatuses.includes(b.status)) return false;
+    if(!b.updated_at) return false;
+    if(b.updated_at.startsWith(todayISO)) return true;
+    if(b.updated_at.includes(todayIN)) return true;
+    try {
+      const d = new Date(b.updated_at);
+      if(!isNaN(d.getTime())) return d.toLocaleDateString('en-CA', {timeZone:'Asia/Kolkata'}) === todayISO;
+    } catch(e) {}
+    return false;
   });
 }
 function getUpdatedTodayBugs() {
@@ -5147,6 +5311,7 @@ function getUpdatedTodayBugs() {
 }
 function openDayEndReport() {
   const todayBugs = getTodayBugs();
+  const closedToday = getClosedTodayBugs();
   const updatedBugs = getUpdatedTodayBugs();
   const resolvedToday = updatedBugs.filter(b => ['Dev Fixed','Done','QA Pass'].includes(b.status));
   const critOpen = S.bugs.filter(b => ['Critical','Urgent'].includes(b.priority) && !['Dev Fixed','Done','QA Pass','Closed'].includes(b.status));
@@ -5161,11 +5326,12 @@ function openDayEndReport() {
       <div style="font-family:var(--disp);font-size:11px;font-weight:800;letter-spacing:2px;color:var(--g2);margin-bottom:4px">DAILY BUG REPORT</div>
       <div style="font-family:var(--mono);font-size:10px;color:var(--mute)">${dateStr}</div>
     </div>
-    <div class="dash-grid" style="margin-bottom:18px;margin-top:0">
-      <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:var(--g5);font-size:36px">${todayBugs.length}</div><div class="sc-l" style="margin-top:6px">BUGS FILED TODAY</div></div>
-      <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:var(--g4);font-size:36px">${resolvedToday.length}</div><div class="sc-l" style="margin-top:6px">RESOLVED TODAY</div></div>
-      <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:var(--g3);font-size:36px">${critOpen.length}</div><div class="sc-l" style="margin-top:6px">CRITICAL OPEN</div></div>
-      <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:var(--text);font-size:36px">${S.bugs.length}</div><div class="sc-l" style="margin-top:6px">TOTAL ACTIVE</div></div>
+    <div class="dash-grid" style="margin-bottom:18px;margin-top:0;grid-template-columns:repeat(auto-fit,minmax(110px,1fr))">
+      <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:var(--g5);font-size:32px">${todayBugs.length}</div><div class="sc-l" style="margin-top:6px">FILED TODAY</div></div>
+      <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:var(--g4);font-size:32px">${resolvedToday.length}</div><div class="sc-l" style="margin-top:6px">RESOLVED</div></div>
+      <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:#06b6d4;font-size:32px">${closedToday.length}</div><div class="sc-l" style="margin-top:6px">CLOSED TODAY</div></div>
+      <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:var(--g3);font-size:32px">${critOpen.length}</div><div class="sc-l" style="margin-top:6px">CRIT OPEN</div></div>
+      <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:var(--text);font-size:32px">${S.bugs.length}</div><div class="sc-l" style="margin-top:6px">TOTAL</div></div>
     </div>
     ${todayBugs.length ? `<div class="dsec"><div class="dsec-title">🐛 BUGS FILED TODAY (${todayBugs.length})</div>
       <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;overflow:hidden">
@@ -5180,6 +5346,13 @@ function openDayEndReport() {
           <span style="font-family:var(--mono);font-size:10px;color:var(--g1);flex-shrink:0;width:100px">${esc(b.id)}</span>
           <span style="flex:1;font-size:12px;font-weight:700;color:var(--text)">${esc(b.title||'')}</span>
           ${stChip(b.status)}</div>`).join('')}
+      </div></div>` : ''}
+    ${closedToday.length ? `<div class="dsec"><div class="dsec-title">🔒 CLOSED TODAY — ALL STATUSES (${closedToday.length})</div>
+      <div style="background:var(--bg3);border:1px solid rgba(6,182,212,.15);border-radius:8px;overflow:hidden">
+        ${closedToday.map(b=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid rgba(255,255,255,.03);cursor:pointer" onclick="closePanel();openDetail('${b.id}')">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--g1);flex-shrink:0;width:100px">${esc(b.id)}</span>
+          <span style="flex:1;font-size:12px;font-weight:700;color:var(--text)">${esc(b.title||'')}</span>
+          ${pChip(b.priority)}${stChip(b.status)}</div>`).join('')}
       </div></div>` : ''}
     ${critOpen.length ? `<div class="dsec"><div class="dsec-title" style="color:var(--g5)">🚨 CRITICAL / URGENT STILL OPEN (${critOpen.length})</div>
       <div style="background:rgba(239,68,68,.04);border:1px solid rgba(239,68,68,.2);border-radius:8px;overflow:hidden">
@@ -5196,11 +5369,12 @@ function openDayEndReport() {
       <textarea id="dayEndReportText" readonly
         style="width:100%;min-height:200px;background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:14px;font-family:var(--mono);font-size:10px;color:var(--mist);white-space:pre;line-height:1.9;resize:vertical;outline:none;cursor:text;box-sizing:border-box"
         onclick="this.select()"
-      >${generateReportText(todayBugs,resolvedToday,critOpen,dateStr)}</textarea>
+      >${generateReportText(todayBugs,resolvedToday,critOpen,dateStr,closedToday)}</textarea>
     </div>`;
   openPanel();
 }
-function generateReportText(todayBugs, resolvedToday, critOpen, dateStr) {
+function generateReportText(todayBugs, resolvedToday, critOpen, dateStr, closedToday) {
+  closedToday = closedToday || [];
   const bugLink = id => `${APP_URL}?bug=${id}`;
 
   // Build status breakdown bar chart
@@ -5230,6 +5404,7 @@ function generateReportText(todayBugs, resolvedToday, critOpen, dateStr) {
 ━━━━━━━━━━━━━━━━━━━━━━━━
 🐛 Filed today  : ${todayBugs.length}
 ✅ Resolved     : ${resolvedToday.length}
+🔒 Closed today : ${closedToday.length}
 🚨 Critical open: ${critOpen.length}
 📋 Total active : ${S.bugs.length}
 
@@ -5240,6 +5415,7 @@ ${statusBar}
 ${prioBar}
 ${todayBugs.length ? '\n🐛 TODAY\'S BUGS:\n'+todayBugs.map(b=>`  • [${b.id}] ${b.title} (${b.priority})\n    🔗 ${bugLink(b.id)}`).join('\n') : ''}
 ${resolvedToday.length ? '\n✅ RESOLVED:\n'+resolvedToday.map(b=>`  • [${b.id}] ${b.title}\n    🔗 ${bugLink(b.id)}`).join('\n') : ''}
+${closedToday.length ? '\n🔒 CLOSED TODAY:\n'+closedToday.map(b=>`  • [${b.id}] ${b.title} → ${b.status}\n    🔗 ${bugLink(b.id)}`).join('\n') : ''}
 ${critOpen.length ? '\n🚨 STILL CRITICAL:\n'+critOpen.slice(0,8).map(b=>`  • [${b.id}] ${b.title} — ${(b.assignees||[]).map(a=>a.name).join(', ')||'Unassigned'}\n    🔗 ${bugLink(b.id)}`).join('\n') : ''}
 
 Generated by BugPulse · ${new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})}`;
