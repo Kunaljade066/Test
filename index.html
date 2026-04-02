@@ -5306,8 +5306,27 @@ function getClosedTodayBugs() {
   });
 }
 function getUpdatedTodayBugs() {
-  const todayStr = new Date().toLocaleDateString('en-IN', {timeZone:'Asia/Kolkata'});
-  return S.bugs.filter(b => b.updated_at && b.updated_at.includes(todayStr));
+  const now = new Date();
+  const todayISO = now.toLocaleDateString('en-CA', {timeZone:'Asia/Kolkata'}); // YYYY-MM-DD
+  const todayIN  = now.toLocaleDateString('en-IN', {timeZone:'Asia/Kolkata'}); // DD/MM/YYYY
+  return S.bugs.filter(b => {
+    if(!b.updated_at && !b.updated_ts) return false;
+    if(b.updated_at) {
+      if(b.updated_at.startsWith(todayISO)) return true;
+      if(b.updated_at.includes(todayIN)) return true;
+      try {
+        const d = new Date(b.updated_at);
+        if(!isNaN(d.getTime())) return d.toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'}) === todayISO;
+      } catch(e) {}
+    }
+    if(b.updated_ts) {
+      try {
+        const d = new Date(b.updated_ts);
+        if(!isNaN(d.getTime())) return d.toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'}) === todayISO;
+      } catch(e) {}
+    }
+    return false;
+  });
 }
 function openDayEndReport() {
   const todayBugs = getTodayBugs();
@@ -5316,6 +5335,7 @@ function openDayEndReport() {
   const resolvedToday = updatedBugs.filter(b => ['Dev Fixed','Done','QA Pass'].includes(b.status));
   const critOpen = S.bugs.filter(b => ['Critical','Urgent'].includes(b.priority) && !['Dev Fixed','Done','QA Pass','Closed'].includes(b.status));
   const dateStr = new Date().toLocaleDateString('en-IN', {timeZone:'Asia/Kolkata', weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  const qaPassToday = resolvedToday.filter(b => b.status === 'QA Pass');
   document.getElementById('panelTitle').textContent = '📊 DAY-END REPORT';
   document.getElementById('panelId').textContent = getTodayIST();
   document.getElementById('panelFooter').innerHTML = `
@@ -5326,23 +5346,31 @@ function openDayEndReport() {
       <div style="font-family:var(--disp);font-size:11px;font-weight:800;letter-spacing:2px;color:var(--g2);margin-bottom:4px">DAILY BUG REPORT</div>
       <div style="font-family:var(--mono);font-size:10px;color:var(--mute)">${dateStr}</div>
     </div>
-    <div class="dash-grid" style="margin-bottom:18px;margin-top:0;grid-template-columns:repeat(auto-fit,minmax(110px,1fr))">
+    <div class="dash-grid" style="margin-bottom:18px;margin-top:0;grid-template-columns:repeat(auto-fit,minmax(100px,1fr))">
       <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:var(--g5);font-size:32px">${todayBugs.length}</div><div class="sc-l" style="margin-top:6px">FILED TODAY</div></div>
+      <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:#34d399;font-size:32px">${qaPassToday.length}</div><div class="sc-l" style="margin-top:6px">QA PASS</div></div>
       <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:var(--g4);font-size:32px">${resolvedToday.length}</div><div class="sc-l" style="margin-top:6px">RESOLVED</div></div>
       <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:#06b6d4;font-size:32px">${closedToday.length}</div><div class="sc-l" style="margin-top:6px">CLOSED TODAY</div></div>
       <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:var(--g3);font-size:32px">${critOpen.length}</div><div class="sc-l" style="margin-top:6px">CRIT OPEN</div></div>
       <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:var(--text);font-size:32px">${S.bugs.length}</div><div class="sc-l" style="margin-top:6px">TOTAL</div></div>
     </div>
-    ${todayBugs.length ? `<div class="dsec"><div class="dsec-title">🐛 BUGS FILED TODAY (${todayBugs.length})</div>
+    ${todayBugs.length ? `<div class="dsec"><div class="dsec-title">🐛 BUGS ADDED TODAY (${todayBugs.length})</div>
       <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;overflow:hidden">
         ${todayBugs.map(b=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid rgba(255,255,255,.03);cursor:pointer" onclick="closePanel();openDetail('${b.id}')">
           <span style="font-family:var(--mono);font-size:10px;color:var(--g1);flex-shrink:0;width:100px">${esc(b.id)}</span>
           <span style="flex:1;font-size:12px;font-weight:700;color:var(--text)">${esc(b.title||'')}</span>
           ${pChip(b.priority)}${stChip(b.status)}</div>`).join('')}
-      </div></div>` : ''}
-    ${resolvedToday.length ? `<div class="dsec"><div class="dsec-title">✅ RESOLVED TODAY (${resolvedToday.length})</div>
+      </div></div>` : `<div class="dsec"><div class="dsec-title" style="color:var(--mute)">🐛 BUGS ADDED TODAY — None</div></div>`}
+    ${qaPassToday.length ? `<div class="dsec"><div class="dsec-title" style="color:#34d399">✅ QA PASS TODAY (${qaPassToday.length})</div>
+      <div style="background:rgba(52,211,153,.04);border:1px solid rgba(52,211,153,.2);border-radius:8px;overflow:hidden">
+        ${qaPassToday.map(b=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid rgba(52,211,153,.06);cursor:pointer" onclick="closePanel();openDetail('${b.id}')">
+          <span style="font-family:var(--mono);font-size:10px;color:#34d399;flex-shrink:0;width:100px">${esc(b.id)}</span>
+          <span style="flex:1;font-size:12px;font-weight:700;color:var(--text)">${esc(b.title||'')}</span>
+          ${pChip(b.priority)}${stChip(b.status)}</div>`).join('')}
+      </div></div>` : `<div class="dsec"><div class="dsec-title" style="color:var(--mute)">✅ QA PASS TODAY — None</div></div>`}
+    ${resolvedToday.filter(b=>b.status!=='QA Pass').length ? `<div class="dsec"><div class="dsec-title">🛠 OTHER RESOLVED TODAY (${resolvedToday.filter(b=>b.status!=='QA Pass').length})</div>
       <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;overflow:hidden">
-        ${resolvedToday.map(b=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid rgba(255,255,255,.03)">
+        ${resolvedToday.filter(b=>b.status!=='QA Pass').map(b=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid rgba(255,255,255,.03)">
           <span style="font-family:var(--mono);font-size:10px;color:var(--g1);flex-shrink:0;width:100px">${esc(b.id)}</span>
           <span style="flex:1;font-size:12px;font-weight:700;color:var(--text)">${esc(b.title||'')}</span>
           ${stChip(b.status)}</div>`).join('')}
@@ -5403,6 +5431,7 @@ function generateReportText(todayBugs, resolvedToday, critOpen, dateStr, closedT
   return `📊 BUG REPORT — ${dateStr}
 ━━━━━━━━━━━━━━━━━━━━━━━━
 🐛 Filed today  : ${todayBugs.length}
+✅ QA Pass today: ${resolvedToday.filter(b=>b.status==='QA Pass').length}
 ✅ Resolved     : ${resolvedToday.length}
 🔒 Closed today : ${closedToday.length}
 🚨 Critical open: ${critOpen.length}
@@ -5413,8 +5442,9 @@ ${statusBar}
 
 🎯 OPEN BY PRIORITY
 ${prioBar}
-${todayBugs.length ? '\n🐛 TODAY\'S BUGS:\n'+todayBugs.map(b=>`  • [${b.id}] ${b.title} (${b.priority})\n    🔗 ${bugLink(b.id)}`).join('\n') : ''}
-${resolvedToday.length ? '\n✅ RESOLVED:\n'+resolvedToday.map(b=>`  • [${b.id}] ${b.title}\n    🔗 ${bugLink(b.id)}`).join('\n') : ''}
+${todayBugs.length ? '\n🐛 BUGS ADDED TODAY ('+todayBugs.length+'):\n'+todayBugs.map(b=>`  • [${b.id}] ${b.title}\n    Priority: ${b.priority||'—'} | Status: ${b.status||'—'} | Feature: ${b.feature||'—'}\n    Assigned: ${(b.assignees||[]).map(a=>a.name).join(', ')||'Unassigned'}\n    🔗 ${bugLink(b.id)}`).join('\n') : '\n🐛 BUGS ADDED TODAY: None'}
+${resolvedToday.filter(b=>b.status==='QA Pass').length ? '\n✅ QA PASS TODAY ('+resolvedToday.filter(b=>b.status==='QA Pass').length+'):\n'+resolvedToday.filter(b=>b.status==='QA Pass').map(b=>`  • [${b.id}] ${b.title}\n    Priority: ${b.priority||'—'} | Feature: ${b.feature||'—'}\n    🔗 ${bugLink(b.id)}`).join('\n') : '\n✅ QA PASS TODAY: None'}
+${resolvedToday.filter(b=>b.status!=='QA Pass').length ? '\n🛠 OTHER RESOLVED TODAY ('+resolvedToday.filter(b=>b.status!=='QA Pass').length+'):\n'+resolvedToday.filter(b=>b.status!=='QA Pass').map(b=>`  • [${b.id}] ${b.title} → ${b.status}\n    🔗 ${bugLink(b.id)}`).join('\n') : ''}
 ${closedToday.length ? '\n🔒 CLOSED TODAY:\n'+closedToday.map(b=>`  • [${b.id}] ${b.title} → ${b.status}\n    🔗 ${bugLink(b.id)}`).join('\n') : ''}
 ${critOpen.length ? '\n🚨 STILL CRITICAL:\n'+critOpen.slice(0,8).map(b=>`  • [${b.id}] ${b.title} — ${(b.assignees||[]).map(a=>a.name).join(', ')||'Unassigned'}\n    🔗 ${bugLink(b.id)}`).join('\n') : ''}
 
