@@ -1568,6 +1568,10 @@ function startFastSync(){
         if(S.view==='home')renderHome();
         else if(S.view==='board')renderBoard();
       }
+      // Quietly re-sync settings from D1 every poll cycle
+      api('/settings').then(sd=>{
+        if(sd?.settings){_webhookCfgCache=sd.settings;try{localStorage.setItem(WEBHOOK_KEY,JSON.stringify(_webhookCfgCache));}catch(e){}}
+      }).catch(()=>{});
     }catch(e){}
   }, SYNC_INTERVAL);
 }
@@ -2050,7 +2054,8 @@ function setCloud(s,l){
 async function refreshAll(){
   setCloud('busy','loading…');
   try{
-    const [bugsD,sprintsD,teamD]=await Promise.all([api('/bugs'),api('/sprints'),api('/team')]);
+    const [bugsD,sprintsD,teamD,settingsD]=await Promise.all([api('/bugs'),api('/sprints'),api('/team'),api('/settings').catch(()=>({settings:null}))]);
+    if(settingsD?.settings){_webhookCfgCache=settingsD.settings;try{localStorage.setItem(WEBHOOK_KEY,JSON.stringify(_webhookCfgCache));}catch(e){}}
     const _rawSprints=sprintsD.sprints||[];
     const freshBugs=bugsD.bugs||[];
 
@@ -2069,6 +2074,7 @@ async function refreshAll(){
     updateSbBadges();populateDropdowns();applyF();populateBoardSprint();
     setCloud('ok',`☁ ${S.bugs.length}`);
     renderSlaWarnings();
+    initEODScheduler();
     if(S.view==='home')renderHome();
     else if(S.view==='board')renderBoard();
     else if(S.view==='sprints')renderSprints();
