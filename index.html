@@ -5006,18 +5006,41 @@ function toggleNotif(btn) {
 }
 
 // ══════════════════════════════════════════
-// WEBHOOK SETTINGS — stored per user in localStorage
+// WEBHOOK SETTINGS — stored in D1 via worker /settings
+// localStorage used only as a fast cache; D1 is the source of truth
 // ══════════════════════════════════════════
-const WEBHOOK_KEY = 'hwt_webhooks_v1';
+const WEBHOOK_KEY = 'hwt_webhooks_v2';
+let _webhookCfgCache = null;
+
 function getWebhookConfig() {
+  // Return cache or localStorage fallback synchronously (for callers that can't await)
+  if (_webhookCfgCache) return _webhookCfgCache;
   try { return JSON.parse(localStorage.getItem(WEBHOOK_KEY)||'{}'); } catch { return {}; }
 }
-function saveWebhookConfig(cfg) {
-  try { localStorage.setItem(WEBHOOK_KEY, JSON.stringify(cfg)); } catch(e) {}
+
+async function loadWebhookConfig() {
+  try {
+    const data = await api('/settings');
+    _webhookCfgCache = data.settings || {};
+    localStorage.setItem(WEBHOOK_KEY, JSON.stringify(_webhookCfgCache));
+    return _webhookCfgCache;
+  } catch(e) {
+    // Fallback to localStorage if offline or not logged in
+    try { return JSON.parse(localStorage.getItem(WEBHOOK_KEY)||'{}'); } catch { return {}; }
+  }
 }
 
-function openWebhookSettings() {
-  const cfg = getWebhookConfig();
+async function saveWebhookConfig(cfg) {
+  _webhookCfgCache = cfg;
+  try { localStorage.setItem(WEBHOOK_KEY, JSON.stringify(cfg)); } catch(e) {}
+  try { await api('/settings', 'POST', cfg); } catch(e) { console.error('[settings] save failed', e.message); }
+}
+
+async function openWebhookSettings() {
+  // Show panel immediately with cached config, then refresh from server
+  let cfg = getWebhookConfig();
+  openPanel();
+  cfg = await loadWebhookConfig();
   document.getElementById('panelTitle').textContent = '🔔 WEBHOOK SETTINGS';
   document.getElementById('panelId').textContent = 'NOTIFICATIONS';
   document.getElementById('panelFooter').innerHTML = `
@@ -5255,29 +5278,29 @@ function jkRegenerate(team, label) {
   toast('Token regenerated — copy URL and update Jenkins + Cloudflare env var', 'warn');
 }
 
-function jkDelete(team, label) {
+async function jkDelete(team, label) {
   document.querySelectorAll('[id^="jk-menu-"]').forEach(m => m.style.display='none');
   if (!confirm('Delete webhook for ' + label + '?\n\nJenkins calls will stop working immediately.')) return;
   document.getElementById('wh-jk-token-' + team).value = '';
   document.getElementById('wh-jk-gchat-' + team).value = '';
   document.getElementById('wh-jk-emails-' + team).value = '';
   // Save immediately so it persists
-  saveWebhookSettings();
+  await saveWebhookSettings();
   // Re-open panel to refresh UI
-  openWebhookSettings();
+  await openWebhookSettings();
   toast(label + ' webhook deleted', 'ok');
 }
 
-function jkGenerate(team) {
+async function jkGenerate(team) {
   const t = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
   document.getElementById('wh-jk-token-' + team).value = t;
   // Save and re-open to show locked state
-  saveWebhookSettings();
-  openWebhookSettings();
+  await saveWebhookSettings();
+  await openWebhookSettings();
   toast('Webhook created — set JENKINS_TOKEN_' + team.toUpperCase() + ' in Cloudflare env vars', 'ok');
 }
 
-function saveWebhookSettings() {
+async function saveWebhookSettings() {
   const cfg = {
     gchat_url: document.getElementById('wh-gchat')?.value?.trim()||'',
     team_emails: document.getElementById('wh-emails')?.value?.trim()||'',
@@ -5299,7 +5322,7 @@ function saveWebhookSettings() {
     jenkins_liveops_gchat:  document.getElementById('wh-jk-gchat-liveops')?.value?.trim()||'',
     jenkins_liveops_emails: document.getElementById('wh-jk-emails-liveops')?.value?.trim()||'',
   };
-  saveWebhookConfig(cfg);
+  await saveWebhookConfig(cfg);
   initEODScheduler();
   toast('Webhook settings saved ✓','ok');
   closePanel();
