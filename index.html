@@ -1043,8 +1043,8 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
           <div class="pm-item" id="importBugsBtn" onclick="goTab('import');closeProfileMenu()" style="display:none"><span class="pm-icon">📥</span> Import Bugs (CSV)</div>
           <div class="pm-divider" id="managePodDivider" style="display:none"></div>
           <div class="pm-item" onclick="openDayEndReport();closeProfileMenu()"><span class="pm-icon">📊</span> Day-End Report</div>
-          <div class="pm-item" onclick="openWebhookSettings();closeProfileMenu()"><span class="pm-icon">🔔</span> Webhook Settings</div>
-          <div class="pm-item" onclick="openSLASettings();closeProfileMenu()"><span class="pm-icon">⏱</span> SLA Rules</div>
+          <div class="pm-item" id="webhookSettingsBtn" onclick="openWebhookSettings();closeProfileMenu()" style="display:none"><span class="pm-icon">🔔</span> Webhook Settings</div>
+          <div class="pm-item" id="slaSettingsBtn" onclick="openSLASettings();closeProfileMenu()" style="display:none"><span class="pm-icon">⏱</span> SLA Rules</div>
           <div class="pm-item danger" onclick="signOut()"><span class="pm-icon">🚪</span> Sign Out</div>
         </div>
       </div>
@@ -1189,8 +1189,8 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
           <div class="ph">
             <div><h1>NOTIFICATIONS</h1><p style="font-family:var(--mono);font-size:10px;color:var(--mute);margin-top:3px">In-app alerts · click any bug ID to open</p></div>
             <div class="ph-r">
-              <button class="btn btn-g btn-sm" onclick="openWebhookSettings()">🔔 Webhook Settings</button>
-              <button class="btn btn-g btn-sm" onclick="openSLASettings()">⏱ SLA Rules</button>
+              <button class="btn btn-g btn-sm" id="notifWebhookBtn" onclick="openWebhookSettings()" style="display:none">🔔 Webhook Settings</button>
+              <button class="btn btn-g btn-sm" id="notifSLABtn" onclick="openSLASettings()" style="display:none">⏱ SLA Rules</button>
               <button class="btn btn-g btn-sm" onclick="markAllRead()">Mark all read</button>
             </div>
           </div>
@@ -1873,6 +1873,10 @@ function onLogin(){
     document.getElementById('managePodBtn').style.display='flex';
     document.getElementById('importBugsBtn').style.display='flex';
     document.getElementById('managePodDivider').style.display='block';
+    document.getElementById('webhookSettingsBtn').style.display='flex';
+    document.getElementById('slaSettingsBtn').style.display='flex';
+    const nwb=document.getElementById('notifWebhookBtn');if(nwb)nwb.style.display='';
+    const nsb=document.getElementById('notifSLABtn');if(nsb)nsb.style.display='';
   }
   loadTheme();
   loadCursorPref();
@@ -2256,7 +2260,9 @@ function renderTable(){
   sl.forEach(bug=>{
     const _isSel=_bulkSelected.has(bug.id);
     const _days=bugAgeDays(bug);
-    const _slaRow=_days!==null&&_days>=SLA_BREACH_DAYS&&['Open','In Progress','Bugged','In Review'].includes(bug.status);
+    const _slaCfg=getSLAConfig();const _pKey=(bug.priority||'Medium').toLowerCase().replace(/\s+/g,'_');
+    const _slaBreach=_slaCfg['p_'+_pKey+'_breach']??_slaCfg.breach??7;
+    const _slaRow=_days!==null&&_days>=_slaBreach&&['Open','In Progress','Bugged','In Review'].includes(bug.status);
     h+=`<tr onclick="openDetail('${bug.id}')" style="${_slaRow?'background:rgba(239,68,68,.04)':''}${_isSel?';background:rgba(124,58,237,.1)':''}">
       <td onclick="event.stopPropagation()" style="width:30px"><div class="cb-wrap"><input type="checkbox" ${_isSel?'checked':''} onclick="toggleBulkSelect('${bug.id}',event)"></div></td>
       <td class="tc-id mob-hide-id" style="white-space:nowrap">
