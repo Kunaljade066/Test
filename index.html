@@ -883,6 +883,10 @@ body.theme-slate { --text:#f0f0f8; --mist:#c0c0e0; --ghost:#e8e8f8; }
 .fi2 { color: var(--text) !important; }
 .fi  { color: var(--text) !important; }
 textarea.fi2, input.fi2 { color: var(--text) !important; }
+.jk-mi{padding:7px 12px;font-family:var(--mono);font-size:11px;color:var(--text);cursor:pointer;border-radius:6px;white-space:nowrap}
+.jk-mi:hover{background:rgba(124,58,237,.15)}
+.jk-mi-danger{color:#f87171}
+.jk-mi-danger:hover{background:rgba(239,68,68,.12)}
 </style>
 </head>
 <body>
@@ -5032,95 +5036,123 @@ function openWebhookSettings() {
       <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:14px 16px">
         <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#f59e0b;margin-bottom:4px">🏗️ JENKINS INBOUND WEBHOOKS</div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:12px;line-height:1.8">
-          One URL per team. Jenkins POST body: <span style="color:var(--g2)">{&quot;version&quot;:&quot;1.4.2&quot;,&quot;platform&quot;:&quot;Android&quot;,&quot;link&quot;:&quot;…&quot;,&quot;notes&quot;:&quot;…&quot;}</span>
+          One URL per team. Jenkins POST: <span style="color:var(--g2)">{&quot;version&quot;:&quot;1.4.2&quot;,&quot;platform&quot;:&quot;Android&quot;,&quot;link&quot;:&quot;…&quot;,&quot;notes&quot;:&quot;…&quot;}</span>
         </div>
         <div style="border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:12px 14px;margin-bottom:10px">
-          <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#06b6d4;margin-bottom:10px">Openers</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#06b6d4">Openers</span>
+            ${cfg.jenkins_openers_token ? `
+              <div style="position:relative;display:inline-block">
+                <button class="btn btn-g" style="font-size:13px;padding:4px 10px;line-height:1" onclick="jkMenu('openers',this)">⋯</button>
+                <div id="jk-menu-openers" style="display:none;position:absolute;right:0;top:28px;background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:4px;z-index:999;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,.4)">
+                  <div class="jk-mi" onclick="jkCopyUrl('openers')">📋 Copy Webhook URL</div>
+                  <div class="jk-mi" onclick="jkReveal('openers')">👁 Reveal Token</div>
+                  <div class="jk-mi jk-mi-danger" onclick="jkRegenerate('openers','Openers')">🔄 Regenerate Token</div>
+                  <div class="jk-mi jk-mi-danger" onclick="jkDelete('openers','Openers')">🗑 Delete Webhook</div>
+                </div>
+              </div>` : ''}
+          </div>
           <div class="fg" style="margin-bottom:8px">
             <label class="fl">GChat Webhook URL</label>
             <input class="fi2" id="wh-jk-gchat-openers" value="${esc(cfg.jenkins_openers_gchat||'')}" placeholder="https://chat.googleapis.com/v1/spaces/…">
           </div>
-          <div class="fg" style="margin-bottom:8px">
+          <div class="fg" style="margin-bottom:10px">
             <label class="fl">Team Emails (comma-separated)</label>
             <input class="fi2" id="wh-jk-emails-openers" value="${esc(cfg.jenkins_openers_emails||'')}" placeholder="dev@hitwicket.com, qa@hitwicket.com">
           </div>
-          <div class="fg" style="margin-bottom:8px">
-            <label class="fl">Secret Token</label>
-            <div style="display:flex;gap:8px">
-              <input class="fi2" id="wh-jk-token-openers" value="${esc(cfg.jenkins_openers_token||'')}" placeholder="auto-generated" style="flex:1">
-              <button class="btn btn-g" style="font-size:11px;padding:6px 10px;flex-shrink:0" onclick="(()=>{const t=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);document.getElementById('wh-jk-token-openers').value=t;document.getElementById('wh-jk-url-openers').value=WORKER+'/webhook/jenkins?team=openers&token='+t;})();">Generate</button>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input class="fi2" id="wh-jk-url-openers" value="${cfg.jenkins_openers_token?WORKER+'/webhook/jenkins?team=openers&token='+cfg.jenkins_openers_token:'— generate token above —'}" readonly style="flex:1;font-family:var(--mono);font-size:10px;color:var(--g2)">
-            <button class="btn btn-g" style="font-size:11px;padding:6px 10px;flex-shrink:0" onclick="(()=>{const el=document.getElementById('wh-jk-url-openers');if(el.value&&!el.value.startsWith('—')){navigator.clipboard.writeText(el.value);toast('URL copied ✓','ok');}})();">Copy</button>
-          </div>
+          ${cfg.jenkins_openers_token ? `
+            <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:8px 12px">
+              <span style="font-family:monospace;font-size:10px;color:var(--g2);flex:1" id="jk-url-display-openers">${WORKER}/webhook/jenkins?team=openers&token=${'•'.repeat(16)}</span>
+            </div>` : `
+            <button class="btn btn-v" style="width:100%;font-size:11px" onclick="jkGenerate('openers')">＋ Generate Webhook URL</button>`}
+          <input type="hidden" id="wh-jk-token-openers" value="${esc(cfg.jenkins_openers_token||'')}">
         </div>
         <div style="border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:12px 14px;margin-bottom:10px">
-          <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#a78bfa;margin-bottom:10px">Middle Order</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#a78bfa">Middle Order</span>
+            ${cfg.jenkins_middle_order_token ? `
+              <div style="position:relative;display:inline-block">
+                <button class="btn btn-g" style="font-size:13px;padding:4px 10px;line-height:1" onclick="jkMenu('middle_order',this)">⋯</button>
+                <div id="jk-menu-middle_order" style="display:none;position:absolute;right:0;top:28px;background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:4px;z-index:999;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,.4)">
+                  <div class="jk-mi" onclick="jkCopyUrl('middle_order')">📋 Copy Webhook URL</div>
+                  <div class="jk-mi" onclick="jkReveal('middle_order')">👁 Reveal Token</div>
+                  <div class="jk-mi jk-mi-danger" onclick="jkRegenerate('middle_order','Middle Order')">🔄 Regenerate Token</div>
+                  <div class="jk-mi jk-mi-danger" onclick="jkDelete('middle_order','Middle Order')">🗑 Delete Webhook</div>
+                </div>
+              </div>` : ''}
+          </div>
           <div class="fg" style="margin-bottom:8px">
             <label class="fl">GChat Webhook URL</label>
             <input class="fi2" id="wh-jk-gchat-middle_order" value="${esc(cfg.jenkins_middle_order_gchat||'')}" placeholder="https://chat.googleapis.com/v1/spaces/…">
           </div>
-          <div class="fg" style="margin-bottom:8px">
+          <div class="fg" style="margin-bottom:10px">
             <label class="fl">Team Emails (comma-separated)</label>
             <input class="fi2" id="wh-jk-emails-middle_order" value="${esc(cfg.jenkins_middle_order_emails||'')}" placeholder="dev@hitwicket.com, qa@hitwicket.com">
           </div>
-          <div class="fg" style="margin-bottom:8px">
-            <label class="fl">Secret Token</label>
-            <div style="display:flex;gap:8px">
-              <input class="fi2" id="wh-jk-token-middle_order" value="${esc(cfg.jenkins_middle_order_token||'')}" placeholder="auto-generated" style="flex:1">
-              <button class="btn btn-g" style="font-size:11px;padding:6px 10px;flex-shrink:0" onclick="(()=>{const t=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);document.getElementById('wh-jk-token-middle_order').value=t;document.getElementById('wh-jk-url-middle_order').value=WORKER+'/webhook/jenkins?team=middle_order&token='+t;})();">Generate</button>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input class="fi2" id="wh-jk-url-middle_order" value="${cfg.jenkins_middle_order_token?WORKER+'/webhook/jenkins?team=middle_order&token='+cfg.jenkins_middle_order_token:'— generate token above —'}" readonly style="flex:1;font-family:var(--mono);font-size:10px;color:var(--g2)">
-            <button class="btn btn-g" style="font-size:11px;padding:6px 10px;flex-shrink:0" onclick="(()=>{const el=document.getElementById('wh-jk-url-middle_order');if(el.value&&!el.value.startsWith('—')){navigator.clipboard.writeText(el.value);toast('URL copied ✓','ok');}})();">Copy</button>
-          </div>
+          ${cfg.jenkins_middle_order_token ? `
+            <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:8px 12px">
+              <span style="font-family:monospace;font-size:10px;color:var(--g2);flex:1" id="jk-url-display-middle_order">${WORKER}/webhook/jenkins?team=middle_order&token=${'•'.repeat(16)}</span>
+            </div>` : `
+            <button class="btn btn-v" style="width:100%;font-size:11px" onclick="jkGenerate('middle_order')">＋ Generate Webhook URL</button>`}
+          <input type="hidden" id="wh-jk-token-middle_order" value="${esc(cfg.jenkins_middle_order_token||'')}">
         </div>
         <div style="border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:12px 14px;margin-bottom:10px">
-          <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#34d399;margin-bottom:10px">Tech Infra</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#34d399">Tech Infra</span>
+            ${cfg.jenkins_tech_infra_token ? `
+              <div style="position:relative;display:inline-block">
+                <button class="btn btn-g" style="font-size:13px;padding:4px 10px;line-height:1" onclick="jkMenu('tech_infra',this)">⋯</button>
+                <div id="jk-menu-tech_infra" style="display:none;position:absolute;right:0;top:28px;background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:4px;z-index:999;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,.4)">
+                  <div class="jk-mi" onclick="jkCopyUrl('tech_infra')">📋 Copy Webhook URL</div>
+                  <div class="jk-mi" onclick="jkReveal('tech_infra')">👁 Reveal Token</div>
+                  <div class="jk-mi jk-mi-danger" onclick="jkRegenerate('tech_infra','Tech Infra')">🔄 Regenerate Token</div>
+                  <div class="jk-mi jk-mi-danger" onclick="jkDelete('tech_infra','Tech Infra')">🗑 Delete Webhook</div>
+                </div>
+              </div>` : ''}
+          </div>
           <div class="fg" style="margin-bottom:8px">
             <label class="fl">GChat Webhook URL</label>
             <input class="fi2" id="wh-jk-gchat-tech_infra" value="${esc(cfg.jenkins_tech_infra_gchat||'')}" placeholder="https://chat.googleapis.com/v1/spaces/…">
           </div>
-          <div class="fg" style="margin-bottom:8px">
+          <div class="fg" style="margin-bottom:10px">
             <label class="fl">Team Emails (comma-separated)</label>
             <input class="fi2" id="wh-jk-emails-tech_infra" value="${esc(cfg.jenkins_tech_infra_emails||'')}" placeholder="dev@hitwicket.com, qa@hitwicket.com">
           </div>
-          <div class="fg" style="margin-bottom:8px">
-            <label class="fl">Secret Token</label>
-            <div style="display:flex;gap:8px">
-              <input class="fi2" id="wh-jk-token-tech_infra" value="${esc(cfg.jenkins_tech_infra_token||'')}" placeholder="auto-generated" style="flex:1">
-              <button class="btn btn-g" style="font-size:11px;padding:6px 10px;flex-shrink:0" onclick="(()=>{const t=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);document.getElementById('wh-jk-token-tech_infra').value=t;document.getElementById('wh-jk-url-tech_infra').value=WORKER+'/webhook/jenkins?team=tech_infra&token='+t;})();">Generate</button>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input class="fi2" id="wh-jk-url-tech_infra" value="${cfg.jenkins_tech_infra_token?WORKER+'/webhook/jenkins?team=tech_infra&token='+cfg.jenkins_tech_infra_token:'— generate token above —'}" readonly style="flex:1;font-family:var(--mono);font-size:10px;color:var(--g2)">
-            <button class="btn btn-g" style="font-size:11px;padding:6px 10px;flex-shrink:0" onclick="(()=>{const el=document.getElementById('wh-jk-url-tech_infra');if(el.value&&!el.value.startsWith('—')){navigator.clipboard.writeText(el.value);toast('URL copied ✓','ok');}})();">Copy</button>
-          </div>
+          ${cfg.jenkins_tech_infra_token ? `
+            <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:8px 12px">
+              <span style="font-family:monospace;font-size:10px;color:var(--g2);flex:1" id="jk-url-display-tech_infra">${WORKER}/webhook/jenkins?team=tech_infra&token=${'•'.repeat(16)}</span>
+            </div>` : `
+            <button class="btn btn-v" style="width:100%;font-size:11px" onclick="jkGenerate('tech_infra')">＋ Generate Webhook URL</button>`}
+          <input type="hidden" id="wh-jk-token-tech_infra" value="${esc(cfg.jenkins_tech_infra_token||'')}">
         </div>
         <div style="border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:12px 14px;margin-bottom:10px">
-          <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#f87171;margin-bottom:10px">LiveOps</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#f87171">LiveOps</span>
+            ${cfg.jenkins_liveops_token ? `
+              <div style="position:relative;display:inline-block">
+                <button class="btn btn-g" style="font-size:13px;padding:4px 10px;line-height:1" onclick="jkMenu('liveops',this)">⋯</button>
+                <div id="jk-menu-liveops" style="display:none;position:absolute;right:0;top:28px;background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:4px;z-index:999;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,.4)">
+                  <div class="jk-mi" onclick="jkCopyUrl('liveops')">📋 Copy Webhook URL</div>
+                  <div class="jk-mi" onclick="jkReveal('liveops')">👁 Reveal Token</div>
+                  <div class="jk-mi jk-mi-danger" onclick="jkRegenerate('liveops','LiveOps')">🔄 Regenerate Token</div>
+                  <div class="jk-mi jk-mi-danger" onclick="jkDelete('liveops','LiveOps')">🗑 Delete Webhook</div>
+                </div>
+              </div>` : ''}
+          </div>
           <div class="fg" style="margin-bottom:8px">
             <label class="fl">GChat Webhook URL</label>
             <input class="fi2" id="wh-jk-gchat-liveops" value="${esc(cfg.jenkins_liveops_gchat||'')}" placeholder="https://chat.googleapis.com/v1/spaces/…">
           </div>
-          <div class="fg" style="margin-bottom:8px">
+          <div class="fg" style="margin-bottom:10px">
             <label class="fl">Team Emails (comma-separated)</label>
             <input class="fi2" id="wh-jk-emails-liveops" value="${esc(cfg.jenkins_liveops_emails||'')}" placeholder="dev@hitwicket.com, qa@hitwicket.com">
           </div>
-          <div class="fg" style="margin-bottom:8px">
-            <label class="fl">Secret Token</label>
-            <div style="display:flex;gap:8px">
-              <input class="fi2" id="wh-jk-token-liveops" value="${esc(cfg.jenkins_liveops_token||'')}" placeholder="auto-generated" style="flex:1">
-              <button class="btn btn-g" style="font-size:11px;padding:6px 10px;flex-shrink:0" onclick="(()=>{const t=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);document.getElementById('wh-jk-token-liveops').value=t;document.getElementById('wh-jk-url-liveops').value=WORKER+'/webhook/jenkins?team=liveops&token='+t;})();">Generate</button>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input class="fi2" id="wh-jk-url-liveops" value="${cfg.jenkins_liveops_token?WORKER+'/webhook/jenkins?team=liveops&token='+cfg.jenkins_liveops_token:'— generate token above —'}" readonly style="flex:1;font-family:var(--mono);font-size:10px;color:var(--g2)">
-            <button class="btn btn-g" style="font-size:11px;padding:6px 10px;flex-shrink:0" onclick="(()=>{const el=document.getElementById('wh-jk-url-liveops');if(el.value&&!el.value.startsWith('—')){navigator.clipboard.writeText(el.value);toast('URL copied ✓','ok');}})();">Copy</button>
-          </div>
+          ${cfg.jenkins_liveops_token ? `
+            <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:8px 12px">
+              <span style="font-family:monospace;font-size:10px;color:var(--g2);flex:1" id="jk-url-display-liveops">${WORKER}/webhook/jenkins?team=liveops&token=${'•'.repeat(16)}</span>
+            </div>` : `
+            <button class="btn btn-v" style="width:100%;font-size:11px" onclick="jkGenerate('liveops')">＋ Generate Webhook URL</button>`}
+          <input type="hidden" id="wh-jk-token-liveops" value="${esc(cfg.jenkins_liveops_token||'')}">
         </div>
       </div>
 
@@ -5165,6 +5197,84 @@ function openWebhookSettings() {
   openPanel();
   // Re-init scheduler after panel opens (so toggle state is fresh)
   setTimeout(initEODScheduler, 100);
+}
+
+// ── Jenkins webhook token management ──────────────────────────────────────
+function jkMenu(team, btn) {
+  // Close all other menus first
+  document.querySelectorAll('[id^="jk-menu-"]').forEach(m => {
+    if (m.id !== 'jk-menu-' + team) m.style.display = 'none';
+  });
+  const menu = document.getElementById('jk-menu-' + team);
+  if (!menu) return;
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  // Close on outside click
+  setTimeout(() => {
+    const close = (e) => { if (!menu.contains(e.target) && e.target !== btn) { menu.style.display='none'; document.removeEventListener('click', close); } };
+    document.addEventListener('click', close);
+  }, 10);
+}
+
+function jkGetToken(team) {
+  return document.getElementById('wh-jk-token-' + team)?.value || '';
+}
+
+function jkCopyUrl(team) {
+  document.querySelectorAll('[id^="jk-menu-"]').forEach(m => m.style.display='none');
+  const token = jkGetToken(team);
+  if (!token) return;
+  const url = WORKER + '/webhook/jenkins?team=' + team + '&token=' + token;
+  navigator.clipboard.writeText(url).then(() => toast('Webhook URL copied ✓', 'ok'));
+}
+
+function jkReveal(team) {
+  document.querySelectorAll('[id^="jk-menu-"]').forEach(m => m.style.display='none');
+  const token = jkGetToken(team);
+  if (!token) return;
+  const url = WORKER + '/webhook/jenkins?team=' + team + '&token=' + token;
+  const disp = document.getElementById('jk-url-display-' + team);
+  if (!disp) return;
+  if (disp.dataset.revealed === '1') {
+    disp.textContent = WORKER + '/webhook/jenkins?team=' + team + '&token=' + '•'.repeat(16);
+    disp.dataset.revealed = '0';
+  } else {
+    disp.textContent = url;
+    disp.dataset.revealed = '1';
+  }
+}
+
+function jkRegenerate(team, label) {
+  document.querySelectorAll('[id^="jk-menu-"]').forEach(m => m.style.display='none');
+  const existing = jkGetToken(team);
+  const warn = existing ? '\n\n⚠️ This will break your Jenkins pipeline until you update the URL + Cloudflare env var.' : '';
+  if (!confirm('Regenerate webhook token for ' + label + '?' + warn)) return;
+  const t = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  document.getElementById('wh-jk-token-' + team).value = t;
+  const disp = document.getElementById('jk-url-display-' + team);
+  if (disp) { disp.textContent = WORKER + '/webhook/jenkins?team=' + team + '&token=' + t; disp.dataset.revealed = '1'; }
+  toast('Token regenerated — copy URL and update Jenkins + Cloudflare env var', 'warn');
+}
+
+function jkDelete(team, label) {
+  document.querySelectorAll('[id^="jk-menu-"]').forEach(m => m.style.display='none');
+  if (!confirm('Delete webhook for ' + label + '?\n\nJenkins calls will stop working immediately.')) return;
+  document.getElementById('wh-jk-token-' + team).value = '';
+  document.getElementById('wh-jk-gchat-' + team).value = '';
+  document.getElementById('wh-jk-emails-' + team).value = '';
+  // Save immediately so it persists
+  saveWebhookSettings();
+  // Re-open panel to refresh UI
+  openWebhookSettings();
+  toast(label + ' webhook deleted', 'ok');
+}
+
+function jkGenerate(team) {
+  const t = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  document.getElementById('wh-jk-token-' + team).value = t;
+  // Save and re-open to show locked state
+  saveWebhookSettings();
+  openWebhookSettings();
+  toast('Webhook created — set JENKINS_TOKEN_' + team.toUpperCase() + ' in Cloudflare env vars', 'ok');
 }
 
 function saveWebhookSettings() {
