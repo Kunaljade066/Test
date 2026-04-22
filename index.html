@@ -311,6 +311,10 @@ tbody td{padding:9px 11px;vertical-align:middle;color:var(--mist)}
 .kcol-name{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
 .kcol-n{background:var(--bg3);color:var(--mute);font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px}
 .kcol-cards{padding:7px;display:flex;flex-direction:column;gap:6px;min-height:40px;}
+.kcol-dragover{border-color:var(--g1)!important;background:rgba(124,58,237,.08)!important;box-shadow:0 0 0 2px rgba(124,58,237,.3)!important;}
+.kcol-empty{text-align:center;padding:18px;font-family:var(--mono);font-size:11px;color:var(--dim);border:1px dashed var(--bd);border-radius:8px;margin:4px;}
+.kcard[draggable]{cursor:grab;}
+.kcard[draggable]:active{cursor:grabbing;}
 .kcard{background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:9px 10px;cursor:none;transition:border-color .15s,box-shadow .15s;}
 .kcard:hover{border-color:var(--g1);box-shadow:var(--glow)}
 .kcard-id{font-family:var(--mono);font-size:8px;color:var(--g1);margin-bottom:4px;letter-spacing:.5px}
@@ -958,6 +962,8 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
     <div class="sc-row"><span class="sc-desc">Focus search</span><span><kbd class="kbd">/</kbd></span></div>
     <div class="sc-row"><span class="sc-desc">Close panel / modal</span><span><kbd class="kbd">Esc</kbd></span></div>
     <div class="sc-row"><span class="sc-desc">This help</span><span><kbd class="kbd">?</kbd></span></div>
+    <div class="sc-row"><span class="sc-desc">Open bug template selector</span><span><kbd class="kbd">T</kbd></span></div>
+    <div class="sc-row"><span class="sc-desc">Go to Test Runs</span><span><kbd class="kbd">R</kbd></span></div>
   </div>
 </div>
 
@@ -1011,10 +1017,11 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
         <div style="width:5px;height:5px;border-radius:50%;background:var(--g4);box-shadow:0 0 5px var(--g4);animation:blink 2.5s ease-in-out infinite;flex-shrink:0"></div>
         <span id="liveCount" style="font-family:var(--mono);font-size:10px;color:var(--g4);font-weight:700;white-space:nowrap"></span>
       </div>
-      <button class="btn btn-g btn-sm" onclick="exportCSV()" title="Export CSV">📥</button>
+      <div style="position:relative;display:inline-block" id="exportDropWrap"><button class="btn btn-g btn-sm" onclick="toggleExportDrop()" title="Export CSV">📥 ▾</button><div id="exportDrop" style="display:none;position:absolute;right:0;top:30px;background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:4px;z-index:999;min-width:150px;box-shadow:0 8px 24px rgba(0,0,0,.4)"><div class="jk-mi" onclick="exportCSV('filtered');toggleExportDrop()">📋 Export filtered</div><div class="jk-mi" onclick="exportCSV('all');toggleExportDrop()">📦 Export all bugs</div><div class="jk-mi" onclick="exportCSV('selection');toggleExportDrop()">✅ Export selected</div></div></div>
       <button class="btn btn-g btn-sm" onclick="refreshAll()">↻</button>
       <button class="btn btn-g btn-sm" onclick="document.getElementById('shortcutsModal').classList.add('on')" title="Keyboard shortcuts (?)">⌨</button>
       <button class="btn btn-v btn-sm" onclick="openNew()">＋ BUG</button>
+              <button class="btn btn-g btn-sm" onclick="openTemplateSelector()">📋</button>
       <div class="user-pill-wrap">
         <div class="user-pill" onclick="toggleProfileMenu(event)" title="Profile & settings">
           <div class="uav" id="uav" style="background:var(--g1)">?</div>
@@ -1037,6 +1044,7 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
           <div class="pm-divider" id="managePodDivider" style="display:none"></div>
           <div class="pm-item" onclick="openDayEndReport();closeProfileMenu()"><span class="pm-icon">📊</span> Day-End Report</div>
           <div class="pm-item" onclick="openWebhookSettings();closeProfileMenu()"><span class="pm-icon">🔔</span> Webhook Settings</div>
+          <div class="pm-item" onclick="openSLASettings();closeProfileMenu()"><span class="pm-icon">⏱</span> SLA Rules</div>
           <div class="pm-item danger" onclick="signOut()"><span class="pm-icon">🚪</span> Sign Out</div>
         </div>
       </div>
@@ -1097,7 +1105,7 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
           <div class="ph">
             <div><h1>Bugs</h1><p id="bl-sub">All issues</p></div>
             <div class="ph-r">
-              <button class="btn btn-g btn-sm" onclick="exportCSV()">📥 CSV</button>
+              <button class="btn btn-g btn-sm" onclick="exportCSV('filtered')">📥 CSV</button>
               <button class="btn btn-v" onclick="openNew()">＋ NEW BUG</button>
             </div>
           </div>
@@ -1167,11 +1175,13 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
           <div class="ph">
             <div><h1>BUILDS</h1><p id="builds-sub">Track what's in each build</p></div>
             <div class="ph-r">
+              <button class="btn btn-g" onclick="goTestRuns()">🧪 Test Runs</button>
               <button class="btn btn-v" onclick="openNewBuild()">＋ LOG BUILD</button>
             </div>
           </div>
           <div id="buildsCurrentBanner"></div>
           <div id="buildsWrap"></div>
+          <div id="testRunsWrap" style="display:none;margin-top:18px"></div>
         </div>
 
         <!-- NOTIFS -->
@@ -1180,6 +1190,7 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
             <div><h1>NOTIFICATIONS</h1><p style="font-family:var(--mono);font-size:10px;color:var(--mute);margin-top:3px">In-app alerts · click any bug ID to open</p></div>
             <div class="ph-r">
               <button class="btn btn-g btn-sm" onclick="openWebhookSettings()">🔔 Webhook Settings</button>
+              <button class="btn btn-g btn-sm" onclick="openSLASettings()">⏱ SLA Rules</button>
               <button class="btn btn-g btn-sm" onclick="markAllRead()">Mark all read</button>
             </div>
           </div>
@@ -2167,7 +2178,7 @@ function goTab(v){
   if(v==='notifs')renderNotifs();
   if(v==='backlog')renderTable();
   if(v==='clickup')loadClickUp();
-  if(v==='builds')renderBuildsPage();
+  if(v==='builds'){renderBuildsPage();document.getElementById('testRunsWrap').style.display='none';document.getElementById('buildsWrap').style.display='';document.getElementById('buildsCurrentBanner').style.display='';}
 }
 
 // ══════════════════════════════════════════
@@ -2302,16 +2313,60 @@ function renderBoard(){
   const src=spf?S.bugs.filter(b=>b.sprint===spf):S.bugs;
   document.getElementById('kanbanBoard').innerHTML=KCOLS.map(col=>{
     const cb=src.filter(b=>b.status===col.k);
-    return`<div class="kcol">
+    return`<div class="kcol"
+      ondragover="event.preventDefault();this.classList.add('kcol-dragover')"
+      ondragleave="this.classList.remove('kcol-dragover')"
+      ondrop="kDrop(event,'${col.k.replace(/'/g,"\'")}');this.classList.remove('kcol-dragover')">
       <div class="kcol-hd"><span class="kcol-name" style="color:${col.c};text-shadow:0 0 8px ${col.c}44">${col.k}</span><span class="kcol-n">${cb.length}</span></div>
       <div class="kcol-cards">
-        ${cb.map(bug=>`<div class="kcard" onclick="openDetail('${bug.id}')">
+        ${cb.map(bug=>`<div class="kcard" draggable="true"
+          onclick="openDetail('${bug.id}')"
+          ondragstart="kDragStart(event,'${bug.id}')"
+          ondragend="kDragEnd(event)">
           <div class="kcard-id">${esc(bug.id)}</div>
           <div class="kcard-title">${esc(bug.title||'')}</div>
           <div class="kcard-foot">${pChip(bug.priority)}${ageChip(bug)}${avStack(bug.assignees||[],18)}</div>
-        </div>`).join('')||`<div style="text-align:center;padding:18px;font-family:var(--mono);font-size:11px;color:var(--dim)">— empty —</div>`}
+        </div>`).join('')||`<div class="kcol-empty">— drop here —</div>`}
       </div></div>`;
   }).join('');
+}
+
+let _kDragging = null;
+function kDragStart(e, bugId) {
+  _kDragging = bugId;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', bugId);
+  e.currentTarget.style.opacity = '0.4';
+}
+function kDragEnd(e) {
+  e.currentTarget.style.opacity = '';
+  _kDragging = null;
+  document.querySelectorAll('.kcol-dragover').forEach(el => el.classList.remove('kcol-dragover'));
+}
+async function kDrop(e, newStatus) {
+  e.preventDefault();
+  const bugId = e.dataTransfer.getData('text/plain') || _kDragging;
+  if(!bugId) return;
+  const bug = S.bugs.find(b => b.id === bugId);
+  if(!bug || bug.status === newStatus) return;
+  const oldStatus = bug.status;
+  // Optimistic update
+  bug.status = newStatus;
+  renderBoard();
+  try {
+    await api('/bugs/'+bugId, 'PUT', { status: newStatus, _restricted: true });
+    toast(`${bugId} → ${newStatus}`, 'ok');
+    // Notify on status change
+    const cfg = getWebhookConfig();
+    const bugUrl = APP_URL + '?bug=' + bugId;
+    const msg = `📊 *Status Update — ${bugId}*\n${bug.title||''}\n${oldStatus} → *${newStatus}*\n🔗 ${bugUrl}`;
+    if(cfg.gchat_url) sendGChatWebhook(msg);
+    if(cfg.slack_url) sendSlackWebhook(msg);
+  } catch(err) {
+    bug.status = oldStatus;
+    renderBoard();
+    toast('Update failed: '+err.message, 'err');
+  }
 }
 
 // ══════════════════════════════════════════
@@ -2529,6 +2584,87 @@ function dashDrillDown(field, value){
   showInlineDrawer('📊 '+value+' ('+field+')', bugs);
 }
 
+// ── Bug Age Heatmap ───────────────────────────────────────────────────────────
+function renderBugHeatmap() {
+  const el = document.getElementById('bugHeatmap');
+  if(!el) return;
+  if(!S.bugs.length) { el.innerHTML=''; return; }
+
+  // Build daily count map for last 84 days (12 weeks)
+  const DAYS = 84;
+  const now = Date.now();
+  const dayMs = 86400000;
+  const counts = {};
+  S.bugs.forEach(b => {
+    if(!b.created_ts) return;
+    const daysAgo = Math.floor((now - b.created_ts) / dayMs);
+    if(daysAgo >= 0 && daysAgo < DAYS) {
+      const key = daysAgo;
+      counts[key] = (counts[key]||0) + 1;
+    }
+  });
+
+  const max = Math.max(1, ...Object.values(counts));
+  const dayNames = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+  // Build 12 columns (weeks), 7 rows (days)
+  const today = new Date();
+  const todayDow = today.getDay(); // 0=Sun
+
+  let cells = [];
+  for(let w = 11; w >= 0; w--) {
+    let col = [];
+    for(let d = 0; d < 7; d++) {
+      const daysAgo = w*7 + (todayDow - d + 7)%7;
+      if(daysAgo >= DAYS) { col.push({daysAgo:-1,count:0}); continue; }
+      const count = counts[daysAgo] || 0;
+      col.push({daysAgo, count});
+    }
+    cells.push(col);
+  }
+
+  const cellHtml = (cell) => {
+    if(cell.daysAgo < 0) return `<div style="width:12px;height:12px"></div>`;
+    const opacity = cell.count === 0 ? 0.07 : 0.2 + (cell.count/max)*0.8;
+    const date = new Date(now - cell.daysAgo * dayMs);
+    const label = date.toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+    const title = cell.count ? `${cell.count} bug${cell.count!==1?'s':''} on ${label}` : `No bugs on ${label}`;
+    return `<div title="${title}" style="width:12px;height:12px;border-radius:2px;background:var(--g1);opacity:${opacity.toFixed(2)};cursor:${cell.count?'pointer':'default'}" onclick="${cell.count?`filterByDate(${cell.daysAgo})`:''}"></div>`;
+  };
+
+  el.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:16px 18px">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g2);margin-bottom:12px">🗓 BUG FILING HEATMAP — LAST 12 WEEKS</div>
+      <div style="display:flex;gap:3px;align-items:flex-start">
+        <div style="display:flex;flex-direction:column;gap:3px;margin-right:4px;padding-top:0">
+          ${dayNames.map((d,i)=>`<div style="font-family:var(--mono);font-size:8px;color:var(--dim);height:12px;line-height:12px;width:14px">${i%2===1?d:''}</div>`).join('')}
+        </div>
+        ${cells.map(col=>`<div style="display:flex;flex-direction:column;gap:3px">${col.map(cellHtml).join('')}</div>`).join('')}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:10px">
+        <span style="font-family:var(--mono);font-size:8px;color:var(--dim)">Less</span>
+        ${[0.07,0.3,0.5,0.7,0.9].map(o=>`<div style="width:12px;height:12px;border-radius:2px;background:var(--g1);opacity:${o}"></div>`).join('')}
+        <span style="font-family:var(--mono);font-size:8px;color:var(--dim)">More</span>
+        <span style="font-family:var(--mono);font-size:8px;color:var(--dim);margin-left:8px">Click a cell to filter that day</span>
+      </div>
+    </div>`;
+}
+
+function filterByDate(daysAgo) {
+  const dayMs = 86400000;
+  const now = Date.now();
+  const target = new Date(now - daysAgo * dayMs);
+  const dateStr = target.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+  // Filter bugs to that day
+  S.filtered = S.bugs.filter(b => {
+    if(!b.created_ts) return false;
+    const d = Math.floor((now - b.created_ts) / dayMs);
+    return d === daysAgo;
+  });
+  goToBugsClean();
+  toast(`Showing bugs filed on ${dateStr} (${S.filtered.length})`, 'ok');
+}
+
 function renderDashboard(){
   renderStats('dashStats');
   const el=document.getElementById('dashCharts');if(!el)return;
@@ -2550,6 +2686,7 @@ function renderDashboard(){
   el.innerHTML=bc('BY PRIORITY',cntBy('priority'),pco,'priority')+bc('BY STATUS',cntBy('status'),sco,'status')+bc('BY ASSIGNEE',cntByAssignee(),'','assignee')+bc('BY FEATURE',cntBy('feature'),{},'feature')+DD_FIELDS.map(f=>bc('BY '+f.label.toUpperCase(),cntBy(f.key),{},f.key)).join('')+bc('BY SPRINT',cntBy('sprint'),{},'sprint');
   renderBuildSection();
   renderDashboardGraphs();
+  renderBugHeatmap();
 }
 
 // ══════════════════════════════════════════
@@ -2557,8 +2694,25 @@ function renderDashboard(){
 // ══════════════════════════════════════════
 function renderNotifs(){
   loadNotifs();const el=document.getElementById('notifsWrap');if(!el)return;
-  if(!S.localNotifs.length){el.innerHTML=`<div class="empty"><div class="empty-icon">🔔</div><h3>ALL CAUGHT UP</h3></div>`;return;}
-  el.innerHTML=S.localNotifs.map(n=>`
+
+  // Watchlist section
+  const watched = getWatchedBugs();
+  const watchHtml = watched.length ? `
+    <div style="margin-bottom:18px">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g2);margin-bottom:10px">👁 WATCHLIST (${watched.length})</div>
+      ${watched.map(b=>`
+        <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:10px 13px;margin-bottom:7px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="openDetail('${b.id}')">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(b.title||'')}</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:3px">${esc(b.id)} · ${pChip(b.priority)} ${stChip(b.status)}</div>
+          </div>
+          <button onclick="event.stopPropagation();toggleWatch('${b.id}');renderNotifs()" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#f87171;font-size:10px;padding:3px 8px;border-radius:6px;cursor:pointer;flex-shrink:0;font-family:var(--mono)">✕ Unwatch</button>
+        </div>`).join('')}
+    </div>` : '';
+
+  const notifHtml = S.localNotifs.length ? `
+    <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g1);margin-bottom:10px">🔔 NOTIFICATIONS</div>
+    ${S.localNotifs.map(n=>`
     <div class="notif-item ${n.read?'':'unread'}" onclick="clickNotif(${n.id},'${n.bugId||''}')">
       <div style="flex-shrink:0;margin-top:3px">${n.read?'<div style="width:7px;height:7px"></div>':'<div class="notif-dot"></div>'}</div>
       <div style="flex:1;min-width:0">
@@ -2569,7 +2723,13 @@ function renderNotifs(){
           <button onclick="event.stopPropagation();navigator.clipboard.writeText('${APP_URL}?bug=${n.bugId}').then(()=>toast('Link copied ✓','ok'))" style="background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);color:var(--g2);font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:6px;cursor:pointer">🔗 Copy Link</button>
         </div>`:''}
       </div>
-    </div>`).join('');
+    </div>`).join('')}` : '';
+
+  if(!watched.length && !S.localNotifs.length) {
+    el.innerHTML=`<div class="empty"><div class="empty-icon">🔔</div><h3>ALL CAUGHT UP</h3></div>`;
+    return;
+  }
+  el.innerHTML = watchHtml + notifHtml;
 }
 function clickNotif(id,bugId){
   const n=S.localNotifs.find(x=>x.id==id);if(n){n.read=true;saveNotifs();updateNotifBadge();}
@@ -3098,11 +3258,176 @@ function openEdit(id){
   if(isOpen){document.getElementById('overlay').classList.remove('on');document.getElementById('panel').classList.remove('on');setTimeout(go,280);}else go();
 }
 
+// ══════════════════════════════════════════
+// BUG TEMPLATES
+// ══════════════════════════════════════════
+const BUG_TEMPLATES_KEY = 'hwt_bug_templates_v2';
+
+const DEFAULT_TEMPLATES = [
+  {
+    id: 'iap', name: '💰 IAP Payment', icon: '💰',
+    data: {
+      priority: 'Critical', severity: 'S1 - Blocker', feature: 'IAP',
+      steps: '1. Open Store\n2. Select offer\n3. Tap Buy\n4. Complete payment',
+      expected: 'Purchase completes, item credited to account',
+      actual: '',
+      device: '', platform: 'Android',
+    }
+  },
+  {
+    id: 'crash', name: '💥 Crash / Force Close', icon: '💥',
+    data: {
+      priority: 'Critical', severity: 'S1 - Blocker',
+      steps: '1. Open app\n2. Navigate to [screen]\n3. Tap [action]\n4. App crashes',
+      expected: 'App stays stable',
+      actual: 'App force closes / crashes to home screen',
+      repro: '100% — Always',
+    }
+  },
+  {
+    id: 'ui', name: '🎨 UI / Visual Bug', icon: '🎨',
+    data: {
+      priority: 'Medium', severity: 'S4 - Minor',
+      steps: '1. Open [screen]\n2. Observe [element]',
+      expected: 'Element renders correctly per design',
+      actual: 'Visual glitch / misalignment / wrong asset shown',
+    }
+  },
+  {
+    id: 'match', name: '🏏 Match Engine', icon: '🏏',
+    data: {
+      priority: 'High', severity: 'S2 - Critical', feature: 'Match Flow',
+      steps: '1. Set up match\n2. Play [shot type]\n3. Observe outcome',
+      expected: 'Shot probability and result correct per match engine spec',
+      actual: '',
+    }
+  },
+  {
+    id: 'network', name: '🌐 Network / API', icon: '🌐',
+    data: {
+      priority: 'High', severity: 'S2 - Critical',
+      steps: '1. [Action that triggers API call]\n2. Check response / behaviour',
+      expected: 'API responds correctly, data saved/loaded',
+      actual: 'Error / timeout / wrong data returned',
+      repro: '~50% — Sometimes',
+    }
+  },
+  {
+    id: 'regression', name: '🔁 Regression', icon: '🔁',
+    data: {
+      priority: 'High', severity: 'S2 - Critical',
+      steps: '1. Test previously fixed flow\n2. Observe behaviour',
+      expected: 'Feature works as previously verified',
+      actual: 'Previously fixed issue has returned',
+    }
+  },
+];
+
+function getTemplates() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(BUG_TEMPLATES_KEY)||'null');
+    return saved || DEFAULT_TEMPLATES;
+  } catch { return DEFAULT_TEMPLATES; }
+}
+
+function saveTemplates(tmpl) {
+  try { localStorage.setItem(BUG_TEMPLATES_KEY, JSON.stringify(tmpl)); } catch(e) {}
+}
+
+function openTemplateSelector(onSelect) {
+  const tmpl = getTemplates();
+  document.getElementById('panelTitle').textContent = '📋 BUG TEMPLATES';
+  document.getElementById('panelId').textContent = 'SELECT TEMPLATE';
+  document.getElementById('panelFooter').innerHTML = `
+    <button class="btn btn-g" onclick="closePanel()">Cancel</button>
+    <button class="btn btn-g" onclick="openManageTemplates()">⚙ Manage</button>`;
+  document.getElementById('panelBody').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:4px">Select a template to pre-fill the bug form</div>
+      ${tmpl.map(t => `
+        <div onclick="${onSelect ? `(${onSelect.toString()})('${t.id}')` : `applyTemplate('${t.id}')`}"
+          style="background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:13px 15px;cursor:pointer;transition:border-color .15s"
+          onmouseenter="this.style.borderColor='var(--g1)'" onmouseleave="this.style.borderColor='var(--bd)'">
+          <div style="font-size:16px;margin-bottom:5px">${t.icon||'📋'}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(t.name)}</div>
+          ${t.data?.feature ? `<div style="font-family:var(--mono);font-size:9px;color:var(--g2);margin-top:3px">${esc(t.data.feature)}</div>` : ''}
+          <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:3px">
+            ${t.data?.priority||'Medium'} · ${t.data?.severity||'—'}
+          </div>
+        </div>`).join('')}
+    </div>`;
+  openPanel();
+}
+
+function applyTemplate(templateId) {
+  const tmpl = getTemplates().find(t => t.id === templateId);
+  if(!tmpl) return;
+  closePanel();
+  setTimeout(() => {
+    openNew();
+    setTimeout(() => {
+      const d = tmpl.data || {};
+      if(d.priority)  { const el = document.getElementById('f-p');  if(el) el.value = d.priority; }
+      if(d.severity)  { const el = document.getElementById('f-sv'); if(el) el.value = d.severity; }
+      if(d.feature)   { const el = document.getElementById('f-feat'); if(el) el.value = d.feature; }
+      if(d.steps)     { const el = document.getElementById('f-steps'); if(el) el.value = d.steps; }
+      if(d.expected)  { const el = document.getElementById('f-exp'); if(el) el.value = d.expected; }
+      if(d.actual)    { const el = document.getElementById('f-actual'); if(el) el.value = d.actual; }
+      if(d.platform)  { const el = document.getElementById('f-dd-platform'); if(el) el.value = d.platform; }
+      if(d.repro)     { const el = document.getElementById('f-repro'); if(el) el.value = d.repro; }
+      if(d.device)    { const el = document.getElementById('f-dev'); if(el) el.value = d.device; }
+      toast(`Template "${tmpl.name}" applied ✓`, 'ok');
+    }, 320);
+  }, 280);
+}
+
+function openManageTemplates() {
+  const tmpl = getTemplates();
+  document.getElementById('panelTitle').textContent = '⚙ MANAGE TEMPLATES';
+  document.getElementById('panelId').textContent = 'TEMPLATES';
+  document.getElementById('panelFooter').innerHTML = `
+    <button class="btn btn-g" onclick="openTemplateSelector()">← Back</button>
+    <button class="btn btn-v" onclick="addCustomTemplate()">＋ New Template</button>`;
+  document.getElementById('panelBody').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${tmpl.map((t,i) => `
+        <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">${t.icon||'📋'}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:700;color:var(--text)">${esc(t.name)}</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--dim)">${t.data?.priority||''} ${t.data?.feature?'· '+t.data.feature:''}</div>
+          </div>
+          ${i >= DEFAULT_TEMPLATES.length ? `<button onclick="deleteTemplate('${t.id}')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#f87171;padding:3px 9px;border-radius:6px;font-size:11px;cursor:pointer;font-family:var(--mono)">Delete</button>` : `<span style="font-family:var(--mono);font-size:8px;color:var(--dim)">built-in</span>`}
+        </div>`).join('')}
+    </div>`;
+  openPanel();
+}
+
+function addCustomTemplate() {
+  const name = prompt('Template name (e.g. "Login Bug"):');
+  if(!name?.trim()) return;
+  const icon = prompt('Icon emoji (e.g. 🔐):', '📋') || '📋';
+  const feature = prompt('Default Feature (optional):') || '';
+  const id = 'custom_' + Date.now();
+  const tmpl = getTemplates();
+  tmpl.push({ id, name: name.trim(), icon, data: { feature, priority:'Medium', severity:'S3 - Major' } });
+  saveTemplates(tmpl);
+  openManageTemplates();
+  toast('Template created ✓', 'ok');
+}
+
+function deleteTemplate(id) {
+  if(!confirm('Delete this template?')) return;
+  saveTemplates(getTemplates().filter(t => t.id !== id));
+  openManageTemplates();
+  toast('Template deleted', 'ok');
+}
+
 function buildBugForm(bug,full){
   const spOpts=S.sprints.map(s=>`<option value="${esc(s.name)}"${bug?.sprint===s.name?' selected':''}>${esc(s.name)}</option>`).join('');
   const stOpts=ALL_STATUSES.map(v=>`<option value="${v}"${(bug?.status||'Open')===v?' selected':''}>${v}</option>`).join('');
   document.getElementById('panelTitle').textContent=bug?(full?'EDIT '+bug.id:'UPDATE '+bug.id):'NEW BUG';
-  document.getElementById('panelFooter').innerHTML=`<button class="btn btn-g" onclick="closePanel()">Cancel</button><button class="btn btn-v" id="panelSave" onclick="saveBug()">💾 SAVE</button>`;
+  document.getElementById('panelFooter').innerHTML=`<button class="btn btn-g" onclick="closePanel()">Cancel</button>${!bug?'<button class="btn btn-g" onclick="openTemplateSelector()">📋 Template</button>':''}<button class="btn btn-v" id="panelSave" onclick="saveBug()">💾 SAVE</button>`;
 
   if(bug&&!full){
     document.getElementById('panelBody').innerHTML=`
@@ -3120,9 +3445,10 @@ function buildBugForm(bug,full){
 
   document.getElementById('panelBody').innerHTML=`
     <div class="dup-box" id="dupBox"><div class="dup-title">⚠ SIMILAR BUGS FOUND</div><div id="dupList"></div></div>
+    <div id="recurBox" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:11px 14px;margin-bottom:14px"><span style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:#f87171;font-weight:700">🔁 RECURRENCE DETECTED</span><div id="recurDetail" style="font-size:12px;color:var(--mist);margin-top:5px;line-height:1.6"></div></div>
     <div class="fg2">
       <div class="fg fc2"><label class="fl">Title / Issue *</label>
-        <textarea class="fi2" id="f-title" rows="2" placeholder="Describe the bug clearly…" oninput="checkDup(this.value,'${bug?.id||''}')">${esc(bug?.title||'')}</textarea>
+        <textarea class="fi2" id="f-title" rows="2" placeholder="Describe the bug clearly…" oninput="checkDup(this.value,'${bug?.id||''}');checkRecurrenceUI(this.value,document.getElementById('f-feat')?.value||''))">${esc(bug?.title||'')}</textarea>
       </div>
       <div class="fg"><label class="fl">Priority</label>
         <select class="fi2" id="f-p">${['Low','Medium','High','Critical','Urgent'].map(v=>`<option value="${v}"${(bug?.priority||'Medium')===v?' selected':''}>${v}</option>`).join('')}</select>
@@ -3153,7 +3479,7 @@ function buildBugForm(bug,full){
       <div class="build-notif-section">
         <div class="build-notif-title">🔔 NOTIFY TEAM ABOUT THIS BUG</div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:8px" id="notifChannelStatus">
-          ${(()=>{const cfg=getWebhookConfig();const ch=[];if(cfg.gchat_url&&cfg.notif_new_bug!==false)ch.push('📢 GChat webhook');ch.push('🔔 In-app');return ch.join(' · ')||'🔔 In-app only';})()}
+          ${(()=>{const cfg=getWebhookConfig();const ch=[];if(cfg.gchat_url&&cfg.notif_new_bug!==false)ch.push('📢 GChat');if(cfg.slack_url&&cfg.notif_new_bug!==false)ch.push('💬 Slack');ch.push('🔔 In-app');return ch.join(' · ')||'🔔 In-app only';})()}
         </div>
         <div class="notif-toggle-row">
           <button class="notif-toggle${bug?'':' on'}" id="notifToggle" onclick="toggleNotif(this)"></button>
@@ -3193,6 +3519,70 @@ function buildBugForm(bug,full){
 
 // AI-powered duplicate detector
 let _dupTimer=null,_dupLastTxt='';
+// ── Recurrence UI ─────────────────────────────────────────────────────────────
+let _recurTimer = null;
+function checkRecurrenceUI(title, feature) {
+  clearTimeout(_recurTimer);
+  const box = document.getElementById('recurBox');
+  const det = document.getElementById('recurDetail');
+  if(!box || !title || title.length < 8) { box && (box.style.display='none'); return; }
+  _recurTimer = setTimeout(() => {
+    const found = checkRecurrence(title, feature);
+    if(!found) { box.style.display='none'; return; }
+    box.style.display='block';
+    det.innerHTML = `This bug was previously filed as <strong style="color:#f87171;cursor:pointer" onclick="openDetail('${found.id}');closePanel()">${found.id}</strong> — <em>${esc(found.title||'')}</em> and marked <strong>${found.status}</strong>. Is this a regression?`;
+  }, 600);
+}
+
+// ── SLA Config Panel ──────────────────────────────────────────────────────────
+function openSLASettings() {
+  const cfg = getSLAConfig();
+  document.getElementById('panelTitle').textContent = '⏱ SLA RULES';
+  document.getElementById('panelId').textContent = 'SETTINGS';
+  document.getElementById('panelFooter').innerHTML = `
+    <button class="btn btn-g" onclick="closePanel()">Cancel</button>
+    <button class="btn btn-v" onclick="saveSLASettings()">💾 Save SLA Rules</button>`;
+
+  const priorities = ['critical','urgent','high','medium','low'];
+  const defaults   = {critical:1,urgent:1,high:2,medium:3,low:5};
+  const defBreach  = {critical:3,urgent:3,high:5,medium:7,low:14};
+  const colors     = {critical:'#ef4444',urgent:'#ef4444',high:'#f59e0b',medium:'#3b82f6',low:'#10b981'};
+
+  document.getElementById('panelBody').innerHTML = `
+    <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:16px;line-height:1.8">
+      Set warn and breach thresholds per priority. Age chips and SLA badge update automatically.
+    </div>
+    ${priorities.map(p => `
+      <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:10px">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:${colors[p]};margin-bottom:10px">${p.replace('_',' ')}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="fg" style="margin:0"><label class="fl">Warn after (days)</label>
+            <input class="fi2" type="number" min="1" max="30" id="sla-warn-${p}" value="${cfg['p_'+p+'_warn'] ?? defaults[p]}">
+          </div>
+          <div class="fg" style="margin:0"><label class="fl">Breach after (days)</label>
+            <input class="fi2" type="number" min="1" max="60" id="sla-breach-${p}" value="${cfg['p_'+p+'_breach'] ?? defBreach[p]}">
+          </div>
+        </div>
+      </div>`).join('')}
+    <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:8px;line-height:1.8">
+      ⚡ Critical &amp; Urgent share the tightest SLAs. Adjust to match your team's commitments.
+    </div>`;
+  openPanel();
+}
+
+function saveSLASettings() {
+  const priorities = ['critical','urgent','high','medium','low'];
+  const cfg = {};
+  priorities.forEach(p => {
+    cfg['p_'+p+'_warn']   = parseInt(document.getElementById('sla-warn-'+p)?.value)   || 3;
+    cfg['p_'+p+'_breach'] = parseInt(document.getElementById('sla-breach-'+p)?.value) || 7;
+  });
+  saveSLAConfig(cfg);
+  renderSlaWarnings();
+  toast('SLA rules saved ✓', 'ok');
+  closePanel();
+}
+
 function checkDup(txt,curId){
   const box=document.getElementById('dupBox'),lst=document.getElementById('dupList');
   if(!box||!lst||!txt||txt.length<6){box?.classList.remove('on');_dupLastTxt='';return;}
@@ -3260,11 +3650,52 @@ async function _aiDup(txt,curId,candidates){
   }
 }
 
+function toggleExportDrop() {
+  const d = document.getElementById('exportDrop');
+  if(!d) return;
+  d.style.display = d.style.display === 'none' ? 'block' : 'none';
+  if(d.style.display === 'block') {
+    setTimeout(() => {
+      const close = e => { if(!document.getElementById('exportDropWrap')?.contains(e.target)) { d.style.display='none'; document.removeEventListener('click',close); } };
+      document.addEventListener('click', close);
+    }, 10);
+  }
+}
+
 function openPanel(){document.getElementById('overlay').classList.add('on');document.getElementById('panel').classList.add('on');}
 function closePanel(){
   document.getElementById('overlay').classList.remove('on');document.getElementById('panel').classList.remove('on');
   S.editing=null;_mapAssignees=[];
   setTimeout(()=>{if(!document.getElementById('panel').classList.contains('on')){document.getElementById('panelBody').innerHTML='';document.getElementById('panelId').textContent='';}},300);
+}
+
+// ══════════════════════════════════════════
+// WATCHLIST — subscribe to bugs without being assignee/reporter
+// ══════════════════════════════════════════
+const WATCHLIST_KEY = 'hwt_watchlist_v1';
+function getWatchlist() {
+  try { return JSON.parse(localStorage.getItem(WATCHLIST_KEY)||'[]'); } catch { return []; }
+}
+function isWatching(bugId) {
+  return getWatchlist().includes(bugId);
+}
+function toggleWatch(bugId) {
+  let wl = getWatchlist();
+  if(wl.includes(bugId)) {
+    wl = wl.filter(id => id !== bugId);
+    toast('Removed from watchlist','ok');
+  } else {
+    wl.push(bugId);
+    toast('Added to watchlist 👁','ok');
+  }
+  try { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(wl)); } catch(e) {}
+  // Update button if visible
+  const btn = document.getElementById('watchBtn-'+bugId);
+  if(btn) { btn.textContent = wl.includes(bugId) ? '👁 Watching' : '👁 Watch'; btn.classList.toggle('btn-v', wl.includes(bugId)); btn.classList.toggle('btn-g', !wl.includes(bugId)); }
+}
+function getWatchedBugs() {
+  const wl = getWatchlist();
+  return S.bugs.filter(b => wl.includes(b.id));
 }
 
 // ══════════════════════════════════════════
@@ -3417,12 +3848,40 @@ async function delBug(id){
   try{await api(`/bugs/${id}`,'DELETE');toast(`${id} deleted`,'ok');await refreshAll();}
   catch(e){toast(e.message,'err');}
 }
-function exportCSV(){
-  const src=S.filtered.length?S.filtered:S.bugs;
-  if(!src.length){toast('No data','err');return;}
-  const keys=['id','title','priority','severity','status','pod','assignees','reporter','feature','sprint','build','device','steps','actual','expected','attachment'];
-  const csv=[keys.join(','),...src.map(b=>keys.map(k=>k==='assignees'?`"${(b.assignees||[]).map(a=>a.name).join('; ')}"`:`"${String(b[k]||'').replace(/"/g,'""')}"`).join(','))].join('\n');
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`hw_bugs_${new Date().toISOString().slice(0,10)}.csv`;a.style.display='none';document.body.appendChild(a);a.click();a.remove();
+function exportCSV(scope) {
+  let src;
+  if(scope === 'all') src = S.bugs;
+  else if(scope === 'selection') src = S.bugs.filter(b => S.selected?.has(b.id));
+  else src = S.filtered.length ? S.filtered : S.bugs;
+  if(!src.length){toast('No data to export','err');return;}
+
+  const nowLabel = new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'short',timeStyle:'short'}).replace(/[,:\/\s]+/g,'-');
+  const scopeLabel = scope==='all'?'all':scope==='selection'?'selected':'filtered';
+  const filename = `bugpulse_${scopeLabel}_${nowLabel}.csv`;
+
+  const COLS = [
+    {k:'id',l:'Bug ID'},{k:'title',l:'Title'},{k:'priority',l:'Priority'},
+    {k:'severity',l:'Severity'},{k:'status',l:'Status'},{k:'feature',l:'Feature'},
+    {k:'sprint',l:'Sprint'},{k:'build',l:'Build'},{k:'platform',l:'Platform'},
+    {k:'device',l:'Device'},{k:'pod',l:'Pod'},{k:'assignees',l:'Assignees'},
+    {k:'reporter',l:'Reporter'},{k:'steps',l:'Steps to Reproduce'},
+    {k:'actual',l:'Actual'},{k:'expected',l:'Expected'},
+    {k:'attachment',l:'Attachment'},{k:'created_at',l:'Created'},
+    {k:'updated_at',l:'Updated'},{k:'age_days',l:'Age (days)'},
+  ];
+  const cell = v => `"${String(v||'').replace(/"/g,'""')}"`;
+  const rows = [COLS.map(c=>c.l).join(',')];
+  for(const b of src) {
+    rows.push(COLS.map(c => {
+      if(c.k==='assignees') return cell((b.assignees||[]).map(a=>a.name).join('; '));
+      if(c.k==='age_days')  return cell(b.created_ts?Math.floor((Date.now()-b.created_ts)/86400000):'');
+      return cell(b[c.k]);
+    }).join(','));
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8'}));
+  a.download = filename; a.style.display='none';
+  document.body.appendChild(a); a.click(); a.remove();
   toast(`Exported ${src.length} bugs ✓`,'ok');
 }
 
@@ -3503,25 +3962,36 @@ function ageChip(bug) {
   if(!active.includes(bug.status)) return '';
   const days = bugAgeDays(bug);
   if(days === null) return '';
-  const SLA_WARN = 3, SLA_BREACH = 7;
-  if(days <= 1)           return `<span class="age-badge age-fresh">NEW</span>`;
-  if(days < SLA_WARN)     return `<span class="age-badge age-normal">${days}d</span>`;
-  if(days < SLA_BREACH)   return `<span class="age-badge age-warn" title="Approaching SLA">${days}d ⚠</span>`;
-  return `<span class="age-badge age-sla" title="SLA BREACHED — ${days} days old">🔴 ${days}d</span>`;
+  const slaCfg = getSLAConfig();
+  const pKey = (bug.priority||'Medium').toLowerCase().replace(/\s+/g,'_');
+  const warn   = slaCfg['p_'+pKey+'_warn']   ?? slaCfg.warn   ?? 3;
+  const breach = slaCfg['p_'+pKey+'_breach'] ?? slaCfg.breach ?? 7;
+  if(days <= 1)       return `<span class="age-badge age-fresh">NEW</span>`;
+  if(days < warn)     return `<span class="age-badge age-normal">${days}d</span>`;
+  if(days < breach)   return `<span class="age-badge age-warn" title="Approaching SLA (${breach}d limit)">${days}d ⚠</span>`;
+  return `<span class="age-badge age-sla" title="SLA BREACHED — ${days}d (limit: ${breach}d)">🔴 ${days}d</span>`;
 }
 
 // ══════════════════════════════════════════
 // FEATURE: SLA TRACKING
 // ══════════════════════════════════════════
-const SLA_BREACH_DAYS = 7;
+const SLA_KEY = 'hwt_sla_config_v1';
+function getSLAConfig() {
+  try { return JSON.parse(localStorage.getItem(SLA_KEY)||'{}'); } catch { return {}; }
+}
+function saveSLAConfig(cfg) {
+  try { localStorage.setItem(SLA_KEY, JSON.stringify(cfg)); } catch(e) {}
+}
 
 function renderSlaWarnings() {
+  const slaCfg = getSLAConfig();
   const active = ['Open','In Progress','Bugged','In Review'];
-  const breached = S.bugs.filter(b =>
-    active.includes(b.status) &&
-    b.created_ts &&
-    Math.floor((Date.now() - b.created_ts) / 86400000) >= SLA_BREACH_DAYS
-  );
+  const breached = S.bugs.filter(b => {
+    if(!active.includes(b.status) || !b.created_ts) return false;
+    const pKey = (b.priority||'Medium').toLowerCase().replace(' ','_');
+    const breach = slaCfg[pKey+'_breach'] ?? slaCfg.breach ?? 7;
+    return Math.floor((Date.now() - b.created_ts) / 86400000) >= breach;
+  });
   // Add SLA count to sidebar if any
   let slaEl = document.getElementById('sla-count-badge');
   if(!slaEl) {
@@ -3764,6 +4234,8 @@ document.addEventListener('keydown', e => {
 
   if(e.key === '?') { document.getElementById('shortcutsModal')?.classList.add('on'); return; }
   if(e.key === 'n' || e.key === 'N') { openNew(); return; }
+  if(e.key === 't' || e.key === 'T') { openTemplateSelector(); return; }
+  if(e.key === 'r' || e.key === 'R') { goTab('builds'); setTimeout(goTestRuns,300); return; }
   if(e.key === 'b' || e.key === 'B') { goTab('board'); return; }
   if(e.key === 'l' || e.key === 'L') { goToBugsClean(); return; }
   if(e.key === 'h' || e.key === 'H') { goTab('home'); return; }
@@ -4581,6 +5053,7 @@ function buildPageCard(b) {
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           ${!b.is_current?`<button class="btn btn-g btn-xs" onclick="setCurrentBuild('${vEsc}')">📍 Set Current</button>`:''}
+          <button class="btn btn-g btn-xs" onclick="openReleaseNotes('${vEsc}')">🚀 Notes</button>
           <button class="btn btn-g btn-xs" onclick="editBuildEntry('${vEsc}')">✏️</button>
           <button class="btn btn-r btn-xs" onclick="deleteBuildEntry('${vEsc}')">🗑</button>
         </div>
@@ -4733,6 +5206,18 @@ async function saveBuildEntry(editVersion) {
         const gchatText = `📦 *New Build Available — ${version}*\n${entry.platform?'Platform: '+entry.platform+'\n':''}${entry.notes?'Notes: '+entry.notes.slice(0,120)+'\n':''}${downloadLine}\n🔗 Build Tracker: ${buildTrackerUrl}`;
         await sendGChatWebhook(gchatText);
       }
+      if(cfg.slack_url && cfg.notif_build_available !== false) {
+        const btu = APP_URL + '#builds';
+        await sendSlackWebhook(null, [
+          { type:'section', text:{ type:'mrkdwn', text:`📦 *New Build Available — ${version}*${entry.platform?' ('+entry.platform+')':''}` } },
+          { type:'section', fields:[
+            ...(entry.notes?[{ type:'mrkdwn', text:`*Notes:* ${entry.notes.slice(0,120)}` }]:[]),
+            ...(entry.link?[{ type:'mrkdwn', text:`*Download:* <${entry.link}|Install Build>` }]:[]),
+            { type:'mrkdwn', text:`*Logged by:* ${entry.logged_by||S.user?.name||'Team'}` },
+            { type:'mrkdwn', text:`*BugPulse:* <${btu}|View Builds>` },
+          ]},
+        ]);
+      }
       // Email via Resend through worker
       if(cfg.team_emails && cfg.team_emails.trim()) {
         const recipients = cfg.team_emails.split(',').map(function(e){return e.trim();}).filter(Boolean);
@@ -4792,6 +5277,336 @@ async function saveBuildEntry(editVersion) {
     toast('Error: '+e.message,'err');
     if(btn){btn.disabled=false;btn.innerHTML='💾 Save Build';}
   }
+}
+
+// ══════════════════════════════════════════
+// RELEASE NOTES GENERATOR
+// ══════════════════════════════════════════
+function openReleaseNotes(version) {
+  const bugMap = getBuildBugMap();
+  const buildBugs = bugMap[version] || [];
+  const DONE = ['Done','QA Pass','Dev Fixed','Closed'];
+  const fixed  = buildBugs.filter(b => DONE.includes(b.status));
+  const open   = buildBugs.filter(b => !DONE.includes(b.status));
+
+  document.getElementById('panelTitle').textContent = '🚀 RELEASE NOTES';
+  document.getElementById('panelId').textContent = version;
+  document.getElementById('panelFooter').innerHTML = `
+    <button class="btn btn-g" onclick="closePanel()">Close</button>
+    <button class="btn btn-g" onclick="copyReleaseNotes('${version}')">📋 Copy</button>
+    <button class="btn btn-v" onclick="sendReleaseNotesToGChat('${version}')">📢 Send to GChat</button>`;
+
+  const groupBy = (bugs, key) => bugs.reduce((acc, b) => {
+    const k = b[key] || 'General'; (acc[k]=acc[k]||[]).push(b); return acc;
+  }, {});
+
+  const byFeature = groupBy(fixed, 'feature');
+
+  const fixedHtml = Object.entries(byFeature).map(([feat, bugs]) => `
+    <div style="margin-bottom:12px">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g2);margin-bottom:6px">${esc(feat)}</div>
+      ${bugs.map(b => `
+        <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 10px;background:var(--bg3);border-radius:7px;margin-bottom:4px">
+          <span style="font-family:var(--mono);font-size:9px;color:var(--g4);flex-shrink:0;padding-top:2px">✓</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:600;color:var(--text)">${esc(b.title||'')}</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">${esc(b.id)} · ${pChip(b.priority)}</div>
+          </div>
+        </div>`).join('')}
+    </div>`).join('') || '<div style="color:var(--dim);font-family:var(--mono);font-size:11px">No fixed bugs tagged to this build yet</div>';
+
+  const openHtml = open.length ? `
+    <div style="margin-top:16px;padding:12px 14px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#f87171;margin-bottom:8px">⚠ ${open.length} KNOWN ISSUE${open.length!==1?'S':''}</div>
+      ${open.map(b=>`<div style="font-size:12px;color:var(--mist);padding:3px 0">${esc(b.id)} — ${esc(b.title||'')}</div>`).join('')}
+    </div>` : '';
+
+  document.getElementById('panelBody').innerHTML = `
+    <div style="margin-bottom:14px">
+      <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:4px">Build ${esc(version)}</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--dim)">${fixed.length} fix${fixed.length!==1?'es':''} · ${open.length} known issue${open.length!==1?'s':''}</div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:16px">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g4);margin-bottom:12px">✅ FIXED IN THIS BUILD</div>
+      ${fixedHtml}
+    </div>
+    ${openHtml}`;
+  openPanel();
+}
+
+function buildReleaseNotesText(version) {
+  const bugMap = getBuildBugMap();
+  const buildBugs = bugMap[version] || [];
+  const DONE = ['Done','QA Pass','Dev Fixed','Closed'];
+  const fixed = buildBugs.filter(b => DONE.includes(b.status));
+  const open  = buildBugs.filter(b => !DONE.includes(b.status));
+  const groupBy = (bugs, key) => bugs.reduce((acc, b) => {
+    const k = b[key] || 'General'; (acc[k]=acc[k]||[]).push(b); return acc;
+  }, {});
+  const byFeature = groupBy(fixed, 'feature');
+
+  let txt = `🚀 *Release Notes — Build ${version}*\n`;
+  txt += `${new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'medium'})}\n\n`;
+
+  if(fixed.length) {
+    txt += `✅ *Fixed (${fixed.length})*\n`;
+    Object.entries(byFeature).forEach(([feat, bugs]) => {
+      txt += `\n*${feat}*\n`;
+      bugs.forEach(b => { txt += `• ${b.title||''} _(${b.id})_\n`; });
+    });
+  }
+  if(open.length) {
+    txt += `\n⚠ *Known Issues (${open.length})*\n`;
+    open.forEach(b => { txt += `• ${b.title||''} _(${b.id} · ${b.priority})_\n`; });
+  }
+  txt += `\n🔗 ${APP_URL}#builds`;
+  return txt;
+}
+
+function copyReleaseNotes(version) {
+  navigator.clipboard.writeText(buildReleaseNotesText(version).replace(/\*/g,'').replace(/_/g,''))
+    .then(() => toast('Release notes copied ✓', 'ok'));
+}
+
+async function sendReleaseNotesToGChat(version) {
+  const cfg = getWebhookConfig();
+  if(!cfg.gchat_url) { toast('No GChat webhook configured', 'err'); return; }
+  await sendGChatWebhook(buildReleaseNotesText(version));
+  // Slack too
+  if(cfg.slack_url) await sendSlackWebhook(buildReleaseNotesText(version).replace(/\*/g,'*'));
+  toast('Release notes sent to GChat ✓', 'ok');
+}
+
+// ══════════════════════════════════════════
+// TEST RUN TRACKER
+// ══════════════════════════════════════════
+const TEST_RUNS_KEY = 'hwt_test_runs_v1';
+
+function getTestRuns() {
+  try { return JSON.parse(localStorage.getItem(TEST_RUNS_KEY)||'[]'); } catch { return []; }
+}
+function saveTestRuns(runs) {
+  try { localStorage.setItem(TEST_RUNS_KEY, JSON.stringify(runs)); } catch(e) {}
+}
+
+function goTestRuns() {
+  const wrap = document.getElementById('testRunsWrap');
+  const buildsWrap = document.getElementById('buildsWrap');
+  const banner = document.getElementById('buildsCurrentBanner');
+  if(!wrap) return;
+  const isOpen = wrap.style.display !== 'none';
+  if(isOpen) {
+    wrap.style.display = 'none';
+    buildsWrap.style.display = '';
+    banner.style.display = '';
+  } else {
+    buildsWrap.style.display = 'none';
+    banner.style.display = 'none';
+    wrap.style.display = '';
+    renderTestRuns();
+  }
+}
+
+function renderTestRuns() {
+  const wrap = document.getElementById('testRunsWrap');
+  if(!wrap) return;
+  const runs = getTestRuns();
+
+  const runsHtml = runs.length ? runs.map((run, ri) => {
+    const total = run.cases?.length || 0;
+    const passed = run.cases?.filter(c => c.result === 'pass').length || 0;
+    const failed = run.cases?.filter(c => c.result === 'fail').length || 0;
+    const blocked = run.cases?.filter(c => c.result === 'blocked').length || 0;
+    const pct = total ? Math.round(passed/total*100) : 0;
+    return `
+      <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:16px 18px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div>
+            <div style="font-size:15px;font-weight:700;color:var(--text)">${esc(run.name||'Unnamed Run')}</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:3px">Build: ${esc(run.build||'—')} · ${esc(run.date||'')} · ${total} cases</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <div style="font-family:var(--mono);font-size:18px;font-weight:800;color:${pct>=80?'var(--g4)':pct>=50?'var(--g3)':'var(--g5)'}">${pct}%</div>
+            <button class="btn btn-g btn-sm" onclick="openTestRun(${ri})">Open</button>
+            <button class="btn btn-r btn-sm" onclick="deleteTestRun(${ri})">✕</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(16,185,129,.15);color:#34d399">✓ ${passed} pass</span>
+          <span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(239,68,68,.15);color:#f87171">✕ ${failed} fail</span>
+          ${blocked?`<span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(245,158,11,.15);color:#fbbf24">⊘ ${blocked} blocked</span>`:''}
+        </div>
+        <div style="height:6px;background:var(--bg3);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${pct>=80?'var(--g4)':pct>=50?'var(--g3)':'var(--g5)'};transition:width .4s"></div>
+        </div>
+      </div>`;
+  }).join('') : `<div class="empty"><div class="empty-icon">🧪</div><h3>NO TEST RUNS</h3><p>Create a test run to track pass/fail for a build</p></div>`;
+
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--g2)">🧪 TEST RUNS</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-g btn-sm" onclick="goTestRuns()">← Builds</button>
+        <button class="btn btn-v btn-sm" onclick="openNewTestRun()">＋ New Run</button>
+      </div>
+    </div>
+    ${runsHtml}`;
+}
+
+function openNewTestRun() {
+  const builds = [];
+  try {
+    // get recent build versions from bugs
+    const bvSet = new Set(S.bugs.map(b=>b.build).filter(Boolean));
+    bvSet.forEach(v => builds.push(v));
+  } catch(e) {}
+
+  document.getElementById('panelTitle').textContent = '🧪 NEW TEST RUN';
+  document.getElementById('panelId').textContent = 'TEST RUN';
+  document.getElementById('panelFooter').innerHTML = `
+    <button class="btn btn-g" onclick="closePanel()">Cancel</button>
+    <button class="btn btn-v" onclick="createTestRun()">＋ Create Run</button>`;
+  document.getElementById('panelBody').innerHTML = `
+    <div class="fg"><label class="fl">Run Name</label>
+      <input class="fi2" id="tr-name" placeholder="e.g. Sprint 14 Regression" value="">
+    </div>
+    <div class="fg"><label class="fl">Build Version</label>
+      <input class="fi2" id="tr-build" list="tr-build-list" placeholder="e.g. v3.2.1">
+      <datalist id="tr-build-list">${builds.map(v=>`<option value="${esc(v)}">`).join('')}</datalist>
+    </div>
+    <div class="fg"><label class="fl">Import bugs as test cases</label>
+      <select class="fi2" id="tr-filter">
+        <option value="">— All active bugs —</option>
+        ${S.sprints.map(s=>`<option value="sprint:${esc(s.name)}">Sprint: ${esc(s.name)}</option>`).join('')}
+        ${[...new Set(S.bugs.map(b=>b.feature).filter(Boolean))].map(f=>`<option value="feature:${esc(f)}">Feature: ${esc(f)}</option>`).join('')}
+      </select>
+    </div>`;
+  openPanel();
+}
+
+function createTestRun() {
+  const name  = document.getElementById('tr-name')?.value?.trim();
+  const build = document.getElementById('tr-build')?.value?.trim();
+  const filter = document.getElementById('tr-filter')?.value || '';
+  if(!name) { toast('Run name required', 'err'); return; }
+
+  let src = S.bugs.filter(b => !['Done','QA Pass','Closed'].includes(b.status));
+  if(filter.startsWith('sprint:'))  src = src.filter(b => b.sprint === filter.slice(7));
+  if(filter.startsWith('feature:')) src = src.filter(b => b.feature === filter.slice(8));
+
+  const run = {
+    id: Date.now(),
+    name,
+    build: build || '',
+    date: new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'medium'}),
+    cases: src.map(b => ({ bugId: b.id, title: b.title||'', result: 'pending', note: '' })),
+  };
+  const runs = getTestRuns();
+  runs.unshift(run);
+  saveTestRuns(runs);
+  closePanel();
+  renderTestRuns();
+  toast(`Test run created — ${run.cases.length} cases ✓`, 'ok');
+}
+
+function openTestRun(idx) {
+  const runs = getTestRuns();
+  const run = runs[idx];
+  if(!run) return;
+
+  const RESULTS = { pass:'✓ Pass', fail:'✕ Fail', blocked:'⊘ Blocked', pending:'— Pending' };
+  const COLORS  = { pass:'#34d399', fail:'#f87171', blocked:'#fbbf24', pending:'var(--dim)' };
+
+  document.getElementById('panelTitle').textContent = '🧪 ' + (run.name||'Test Run');
+  document.getElementById('panelId').textContent = run.build || '';
+  document.getElementById('panelFooter').innerHTML = `
+    <button class="btn btn-g" onclick="closePanel();renderTestRuns()">Close</button>
+    <button class="btn btn-v" onclick="exportTestRun(${idx})">📥 Export</button>`;
+
+  const renderCases = () => {
+    document.getElementById('tr-cases').innerHTML = run.cases.map((c, ci) => `
+      <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:10px 12px;margin-bottom:7px">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:600;color:var(--text)">${esc(c.title)}</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">${esc(c.bugId)}</div>
+          </div>
+          <select onchange="setTestResult(${idx},${ci},this.value)"
+            style="font-family:var(--mono);font-size:10px;padding:4px 8px;border-radius:7px;border:1px solid ${COLORS[c.result]||'var(--bd)'};background:var(--bg2);color:${COLORS[c.result]||'var(--text)'};cursor:pointer">
+            ${Object.entries(RESULTS).map(([v,l])=>`<option value="${v}" ${c.result===v?'selected':''}>${l}</option>`).join('')}
+          </select>
+        </div>
+        <input class="fi2" placeholder="Note (optional)" value="${esc(c.note||'')}"
+          oninput="setTestNote(${idx},${ci},this.value)"
+          style="margin-top:7px;font-size:11px;padding:5px 10px">
+      </div>`).join('');
+  };
+
+  document.getElementById('panelBody').innerHTML = `
+    <div id="tr-summary" style="margin-bottom:14px"></div>
+    <div id="tr-cases"></div>`;
+  renderCases();
+  updateTestSummary(idx);
+}
+
+function updateTestSummary(idx) {
+  const run = getTestRuns()[idx];
+  if(!run) return;
+  const total   = run.cases.length;
+  const passed  = run.cases.filter(c=>c.result==='pass').length;
+  const failed  = run.cases.filter(c=>c.result==='fail').length;
+  const blocked = run.cases.filter(c=>c.result==='blocked').length;
+  const pending = run.cases.filter(c=>c.result==='pending').length;
+  const pct = total ? Math.round(passed/total*100) : 0;
+  const el = document.getElementById('tr-summary');
+  if(el) el.innerHTML = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;background:rgba(16,185,129,.15);color:#34d399">✓ ${passed}</span>
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;background:rgba(239,68,68,.15);color:#f87171">✕ ${failed}</span>
+      ${blocked?`<span style="font-family:var(--mono);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;background:rgba(245,158,11,.15);color:#fbbf24">⊘ ${blocked}</span>`:''}
+      ${pending?`<span style="font-family:var(--mono);font-size:11px;color:var(--dim);padding:4px 12px;border-radius:20px;background:var(--bg3)">— ${pending} pending</span>`:''}
+      <span style="font-family:var(--mono);font-size:18px;font-weight:800;color:${pct>=80?'var(--g4)':pct>=50?'var(--g3)':'var(--g5)'};margin-left:auto">${pct}%</span>
+    </div>
+    <div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:14px">
+      <div style="height:100%;width:${pct}%;background:${pct>=80?'var(--g4)':pct>=50?'var(--g3)':'var(--g5)'}"></div>
+    </div>`;
+}
+
+function setTestResult(runIdx, caseIdx, result) {
+  const runs = getTestRuns();
+  if(!runs[runIdx]?.cases[caseIdx]) return;
+  runs[runIdx].cases[caseIdx].result = result;
+  saveTestRuns(runs);
+  updateTestSummary(runIdx);
+}
+
+function setTestNote(runIdx, caseIdx, note) {
+  const runs = getTestRuns();
+  if(!runs[runIdx]?.cases[caseIdx]) return;
+  runs[runIdx].cases[caseIdx].note = note;
+  saveTestRuns(runs);
+}
+
+function deleteTestRun(idx) {
+  if(!confirm('Delete this test run?')) return;
+  const runs = getTestRuns();
+  runs.splice(idx, 1);
+  saveTestRuns(runs);
+  renderTestRuns();
+  toast('Test run deleted', 'ok');
+}
+
+function exportTestRun(idx) {
+  const run = getTestRuns()[idx];
+  if(!run) return;
+  const rows = [['Bug ID','Title','Result','Note']];
+  run.cases.forEach(c => rows.push([c.bugId, c.title, c.result, c.note||'']));
+  const csv = rows.map(r => r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download = `testrun_${(run.name||'run').replace(/\s+/g,'_')}_${run.build||''}.csv`;
+  a.style.display='none'; document.body.appendChild(a); a.click(); a.remove();
+  toast('Test run exported ✓', 'ok');
 }
 
 async function setCurrentBuild(version) {
@@ -5056,6 +5871,17 @@ async function openWebhookSettings() {
         <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:8px;line-height:1.8">Get it from GChat: open a Space → Apps & Integrations → Manage Webhooks → Add</div>
       </div>
 
+      <div style="background:rgba(74,144,226,.06);border:1px solid rgba(74,144,226,.25);border-radius:10px;padding:14px 16px">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#4a90e2;margin-bottom:12px">💬 SLACK WEBHOOK</div>
+        <div class="fg"><label class="fl">Slack Incoming Webhook URL</label>
+          <input class="fi2" id="wh-slack" value="${esc(cfg.slack_url||'')}" placeholder="https://hooks.slack.com/services/…">
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:8px;line-height:1.8">Slack → Apps → Incoming Webhooks → Add to Slack → copy Webhook URL</div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-g" onclick="testSlackWebhook()" style="font-size:11px">🧪 Test Slack</button>
+        </div>
+      </div>
+
       <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:14px 16px">
         <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#f59e0b;margin-bottom:4px">🏗️ JENKINS INBOUND WEBHOOKS</div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:12px;line-height:1.8">
@@ -5182,7 +6008,7 @@ async function openWebhookSettings() {
       <div style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:14px 16px">
         <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g1);margin-bottom:12px">🔔 NOTIFY ON EVENTS</div>
         ${['new_bug','build_available','day_end_report'].map(ev => {
-          const labels = {new_bug:'New Bug Filed / Assigned', build_available:'New Build Available', day_end_report:'Day-End Report'};
+          const labels = {new_bug:'New Bug Filed (GChat + Slack)', build_available:'New Build Available (GChat + Slack)', day_end_report:'Day-End Report (GChat)'};
           return `<div class="notif-toggle-row" style="margin-bottom:10px">
             <button class="notif-toggle${cfg['notif_'+ev]!==false?' on':''}" id="wh-ev-${ev}" onclick="this.classList.toggle('on')"></button>
             <span class="notif-toggle-label">${labels[ev]}</span>
@@ -5303,6 +6129,7 @@ async function jkGenerate(team) {
 async function saveWebhookSettings() {
   const cfg = {
     gchat_url: document.getElementById('wh-gchat')?.value?.trim()||'',
+    slack_url: document.getElementById('wh-slack')?.value?.trim()||'',
     team_emails: document.getElementById('wh-emails')?.value?.trim()||'',
     notif_new_bug: document.getElementById('wh-ev-new_bug')?.classList.contains('on'),
     notif_build_available: document.getElementById('wh-ev-build_available')?.classList.contains('on'),
@@ -5380,6 +6207,45 @@ async function sendGChatWebhook(text) {
   }
 }
 
+async function sendSlackWebhook(text, blocks) {
+  const cfg = getWebhookConfig();
+  if(!cfg.slack_url) return false;
+  try {
+    const payload = blocks ? { blocks } : { text };
+    await fetch(cfg.slack_url, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch(e) { console.warn('[slack webhook]', e.message); return false; }
+}
+
+async function testSlackWebhook() {
+  const url = document.getElementById('wh-slack')?.value?.trim();
+  if(!url) { toast('Enter a Slack webhook URL first','err'); return; }
+  try {
+    await fetch(url, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text:`🧪 BugPulse test from ${S.user?.name||'team'} — Slack webhook working! ✅`})
+    });
+    toast('Test sent to Slack ✓','ok');
+  } catch(e) { toast('Slack webhook failed: '+e.message,'err'); }
+}
+
+// ── Bug recurrence detection ──────────────────────────────────────────────────
+function checkRecurrence(title, featureKey) {
+  if(!title || !S.bugs.length) return null;
+  const t = title.toLowerCase().trim();
+  const feat = (featureKey||'').toLowerCase();
+  const DONE_STATUSES = ['Done','QA Pass','Closed'];
+  const prev = S.bugs.filter(b =>
+    DONE_STATUSES.includes(b.status) &&
+    ( b.title?.toLowerCase().includes(t.slice(0,30)) ||
+      (feat && (b.feature||'').toLowerCase() === feat && b.title?.toLowerCase().slice(0,20) === t.slice(0,20)) )
+  );
+  return prev.length ? prev[0] : null;
+}
+
 async function testWebhook() {
   const url = document.getElementById('wh-gchat')?.value?.trim();
   if(!url) { toast('Enter a webhook URL first','err'); return; }
@@ -5412,6 +6278,23 @@ async function sendBugNotification(bug, customMsg) {
     const assigneeNames = assignees.map(a=>a.name).join(', ')||'Unassigned';
     const gchatText = `🐛 *New Bug Filed — ${bug.id||''}*\n*${bug.title||''}*\nPriority: ${bug.priority||'Medium'} | Status: ${bug.status||'Open'}\nBuild: ${bug.build||'—'} | Assignee: ${assigneeNames}\n🔗 View: ${bugUrl}`;
     await sendGChatWebhook(gchatText);
+  }
+
+  // Slack notification
+  const slackCfg = getWebhookConfig();
+  if(slackCfg.slack_url && slackCfg.notif_new_bug !== false) {
+    const aNames = (bug.assignees||[]).map(a=>a.name).join(', ')||'Unassigned';
+    const bUrl = `${APP_URL}?bug=${bug.id||''}`;
+    const slackBlocks = [
+      { type:'section', text:{ type:'mrkdwn', text:`🐛 *New Bug: <${bUrl}|${bug.id}>*\n${bug.title||''}` } },
+      { type:'section', fields:[
+        { type:'mrkdwn', text:`*Priority:* ${bug.priority||'Medium'}` },
+        { type:'mrkdwn', text:`*Status:* ${bug.status||'Open'}` },
+        { type:'mrkdwn', text:`*Build:* ${bug.build||'—'}` },
+        { type:'mrkdwn', text:`*Assignee:* ${aNames}` },
+      ]},
+    ];
+    await sendSlackWebhook(`🐛 New Bug: ${bug.id} — ${bug.title}`, slackBlocks);
   }
 
   toast('Team notified ✓','ok');
