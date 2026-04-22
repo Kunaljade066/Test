@@ -5030,23 +5030,97 @@ function openWebhookSettings() {
       </div>
 
       <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:14px 16px">
-        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#f59e0b;margin-bottom:12px">🏗️ JENKINS INBOUND WEBHOOK</div>
-        <div class="fg" style="margin-bottom:10px"><label class="fl">Webhook Secret Token</label>
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#f59e0b;margin-bottom:4px">🏗️ JENKINS INBOUND WEBHOOKS</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:12px;line-height:1.8">
+          One URL per team. Jenkins POST body: <span style="color:var(--g2)">{&quot;version&quot;:&quot;1.4.2&quot;,&quot;platform&quot;:&quot;Android&quot;,&quot;link&quot;:&quot;…&quot;,&quot;notes&quot;:&quot;…&quot;}</span>
+        </div>
+        <div style="border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:12px 14px;margin-bottom:10px">
+          <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#06b6d4;margin-bottom:10px">Openers</div>
+          <div class="fg" style="margin-bottom:8px">
+            <label class="fl">GChat Webhook URL</label>
+            <input class="fi2" id="wh-jk-gchat-openers" value="${esc(cfg.jenkins_openers_gchat||'')}" placeholder="https://chat.googleapis.com/v1/spaces/…">
+          </div>
+          <div class="fg" style="margin-bottom:8px">
+            <label class="fl">Team Emails (comma-separated)</label>
+            <input class="fi2" id="wh-jk-emails-openers" value="${esc(cfg.jenkins_openers_emails||'')}" placeholder="dev@hitwicket.com, qa@hitwicket.com">
+          </div>
+          <div class="fg" style="margin-bottom:8px">
+            <label class="fl">Secret Token</label>
+            <div style="display:flex;gap:8px">
+              <input class="fi2" id="wh-jk-token-openers" value="${esc(cfg.jenkins_openers_token||'')}" placeholder="auto-generated" style="flex:1">
+              <button class="btn btn-g" style="font-size:11px;padding:6px 10px;flex-shrink:0" onclick="(()=>{const t=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);document.getElementById('wh-jk-token-openers').value=t;document.getElementById('wh-jk-url-openers').value=WORKER+'/webhook/jenkins?team=openers&token='+t;})();">Generate</button>
+            </div>
+          </div>
           <div style="display:flex;gap:8px;align-items:center">
-            <input class="fi2" id="wh-jenkins-token" value="${esc(cfg.jenkins_token||'')}" placeholder="auto-generated secret" style="flex:1">
-            <button class="btn btn-g" style="flex-shrink:0;font-size:11px;padding:6px 10px" onclick="(()=>{const t=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);document.getElementById('wh-jenkins-token').value=t;document.getElementById('wh-jenkins-url-display').value=WORKER+'/webhook/jenkins?token='+t;})();">Generate</button>
+            <input class="fi2" id="wh-jk-url-openers" value="${cfg.jenkins_openers_token?WORKER+'/webhook/jenkins?team=openers&token='+cfg.jenkins_openers_token:'— generate token above —'}" readonly style="flex:1;font-family:var(--mono);font-size:10px;color:var(--g2)">
+            <button class="btn btn-g" style="font-size:11px;padding:6px 10px;flex-shrink:0" onclick="(()=>{const el=document.getElementById('wh-jk-url-openers');if(el.value&&!el.value.startsWith('—')){navigator.clipboard.writeText(el.value);toast('URL copied ✓','ok');}})();">Copy</button>
           </div>
         </div>
-        <div class="fg" style="margin-bottom:8px"><label class="fl">Jenkins Webhook URL &mdash; configure in Jenkins Post-build Actions &rarr; HTTP Request</label>
+        <div style="border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:12px 14px;margin-bottom:10px">
+          <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#a78bfa;margin-bottom:10px">Middle Order</div>
+          <div class="fg" style="margin-bottom:8px">
+            <label class="fl">GChat Webhook URL</label>
+            <input class="fi2" id="wh-jk-gchat-middle_order" value="${esc(cfg.jenkins_middle_order_gchat||'')}" placeholder="https://chat.googleapis.com/v1/spaces/…">
+          </div>
+          <div class="fg" style="margin-bottom:8px">
+            <label class="fl">Team Emails (comma-separated)</label>
+            <input class="fi2" id="wh-jk-emails-middle_order" value="${esc(cfg.jenkins_middle_order_emails||'')}" placeholder="dev@hitwicket.com, qa@hitwicket.com">
+          </div>
+          <div class="fg" style="margin-bottom:8px">
+            <label class="fl">Secret Token</label>
+            <div style="display:flex;gap:8px">
+              <input class="fi2" id="wh-jk-token-middle_order" value="${esc(cfg.jenkins_middle_order_token||'')}" placeholder="auto-generated" style="flex:1">
+              <button class="btn btn-g" style="font-size:11px;padding:6px 10px;flex-shrink:0" onclick="(()=>{const t=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);document.getElementById('wh-jk-token-middle_order').value=t;document.getElementById('wh-jk-url-middle_order').value=WORKER+'/webhook/jenkins?team=middle_order&token='+t;})();">Generate</button>
+            </div>
+          </div>
           <div style="display:flex;gap:8px;align-items:center">
-            <input class="fi2" id="wh-jenkins-url-display" value="${cfg.jenkins_token ? WORKER+'/webhook/jenkins?token='+cfg.jenkins_token : '— generate a token above —'}" readonly style="flex:1;font-family:var(--mono);font-size:10px;color:var(--g2)">
-            <button class="btn btn-g" style="flex-shrink:0;font-size:11px;padding:6px 10px" onclick="(()=>{const el=document.getElementById('wh-jenkins-url-display');if(el.value&&!el.value.startsWith('—')){navigator.clipboard.writeText(el.value);toast('URL copied ✓','ok');}})();">Copy</button>
+            <input class="fi2" id="wh-jk-url-middle_order" value="${cfg.jenkins_middle_order_token?WORKER+'/webhook/jenkins?team=middle_order&token='+cfg.jenkins_middle_order_token:'— generate token above —'}" readonly style="flex:1;font-family:var(--mono);font-size:10px;color:var(--g2)">
+            <button class="btn btn-g" style="font-size:11px;padding:6px 10px;flex-shrink:0" onclick="(()=>{const el=document.getElementById('wh-jk-url-middle_order');if(el.value&&!el.value.startsWith('—')){navigator.clipboard.writeText(el.value);toast('URL copied ✓','ok');}})();">Copy</button>
           </div>
         </div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);line-height:1.9">
-          Jenkins POST payload (JSON):<br>
-          <span style="color:var(--g2)">{&quot;version&quot;:&quot;1.4.2&quot;,&quot;platform&quot;:&quot;Android&quot;,&quot;link&quot;:&quot;https://…&quot;,&quot;notes&quot;:&quot;…&quot;}</span><br>
-          Worker logs build, marks current, fires GChat + email automatically.
+        <div style="border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:12px 14px;margin-bottom:10px">
+          <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#34d399;margin-bottom:10px">Tech Infra</div>
+          <div class="fg" style="margin-bottom:8px">
+            <label class="fl">GChat Webhook URL</label>
+            <input class="fi2" id="wh-jk-gchat-tech_infra" value="${esc(cfg.jenkins_tech_infra_gchat||'')}" placeholder="https://chat.googleapis.com/v1/spaces/…">
+          </div>
+          <div class="fg" style="margin-bottom:8px">
+            <label class="fl">Team Emails (comma-separated)</label>
+            <input class="fi2" id="wh-jk-emails-tech_infra" value="${esc(cfg.jenkins_tech_infra_emails||'')}" placeholder="dev@hitwicket.com, qa@hitwicket.com">
+          </div>
+          <div class="fg" style="margin-bottom:8px">
+            <label class="fl">Secret Token</label>
+            <div style="display:flex;gap:8px">
+              <input class="fi2" id="wh-jk-token-tech_infra" value="${esc(cfg.jenkins_tech_infra_token||'')}" placeholder="auto-generated" style="flex:1">
+              <button class="btn btn-g" style="font-size:11px;padding:6px 10px;flex-shrink:0" onclick="(()=>{const t=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);document.getElementById('wh-jk-token-tech_infra').value=t;document.getElementById('wh-jk-url-tech_infra').value=WORKER+'/webhook/jenkins?team=tech_infra&token='+t;})();">Generate</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="fi2" id="wh-jk-url-tech_infra" value="${cfg.jenkins_tech_infra_token?WORKER+'/webhook/jenkins?team=tech_infra&token='+cfg.jenkins_tech_infra_token:'— generate token above —'}" readonly style="flex:1;font-family:var(--mono);font-size:10px;color:var(--g2)">
+            <button class="btn btn-g" style="font-size:11px;padding:6px 10px;flex-shrink:0" onclick="(()=>{const el=document.getElementById('wh-jk-url-tech_infra');if(el.value&&!el.value.startsWith('—')){navigator.clipboard.writeText(el.value);toast('URL copied ✓','ok');}})();">Copy</button>
+          </div>
+        </div>
+        <div style="border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:12px 14px;margin-bottom:10px">
+          <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#f87171;margin-bottom:10px">LiveOps</div>
+          <div class="fg" style="margin-bottom:8px">
+            <label class="fl">GChat Webhook URL</label>
+            <input class="fi2" id="wh-jk-gchat-liveops" value="${esc(cfg.jenkins_liveops_gchat||'')}" placeholder="https://chat.googleapis.com/v1/spaces/…">
+          </div>
+          <div class="fg" style="margin-bottom:8px">
+            <label class="fl">Team Emails (comma-separated)</label>
+            <input class="fi2" id="wh-jk-emails-liveops" value="${esc(cfg.jenkins_liveops_emails||'')}" placeholder="dev@hitwicket.com, qa@hitwicket.com">
+          </div>
+          <div class="fg" style="margin-bottom:8px">
+            <label class="fl">Secret Token</label>
+            <div style="display:flex;gap:8px">
+              <input class="fi2" id="wh-jk-token-liveops" value="${esc(cfg.jenkins_liveops_token||'')}" placeholder="auto-generated" style="flex:1">
+              <button class="btn btn-g" style="font-size:11px;padding:6px 10px;flex-shrink:0" onclick="(()=>{const t=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);document.getElementById('wh-jk-token-liveops').value=t;document.getElementById('wh-jk-url-liveops').value=WORKER+'/webhook/jenkins?team=liveops&token='+t;})();">Generate</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="fi2" id="wh-jk-url-liveops" value="${cfg.jenkins_liveops_token?WORKER+'/webhook/jenkins?team=liveops&token='+cfg.jenkins_liveops_token:'— generate token above —'}" readonly style="flex:1;font-family:var(--mono);font-size:10px;color:var(--g2)">
+            <button class="btn btn-g" style="font-size:11px;padding:6px 10px;flex-shrink:0" onclick="(()=>{const el=document.getElementById('wh-jk-url-liveops');if(el.value&&!el.value.startsWith('—')){navigator.clipboard.writeText(el.value);toast('URL copied ✓','ok');}})();">Copy</button>
+          </div>
         </div>
       </div>
 
@@ -5102,7 +5176,18 @@ function saveWebhookSettings() {
     notif_day_end_report: document.getElementById('wh-ev-day_end_report')?.classList.contains('on'),
     eod_time: document.getElementById('wh-eod-time')?.value||'21:00',
     eod_schedule_on: document.getElementById('wh-eod-on')?.classList.contains('on'),
-    jenkins_token: document.getElementById('wh-jenkins-token')?.value?.trim()||'',
+    jenkins_openers_token:  document.getElementById('wh-jk-token-openers')?.value?.trim()||'',
+    jenkins_openers_gchat:  document.getElementById('wh-jk-gchat-openers')?.value?.trim()||'',
+    jenkins_openers_emails: document.getElementById('wh-jk-emails-openers')?.value?.trim()||'',
+    jenkins_middle_order_token:  document.getElementById('wh-jk-token-middle_order')?.value?.trim()||'',
+    jenkins_middle_order_gchat:  document.getElementById('wh-jk-gchat-middle_order')?.value?.trim()||'',
+    jenkins_middle_order_emails: document.getElementById('wh-jk-emails-middle_order')?.value?.trim()||'',
+    jenkins_tech_infra_token:  document.getElementById('wh-jk-token-tech_infra')?.value?.trim()||'',
+    jenkins_tech_infra_gchat:  document.getElementById('wh-jk-gchat-tech_infra')?.value?.trim()||'',
+    jenkins_tech_infra_emails: document.getElementById('wh-jk-emails-tech_infra')?.value?.trim()||'',
+    jenkins_liveops_token:  document.getElementById('wh-jk-token-liveops')?.value?.trim()||'',
+    jenkins_liveops_gchat:  document.getElementById('wh-jk-gchat-liveops')?.value?.trim()||'',
+    jenkins_liveops_emails: document.getElementById('wh-jk-emails-liveops')?.value?.trim()||'',
   };
   saveWebhookConfig(cfg);
   initEODScheduler();
