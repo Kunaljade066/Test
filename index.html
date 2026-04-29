@@ -1546,14 +1546,7 @@ let _pushPermission = 'default';
 async function initPushNotifications() {
   if (!('Notification' in window)) return;
   _pushPermission = Notification.permission;
-  if(_pushPermission === 'default') {
-    // Show a friendly in-app prompt rather than immediately triggering browser dialog
-    // Give user 3 seconds after login to settle in first
-    setTimeout(() => {
-      if(Notification.permission !== 'default') return; // already decided
-      showPushPrompt();
-    }, 3000);
-  }
+  // Never auto-prompt — user enables via the button in Alerts tab
 }
 
 function showPushPrompt() {
