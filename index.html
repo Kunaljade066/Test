@@ -1630,14 +1630,26 @@ async function requestPushPermission() {
 
     try { localStorage.setItem('hwt_push_enabled', '1'); } catch(e) {}
 
-    // Step 5: Test notification
+    // Step 5: Test notification — send via server push so it works even when tab open
     toast('ALL STEPS OK — sending test notification!', 'ok');
-    setTimeout(() => {
-      reg.showNotification('BugPulse', {
-        body: 'Push notifications are now active!',
-        icon: 'https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png',
-      });
-    }, 1000);
+    // Show immediate local notification
+    reg.showNotification('BugPulse Active', {
+      body: 'Push notifications are now active! You will be notified of new bugs and builds.',
+      icon: 'https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png',
+      requireInteraction: true,
+    });
+    // Also send a server-side push to confirm end-to-end works
+    setTimeout(async () => {
+      try {
+        await api('/push/notify', 'POST', {
+          title: 'BugPulse Connected',
+          body: 'Server push working! You will get notified even when browser is closed.',
+          icon: 'https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png',
+          tag: 'test',
+        });
+        toast('Server push sent — check desktop!', 'ok');
+      } catch(e) { console.warn('[push test]', e); }
+    }, 1500);
     return true;
 
   } catch(e) {
@@ -1717,7 +1729,7 @@ function showPushPrompt() {
 function sendDesktopNotification(title, body, bugId) {
   if (!('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
-  if (document.visibilityState === 'visible') return; // only when tab is hidden
+  // Show notification regardless of tab visibility
   // Use service worker notification if available (shows even when tab closed later)
   if (_swRegistration) {
     _swRegistration.showNotification(title, {
