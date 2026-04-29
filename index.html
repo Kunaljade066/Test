@@ -1543,10 +1543,123 @@ function avStack(assignees,sz=22){
 // ══════════════════════════════════════════
 let _pushPermission = 'default';
 
+// ── Service Worker + Web Push ─────────────────────────────────────────────────
+let _swRegistration = null;
+
 async function initPushNotifications() {
-  if (!('Notification' in window)) return;
+  if (!('serviceWorker' in navigator) || !('Notification' in window)) return;
   _pushPermission = Notification.permission;
-  // Never auto-prompt — user enables via the button in Alerts tab
+
+  // Register service worker (sw.js must be at same origin as index.html)
+  try {
+    _swRegistration = await navigator.serviceWorker.register(
+      new URL('./sw.js', window.location.href).href
+    );
+    console.log('[sw] registered');
+
+    // Listen for messages from SW (e.g. OPEN_BUG)
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (e.data?.type === 'OPEN_BUG' && e.data.bugId) {
+        openDetail(e.data.bugId);
+      }
+    });
+  } catch(e) {
+    console.warn('[sw] registration failed:', e.message);
+  }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+async function requestPushPermission() {
+  if (!('serviceWorker' in navigator)) {
+    toast('Service worker not supported — make sure sw.js is deployed alongside index.html', 'err');
+    return false;
+  }
+  if (!('Notification' in window)) { toast('Push not supported in this browser', 'err'); return false; }
+
+  const result = await Notification.requestPermission();
+  _pushPermission = result;
+  if (result !== 'granted') { toast('Notifications blocked — check browser settings', 'err'); return false; }
+
+  // Get VAPID public key from worker
+  try {
+    const keyRes = await api('/push/vapid-public-key');
+    if (!keyRes?.key) {
+      toast('VAPID key not configured — see setup instructions in Webhook Settings', 'err');
+      return false;
+    }
+
+    // Subscribe to push
+    const reg = _swRegistration || await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(keyRes.key),
+    });
+
+    // Save subscription to worker
+    await api('/push/subscribe', 'POST', sub.toJSON());
+    try { localStorage.setItem('hwt_push_enabled', '1'); } catch(e) {}
+    toast('Desktop notifications enabled — works even when browser is closed!', 'ok');
+
+    // Test notification
+    new Notification('BugPulse', {
+      body: 'Notifications active! You will be notified of new bugs and builds.',
+      icon: 'https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png',
+    });
+    return true;
+  } catch(e) {
+    toast('Push setup failed: ' + e.message, 'err');
+    return false;
+  }
+}
+
+async function disablePushNotifications() {
+  try {
+    const reg = _swRegistration || await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) await sub.unsubscribe();
+    await api('/push/subscribe', 'DELETE');
+    localStorage.removeItem('hwt_push_enabled');
+    toast('Desktop notifications disabled', 'ok');
+  } catch(e) { toast('Failed to disable: ' + e.message, 'err'); }
+}
+
+// Generate VAPID keys in browser (admin setup)
+
+function showVapidSetup() {
+  generateVapidKeys().then(keys => {
+    if(!keys) return;
+    document.getElementById('vapid-pub').value  = keys.public;
+    document.getElementById('vapid-priv').value = keys.private;
+    document.getElementById('vapid-generated').style.display = 'block';
+    document.getElementById('vapid-setup-section').innerHTML =
+      '<div style="font-family:var(--mono);font-size:9px;color:var(--g4)">Keys generated below. Copy both to Cloudflare Worker env vars, then redeploy.</div>';
+  });
+}
+
+async function generateVapidKeys() {
+  try {
+    const keyPair = await crypto.subtle.generateKey(
+      { name: 'ECDSA', namedCurve: 'P-256' },
+      true,
+      ['sign', 'verify']
+    );
+    const pub  = await crypto.subtle.exportKey('raw',   keyPair.publicKey);
+    const priv = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
+    const toB64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf)))
+      .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+    return { public: toB64url(pub), private: toB64url(priv) };
+  } catch(e) {
+    toast('Key generation failed: ' + e.message, 'err');
+    return null;
+  }
 }
 
 function showPushPrompt() {
@@ -1591,11 +1704,22 @@ function sendDesktopNotification(title, body, bugId) {
   if (!('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
   if (document.visibilityState === 'visible') return; // only when tab is hidden
+  // Use service worker notification if available (shows even when tab closed later)
+  if (_swRegistration) {
+    _swRegistration.showNotification(title, {
+      body,
+      icon:  'https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png',
+      badge: 'https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png',
+      tag:   bugId || 'bugpulse',
+      data:  { bugId, url: bugId ? APP_URL + '?bug=' + bugId : APP_URL },
+    });
+    return;
+  }
+  // Fallback to basic Notification API
   const n = new Notification(title, {
     body,
     icon: 'https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png',
-    badge: 'https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png',
-    tag: bugId || 'bugpulse',
+    tag:  bugId || 'bugpulse',
   });
   if(bugId) n.onclick = () => { window.focus(); openDetail(bugId); n.close(); };
 }
@@ -6490,6 +6614,41 @@ async function openWebhookSettings() {
 
       <div style="display:flex;gap:8px">
         <button class="btn btn-g" onclick="testWebhook()">🧪 Test Webhook</button>
+      </div>
+
+      <div style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:14px 16px">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g1);margin-bottom:8px">DESKTOP PUSH NOTIFICATIONS</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:12px;line-height:1.8">
+          Notifies team of new bugs, status changes and builds — even when browser is closed.<br>
+          Requires VAPID keys set as Cloudflare Worker env vars.
+        </div>
+        <div id="vapid-setup-section">
+          <button class="btn btn-g btn-sm" onclick="showVapidSetup()">Generate VAPID Keys</button>
+        </div>
+        <div id="vapid-generated" style="display:none;margin-top:10px">
+          <div class="fg" style="margin-bottom:8px">
+            <label class="fl">VAPID_PUBLIC_KEY (add to Cloudflare Worker env vars)</label>
+            <div style="display:flex;gap:8px">
+              <input class="fi2" id="vapid-pub" readonly style="font-family:var(--mono);font-size:10px;flex:1">
+              <button class="btn btn-g btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('vapid-pub').value).then(()=>toast('Copied','ok'))">Copy</button>
+            </div>
+          </div>
+          <div class="fg" style="margin-bottom:10px">
+            <label class="fl">VAPID_PRIVATE_KEY (add to Cloudflare Worker env vars — keep secret!)</label>
+            <div style="display:flex;gap:8px">
+              <input class="fi2" id="vapid-priv" readonly style="font-family:var(--mono);font-size:10px;flex:1">
+              <button class="btn btn-g btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('vapid-priv').value).then(()=>toast('Copied','ok'))">Copy</button>
+            </div>
+          </div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--g3);line-height:1.8;margin-bottom:10px">
+            Also set: VAPID_SUBJECT = mailto:kunal@hitwicket.com in Cloudflare env vars.<br>
+            Then redeploy the worker. Then click Enable below.
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn btn-v btn-sm" onclick="closePanel();requestPushPermission()">Enable Push Notifs</button>
+          <button class="btn btn-g btn-sm" onclick="closePanel();disablePushNotifications()">Disable</button>
+        </div>
       </div>
     </div>`;
   openPanel();
