@@ -1704,20 +1704,7 @@ function showPushPrompt() {
   setTimeout(() => banner.remove(), 15000);
 }
 
-async function requestPushPermission() {
-  if (!('Notification' in window)) { toast('Push notifications not supported in this browser', 'err'); return false; }
-  const result = await Notification.requestPermission();
-  _pushPermission = result;
-  if(result === 'granted') {
-    toast('Desktop notifications enabled ✓', 'ok');
-    new Notification('BugPulse', { body: 'Desktop notifications are now active!', icon: 'https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png' });
-    try { localStorage.setItem('hwt_push_enabled', '1'); } catch(e) {}
-    return true;
-  } else {
-    toast('Push notifications blocked — check browser settings', 'err');
-    return false;
-  }
-}
+// requestPushPermission defined above
 
 function sendDesktopNotification(title, body, bugId) {
   if (!('Notification' in window)) return;
