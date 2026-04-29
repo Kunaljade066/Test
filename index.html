@@ -891,6 +891,7 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
 .jk-mi:hover{background:rgba(124,58,237,.15)}
 .jk-mi-danger{color:#f87171}
 .jk-mi-danger:hover{background:rgba(239,68,68,.12)}
+@keyframes slideInRight{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
 </style>
 </head>
 <body>
@@ -1546,9 +1547,36 @@ async function initPushNotifications() {
   if (!('Notification' in window)) return;
   _pushPermission = Notification.permission;
   if(_pushPermission === 'default') {
-    // Don't auto-ask — let user enable via settings
-    return;
+    // Show a friendly in-app prompt rather than immediately triggering browser dialog
+    // Give user 3 seconds after login to settle in first
+    setTimeout(() => {
+      if(Notification.permission !== 'default') return; // already decided
+      showPushPrompt();
+    }, 3000);
   }
+}
+
+function showPushPrompt() {
+  // Show a non-intrusive banner asking for permission
+  const existing = document.getElementById('pushPromptBanner');
+  if(existing) return;
+  const banner = document.createElement('div');
+  banner.id = 'pushPromptBanner';
+  banner.style.cssText = 'position:fixed;bottom:80px;right:20px;z-index:8000;background:var(--bg2);border:1px solid var(--g1);border-radius:12px;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,.5);max-width:300px;backdrop-filter:blur(12px);animation:slideInRight .3s ease';
+  banner.innerHTML = `
+    <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g1);margin-bottom:6px">🔔 STAY UPDATED</div>
+    <div style="font-size:12px;color:var(--mist);line-height:1.6;margin-bottom:12px">Get notified about critical bugs and EOD reports even when you're on another tab.</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="requestPushPermission();document.getElementById('pushPromptBanner')?.remove()" 
+        style="flex:1;background:linear-gradient(135deg,var(--g1),#5b21b6);color:#fff;border:none;border-radius:7px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">Enable</button>
+      <button onclick="document.getElementById('pushPromptBanner')?.remove();try{localStorage.setItem('hwt_push_dismissed','1');}catch(e){}"
+        style="background:var(--bg3);color:var(--mute);border:1px solid var(--bd);border-radius:7px;padding:7px 12px;font-size:12px;cursor:pointer">Later</button>
+    </div>`;
+  // Don't show again if dismissed
+  try { if(localStorage.getItem('hwt_push_dismissed')) return; } catch(e) {}
+  document.body.appendChild(banner);
+  // Auto-dismiss after 15s
+  setTimeout(() => banner.remove(), 15000);
 }
 
 async function requestPushPermission() {
@@ -2156,7 +2184,7 @@ async function refreshAll(){
     }
 
     S.bugs=freshBugs;
-    S.sprints=_rawSprints.filter(s=>s.name!==DD_CONFIG_KEY);
+    S.sprints=_rawSprints.filter(s=>!s.name.startsWith('__'));
     S.teamMembers=teamD.members||[];
     loadDDConfigFromSprints(_rawSprints);
     S.bugs.forEach(b=>{if(!b.assignees)b.assignees=b.assignee_email?[{name:b.assignee||'',email:b.assignee_email,picture:b.assignee_picture||''}]:[];});
@@ -2649,16 +2677,44 @@ function renderFeatures(){
   const feats=[...new Set(S.bugs.map(b=>b.feature).filter(Boolean))].sort();
   if(!feats.length){el.innerHTML=`<div class="empty"><div class="empty-icon">🎮</div><h3>NO FEATURES</h3><p>Add feature tags when creating bugs.</p></div>`;return;}
   const dc=['#7c3aed','#0891b2','#059669','#d97706','#dc2626','#7c3aed','#db2777','#0d9488'];
-  el.innerHTML=feats.map((feat,i)=>{
+
+  el.innerHTML = feats.map((feat,i)=>{
     const fb=S.bugs.filter(b=>b.feature===feat);
     const done=fb.filter(b=>['Dev Fixed','Done','QA Pass'].includes(b.status)).length;
     const pct=fb.length?Math.round(done/fb.length*100):0;
     const c=dc[i%dc.length];
+
+    // Group by sub_feature — bugs with sub_feature get nested, others go under feature directly
+    const subMap = {};
+    fb.forEach(b => {
+      const sub = b.sub_feature?.trim() || '';
+      if(!subMap[sub]) subMap[sub] = [];
+      subMap[sub].push(b);
+    });
+    const subKeys = Object.keys(subMap).sort((a,b) => a === '' ? 1 : b === '' ? -1 : a.localeCompare(b));
+
+    const subSections = subKeys.map(sub => {
+      const subBugs = subMap[sub];
+      const subOpen = subBugs.filter(b=>!['Dev Fixed','Done','QA Pass','Closed'].includes(b.status)).length;
+      return `
+        <div style="margin-bottom:8px">
+          ${sub ? `<div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:${c};opacity:.7;margin-bottom:5px;padding-left:2px">↳ ${esc(sub)}</div>` : ''}
+          <div style="display:flex;flex-wrap:wrap;gap:7px">
+            ${subBugs.slice(0,6).map(bug=>`<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:9px 11px;cursor:pointer;flex:1;min-width:150px;max-width:220px;transition:all .15s" onclick="openDetail('${bug.id}')" onmouseenter="this.style.borderColor='${c}'" onmouseleave="this.style.borderColor='var(--bd)'">
+              <div style="font-family:var(--mono);font-size:9px;color:${c};margin-bottom:4px">${esc(bug.id)}</div>
+              <div style="font-size:12px;font-weight:700;color:var(--text);line-height:1.4;margin-bottom:6px">${esc((bug.title||'').slice(0,55))}</div>
+              <div style="display:flex;gap:4px;flex-wrap:wrap">${pChip(bug.priority)}${stChip(bug.status)}</div>
+            </div>`).join('')}
+            ${subBugs.length>6?`<div style="display:flex;align-items:center;justify-content:center;min-width:80px;cursor:pointer;color:${c};font-size:13px;font-weight:700;padding:9px;border:1px dashed var(--bd);border-radius:8px" onclick="fBySubFeat('${esc(feat)}','${esc(sub)}')">+${subBugs.length-6} more</div>`:''}
+          </div>
+        </div>`;
+    }).join('');
+
     return`<div class="sprint-card">
       <div class="sprint-hd">
         <div style="display:flex;align-items:center;gap:9px;flex:1">
           <div style="width:10px;height:10px;border-radius:50%;background:${c};flex-shrink:0;box-shadow:0 0 8px ${c}"></div>
-          <div><div class="sprint-name">${esc(feat)}</div><div class="sprint-dates">${fb.length} issues</div></div>
+          <div><div class="sprint-name">${esc(feat)}</div><div class="sprint-dates">${fb.length} issues · ${subKeys.filter(s=>s).length} sub-features</div></div>
           <div style="flex:1;display:flex;align-items:center;gap:8px;margin-left:14px">
             <div class="sprint-prog"><div class="sprint-prog-fill" style="width:${pct}%;background:linear-gradient(90deg,${c},${c}aa)"></div></div>
             <span class="sprint-pct" style="color:${c}">${pct}%</span>
@@ -2668,20 +2724,21 @@ function renderFeatures(){
           ${fb.filter(b=>b.status==='Open').length?`<span class="chip chip-open">${fb.filter(b=>b.status==='Open').length} open</span>`:''}
           ${fb.filter(b=>['In Progress','Bugged'].includes(b.status)).length?`<span class="chip chip-prog">${fb.filter(b=>['In Progress','Bugged'].includes(b.status)).length} active</span>`:''}
           ${done?`<span class="chip chip-done">${done} done</span>`:''}
-          <button class="btn btn-g btn-sm" onclick="fByFeat('${esc(feat)}')">View</button>
+          <button class="btn btn-g btn-sm" onclick="fByFeat('${esc(feat)}')">View All</button>
         </div>
       </div>
-      <div style="padding:10px;display:flex;flex-wrap:wrap;gap:7px">
-        ${fb.slice(0,8).map(bug=>`<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:9px 11px;cursor:none;flex:1;min-width:170px;max-width:240px;transition:all .15px" onclick="openDetail('${bug.id}')" onmouseenter="this.style.borderColor='${c}'" onmouseleave="this.style.borderColor='var(--bd)'">
-          <div style="font-family:var(--mono);font-size:9px;color:${c};margin-bottom:4px;letter-spacing:.5px">${esc(bug.id)}</div>
-          <div style="font-size:12px;font-weight:700;color:var(--text);line-height:1.4;margin-bottom:6px">${esc((bug.title||'').slice(0,55))}</div>
-          <div style="display:flex;gap:4px;flex-wrap:wrap">${pChip(bug.priority)}${stChip(bug.status)}</div>
-        </div>`).join('')}
-        ${fb.length>8?`<div style="display:flex;align-items:center;justify-content:center;min-width:80px;cursor:none;color:${c};font-size:13px;font-weight:700;padding:9px;border:1px dashed var(--bd);border-radius:8px" onclick="fByFeat('${esc(feat)}')">+${fb.length-8} more</div>`:''}
+      <div style="padding:10px 14px">
+        ${subSections}
       </div>
     </div>`;
   }).join('');
 }
+
+function fBySubFeat(feat, sub) {
+  const bugs = S.bugs.filter(b => b.feature === feat && (b.sub_feature||'') === sub);
+  showInlineDrawer(`🎮 ${feat}${sub?' → '+sub:''}`, bugs);
+}
+
 function fByFeat(f){
   const bugs = S.bugs.filter(b=>b.feature===f);
   showInlineDrawer('🎮 Feature: '+f, bugs, ()=>fByFeat(f));
@@ -3670,6 +3727,9 @@ function buildBugForm(bug,full){
           </div>
         </div>
       </div>
+      <div class="fg"><label class="fl">Sub-feature / Screen <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">(optional — e.g. "Login Flow", "Icon Issue")</span></label>
+        <input class="fi2" id="f-sub-feat" value="${esc(bug?.sub_feature||'')}" placeholder="e.g. Dashboard → Stats, Match → Shot Selection">
+      </div>
       <div class="fg"><label class="fl">Sprint</label><select class="fi2" id="f-sp"><option value="">No Sprint</option>${spOpts}</select></div>
       <div class="fg"><label class="fl">Build Version</label><input class="fi2" id="f-build" value="${esc(bug?.build||'')}" placeholder="e.g. v3.2.1" list="buildHistoryList" oninput="onBuildInput(this.value)"><datalist id="buildHistoryList">${getRecentBuilds().map(b=>`<option value="${esc(b)}">`).join('')}</datalist></div>
       <div class="fg"><label class="fl">Build Link / APK URL <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label><input class="fi2" id="f-build-link" value="${esc(bug?.build_link||'')}" placeholder="https://drive.google.com/… or https://appdistribution/…"></div>
@@ -3963,7 +4023,8 @@ async function saveBug(){
         assignees,assignee:assignees[0]?.name||'',assignee_email:assignees[0]?.email||'',assignee_picture:assignees[0]?.picture||'',
         reporter:document.getElementById('f-rep')?.value||S.user?.name||'',
         reporter_email:S.user?.email||'',reporter_picture:S.user?.picture||'',
-        feature:document.getElementById('f-feat')?.value||'',sprint:document.getElementById('f-sp')?.value||'',
+        feature:document.getElementById('f-feat')?.value||'',
+        sub_feature:document.getElementById('f-sub-feat')?.value?.trim()||'',sprint:document.getElementById('f-sp')?.value||'',
         build:document.getElementById('f-build')?.value||'',
         device:document.getElementById('f-dev')?.value||'',
         steps:document.getElementById('f-steps')?.value||'',repro:document.getElementById('f-repro')?.value||'',expected:document.getElementById('f-expected')?.value||'',actual:document.getElementById('f-actual')?.value||'',
@@ -6306,7 +6367,7 @@ async function openWebhookSettings() {
           </div>
           ${cfg.jenkins_openers_token ? `
             <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:8px 12px">
-              <span style="font-family:monospace;font-size:10px;color:var(--g2);flex:1" id="jk-url-display-openers">${WORKER}/webhook/jenkins?team=openers&token=${'•'.repeat(16)}</span>
+              <span style="font-family:monospace;font-size:10px;color:var(--g2);flex:1;word-break:break-all" id="jk-url-display-openers">${cfg.jenkins_openers_token && cfg.jenkins_openers_token!=='••set••' ? WORKER+'/webhook/jenkins?team=openers&token='+cfg.jenkins_openers_token : WORKER+'/webhook/jenkins?team=openers&token='+'•'.repeat(16)}</span>
             </div>` : `
             <button class="btn btn-v" style="width:100%;font-size:11px" onclick="jkGenerate('openers')">＋ Generate Webhook URL</button>`}
           <input type="hidden" id="wh-jk-token-openers" value="${esc(cfg.jenkins_openers_token||'')}">
@@ -6335,7 +6396,7 @@ async function openWebhookSettings() {
           </div>
           ${cfg.jenkins_middle_order_token ? `
             <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:8px 12px">
-              <span style="font-family:monospace;font-size:10px;color:var(--g2);flex:1" id="jk-url-display-middle_order">${WORKER}/webhook/jenkins?team=middle_order&token=${'•'.repeat(16)}</span>
+              <span style="font-family:monospace;font-size:10px;color:var(--g2);flex:1;word-break:break-all" id="jk-url-display-middle_order">${cfg.jenkins_middle_order_token && cfg.jenkins_middle_order_token!=='••set••' ? WORKER+'/webhook/jenkins?team=middle_order&token='+cfg.jenkins_middle_order_token : WORKER+'/webhook/jenkins?team=middle_order&token='+'•'.repeat(16)}</span>
             </div>` : `
             <button class="btn btn-v" style="width:100%;font-size:11px" onclick="jkGenerate('middle_order')">＋ Generate Webhook URL</button>`}
           <input type="hidden" id="wh-jk-token-middle_order" value="${esc(cfg.jenkins_middle_order_token||'')}">
@@ -6364,7 +6425,7 @@ async function openWebhookSettings() {
           </div>
           ${cfg.jenkins_tech_infra_token ? `
             <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:8px 12px">
-              <span style="font-family:monospace;font-size:10px;color:var(--g2);flex:1" id="jk-url-display-tech_infra">${WORKER}/webhook/jenkins?team=tech_infra&token=${'•'.repeat(16)}</span>
+              <span style="font-family:monospace;font-size:10px;color:var(--g2);flex:1;word-break:break-all" id="jk-url-display-tech_infra">${cfg.jenkins_tech_infra_token && cfg.jenkins_tech_infra_token!=='••set••' ? WORKER+'/webhook/jenkins?team=tech_infra&token='+cfg.jenkins_tech_infra_token : WORKER+'/webhook/jenkins?team=tech_infra&token='+'•'.repeat(16)}</span>
             </div>` : `
             <button class="btn btn-v" style="width:100%;font-size:11px" onclick="jkGenerate('tech_infra')">＋ Generate Webhook URL</button>`}
           <input type="hidden" id="wh-jk-token-tech_infra" value="${esc(cfg.jenkins_tech_infra_token||'')}">
@@ -6393,7 +6454,7 @@ async function openWebhookSettings() {
           </div>
           ${cfg.jenkins_liveops_token ? `
             <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:8px 12px">
-              <span style="font-family:monospace;font-size:10px;color:var(--g2);flex:1" id="jk-url-display-liveops">${WORKER}/webhook/jenkins?team=liveops&token=${'•'.repeat(16)}</span>
+              <span style="font-family:monospace;font-size:10px;color:var(--g2);flex:1;word-break:break-all" id="jk-url-display-liveops">${cfg.jenkins_liveops_token && cfg.jenkins_liveops_token!=='••set••' ? WORKER+'/webhook/jenkins?team=liveops&token='+cfg.jenkins_liveops_token : WORKER+'/webhook/jenkins?team=liveops&token='+'•'.repeat(16)}</span>
             </div>` : `
             <button class="btn btn-v" style="width:100%;font-size:11px" onclick="jkGenerate('liveops')">＋ Generate Webhook URL</button>`}
           <input type="hidden" id="wh-jk-token-liveops" value="${esc(cfg.jenkins_liveops_token||'')}">
@@ -7040,8 +7101,25 @@ function featureInputFilter(q) {
   const dd = document.getElementById('featDropdown');
   if(!dd) return;
   const allFeats = [...new Set(S.bugs.map(b=>b.feature).filter(Boolean))];
-  const filtered = q ? allFeats.filter(f=>f.toLowerCase().includes(q.toLowerCase())) : allFeats;
+  // Also include sub-features from title patterns like "Feature > Sub"
+  const allSubFeats = [...new Set(S.bugs.map(b=>b.sub_feature).filter(Boolean))];
+  const filtered = q
+    ? [...allFeats, ...allSubFeats].filter(f=>f.toLowerCase().includes(q.toLowerCase()))
+    : allFeats;
   if(!filtered.length) { dd.style.display='none'; return; }
+  // Group: features first, then sub-features
+  const feats = filtered.filter(f => allFeats.includes(f));
+  const subs  = filtered.filter(f => !allFeats.includes(f));
+  let html = '';
+  if(feats.length) {
+    html += `<div style="padding:5px 10px 2px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--dim);text-transform:uppercase">Features</div>`;
+    html += feats.slice(0,8).map(f=>`<div onclick="selectFeature('${esc(f)}')" style="padding:9px 13px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px;transition:background .1s" onmouseenter="this.style.background='rgba(124,58,237,.1)'" onmouseleave="this.style.background=''"><span style="font-size:14px">🎮</span><span>${esc(f)}</span><span style="margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--dim)">${S.bugs.filter(b=>b.feature===f).length} bugs</span></div>`).join('');
+  }
+  if(subs.length && !q) {
+    html += `<div style="padding:5px 10px 2px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin-top:4px">Recent Sub-features</div>`;
+    html += subs.slice(0,5).map(f=>`<div onclick="selectFeature('${esc(f)}')" style="padding:7px 13px 7px 26px;cursor:pointer;font-size:12px;color:var(--mist);border-bottom:1px solid rgba(255,255,255,.03);transition:background .1s" onmouseenter="this.style.background='rgba(124,58,237,.08)'" onmouseleave="this.style.background=''">↳ ${esc(f)}</div>`).join('');
+  }
+  dd.innerHTML = html || '<div style="padding:14px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim)">No features found</div>';
   dd.style.display = 'block';
   document.addEventListener('click', e => {
     if(!e.target.closest('#f-feat') && !e.target.closest('#featDropdown')) dd.style.display='none';
