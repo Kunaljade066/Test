@@ -973,6 +973,8 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
   <select class="fi" id="bulkStatus" style="width:auto;padding:5px 9px"><option value="">Change Status…</option></select>
   <select class="fi" id="bulkAssignee" style="width:auto;padding:5px 9px"><option value="">Change Assignee…</option></select>
   <button class="btn btn-v btn-sm" onclick="applyBulk()">✓ Apply</button>
+  <button class="btn btn-g btn-sm" onclick="copyBulkLink()">🔗 Copy Link</button>
+  <button class="btn btn-g btn-sm" onclick="copyBulkReport()">📋 Copy Report</button>
   <button class="btn btn-g btn-sm" onclick="clearBulk()">✕ Clear</button>
 </div>
 
@@ -1038,6 +1040,7 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
           <div class="pm-divider"></div>
           <div class="pm-item" onclick="refreshAll();closeProfileMenu()"><span class="pm-icon">↻</span> Refresh Data</div>
           <div class="pm-item" onclick="showNatasha();closeProfileMenu()"><span class="pm-icon">🏏</span> Say Hi to Natasha</div>
+          <div class="pm-item" onclick="toggleNatashaPref();closeProfileMenu()"><span class="pm-icon" id="natashaPrefIcon">🔕</span> <span id="natashaPrefLabel">Disable Natasha</span></div>
           <div class="pm-divider"></div>
           <div class="pm-item" id="managePodBtn" onclick="openDropdownManager();closeProfileMenu()" style="display:none"><span class="pm-icon">🗂️</span> Manage Dropdowns</div>
           <div class="pm-item" id="importBugsBtn" onclick="goTab('import');closeProfileMenu()" style="display:none"><span class="pm-icon">📥</span> Import Bugs (CSV)</div>
@@ -1106,6 +1109,7 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
             <div><h1>Bugs</h1><p id="bl-sub">All issues</p></div>
             <div class="ph-r">
               <button class="btn btn-g btn-sm" onclick="exportCSV('filtered')">📥 CSV</button>
+              <button class="btn btn-g btn-sm" onclick="openFeatureKanban()" title="Feature / System view">🎮 Features</button>
               <button class="btn btn-v" onclick="openNew()">＋ NEW BUG</button>
             </div>
           </div>
@@ -1191,6 +1195,7 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
             <div class="ph-r">
               <button class="btn btn-g btn-sm" id="notifWebhookBtn" onclick="openWebhookSettings()" style="display:none">🔔 Webhook Settings</button>
               <button class="btn btn-g btn-sm" id="notifSLABtn" onclick="openSLASettings()" style="display:none">⏱ SLA Rules</button>
+              <button class="btn btn-g btn-sm" id="pushEnableBtn" onclick="requestPushPermission()" style="display:none">🔔 Enable Desktop Notifs</button>
               <button class="btn btn-g btn-sm" onclick="markAllRead()">Mark all read</button>
             </div>
           </div>
@@ -1532,6 +1537,48 @@ function avStack(assignees,sz=22){
 // ══════════════════════════════════════════
 // SESSION
 // ══════════════════════════════════════════
+// ══════════════════════════════════════════
+// DESKTOP PUSH NOTIFICATIONS
+// ══════════════════════════════════════════
+let _pushPermission = 'default';
+
+async function initPushNotifications() {
+  if (!('Notification' in window)) return;
+  _pushPermission = Notification.permission;
+  if(_pushPermission === 'default') {
+    // Don't auto-ask — let user enable via settings
+    return;
+  }
+}
+
+async function requestPushPermission() {
+  if (!('Notification' in window)) { toast('Push notifications not supported in this browser', 'err'); return false; }
+  const result = await Notification.requestPermission();
+  _pushPermission = result;
+  if(result === 'granted') {
+    toast('Desktop notifications enabled ✓', 'ok');
+    new Notification('BugPulse', { body: 'Desktop notifications are now active!', icon: 'https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png' });
+    try { localStorage.setItem('hwt_push_enabled', '1'); } catch(e) {}
+    return true;
+  } else {
+    toast('Push notifications blocked — check browser settings', 'err');
+    return false;
+  }
+}
+
+function sendDesktopNotification(title, body, bugId) {
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+  if (document.visibilityState === 'visible') return; // only when tab is hidden
+  const n = new Notification(title, {
+    body,
+    icon: 'https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png',
+    badge: 'https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png',
+    tag: bugId || 'bugpulse',
+  });
+  if(bugId) n.onclick = () => { window.focus(); openDetail(bugId); n.close(); };
+}
+
 const saveSession=()=>{try{if(S.user)localStorage.setItem(SK,JSON.stringify({user:S.user,ts:Date.now()}));}catch(e){}};
 const loadSession=()=>{try{const r=JSON.parse(localStorage.getItem(SK)||'null');if(!r||!r.user||Date.now()-r.ts>8*3600*1000){localStorage.removeItem(SK);return null;}return r;}catch{return null;}};
 const clearSession=()=>localStorage.removeItem(SK);
@@ -1572,6 +1619,17 @@ function startFastSync(){
       api('/settings').then(sd=>{
         if(sd?.settings){_webhookCfgCache=sd.settings;try{localStorage.setItem(WEBHOOK_KEY,JSON.stringify(_webhookCfgCache));}catch(e){}}
       }).catch(()=>{});
+      // Desktop push: notify about critical bugs when tab hidden
+      if(document.hidden && Notification.permission === 'granted') {
+        const crit = S.bugs.filter(b => ['Critical','Urgent'].includes(b.priority) && ['Open','Bugged','In Progress'].includes(b.status));
+        if(crit.length > 0) {
+          const key = 'hwt_crit_push_' + new Date().toISOString().slice(0,13);
+          if(!sessionStorage.getItem(key)) {
+            sessionStorage.setItem(key, '1');
+            sendDesktopNotification(`🚨 ${crit.length} Critical Bug${crit.length!==1?'s':''} Open`, crit.slice(0,2).map(b=>b.title).join(' · '));
+          }
+        }
+      }
     }catch(e){}
   }, SYNC_INTERVAL);
 }
@@ -1709,7 +1767,7 @@ async function ensureFreshToken() {
 // ══════════════════════════════════════════
 function loadNotifs(){try{S.localNotifs=JSON.parse(localStorage.getItem(NK(S.user?.email))||'[]');}catch{S.localNotifs=[];}}
 function saveNotifs(){try{localStorage.setItem(NK(S.user?.email),JSON.stringify(S.localNotifs.slice(0,100)));}catch{}}
-function addNotif(t,b,bugId){loadNotifs();S.localNotifs.unshift({id:Date.now(),title:t,body:b,bugId,read:false,ts:new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})});saveNotifs();updateNotifBadge();}
+function addNotif(t,b,bugId){loadNotifs();S.localNotifs.unshift({id:Date.now(),title:t,body:b,bugId,read:false,ts:new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})});saveNotifs();updateNotifBadge();sendDesktopNotification(t,b,bugId);}
 function updateNotifBadge(){
   loadNotifs();
   const u=S.localNotifs.filter(n=>!n.read).length;
@@ -1724,7 +1782,36 @@ function markAllRead(){S.localNotifs.forEach(n=>n.read=true);saveNotifs();update
 function checkDeepLink(){
   const p=new URLSearchParams(window.location.search);
   const bugId=p.get('bug');
-  if(!bugId)return;
+  // Multi-bug share link: ?bugs=BUG-1,BUG-2,BUG-3
+  const bugsParam = p.get('bugs');
+  if(bugsParam) {
+    history.replaceState({},'',window.location.pathname);
+    const ids = bugsParam.split(',').map(s=>s.trim()).filter(Boolean);
+    const tryOpenMulti = () => {
+      if(!S.bugs.length) { setTimeout(tryOpenMulti, 400); return; }
+      const found = S.bugs.filter(b => ids.includes(b.id));
+      if(!found.length) { toast('No matching bugs found', 'err'); return; }
+      // Filter backlog to these bugs
+      S.filtered = found;
+      S.page = 1;
+      goToBugsClean();
+      S.filtered = found;
+      renderTable();
+      const title = document.getElementById('tTitle');
+      if(title) title.textContent = `Shared: ${found.length} bug${found.length!==1?'s':''}`;
+      toast(`Showing ${found.length} shared bug${found.length!==1?'s':''}`, 'ok');
+    };
+    setTimeout(tryOpenMulti, 600);
+    return;
+  }
+  if(!bugId) {
+    // Restore last tab
+    try {
+      const lastTab = sessionStorage.getItem('hwt_tab');
+      if(lastTab && lastTab !== 'home') setTimeout(()=>goTab(lastTab), 100);
+    } catch(e) {}
+    return;
+  }
   history.replaceState({},'',window.location.pathname);
   const tryOpen=()=>{if(S.bugs.length){const f=S.bugs.find(b=>b.id===bugId);if(f)openDetail(bugId);else toast(`Bug ${bugId} not found`,'err');}else{setTimeout(tryOpen,400);}};
   setTimeout(tryOpen,600);
@@ -1884,8 +1971,10 @@ function onLogin(){
   }
   loadTheme();
   loadCursorPref();
+  loadNatashaPref();
   loadNotifs();updateNotifBadge();
   scheduleTokenRefresh();
+  initPushNotifications();
   initEODScheduler();
   refreshAll().then(()=>{
     startFastSync();
@@ -2172,9 +2261,19 @@ function applyF(){
 // ══════════════════════════════════════════
 // VIEWS
 // ══════════════════════════════════════════
+// Tab state: store scroll position + filter state per tab
+const _tabScrollPos = {};
+const _tabFilterState = {};
+
 function goTab(v){
+  // Save scroll of current tab
+  if(S.view && S.view !== v) {
+    const main = document.querySelector('.main');
+    if(main) _tabScrollPos[S.view] = main.scrollTop;
+  }
   if(v!=='backlog')closeInlineDrawer();
   S.view=v;
+  try { sessionStorage.setItem('hwt_tab', v); } catch(e) {}
   ['home','backlog','board','sprints','features','dashboard','notifs','clickup','import','builds'].forEach(n=>{
     const el=document.getElementById('v-'+n);if(el)el.style.display=n===v?'':'none';
     document.getElementById('tt-'+n)?.classList.toggle('on',n===v);
@@ -2189,6 +2288,11 @@ function goTab(v){
   if(v==='backlog')renderTable();
   if(v==='clickup')loadClickUp();
   if(v==='builds'){renderBuildsPage();document.getElementById('testRunsWrap').style.display='none';document.getElementById('buildsWrap').style.display='';document.getElementById('buildsCurrentBanner').style.display='';}
+  // Restore scroll position
+  requestAnimationFrame(() => {
+    const main = document.querySelector('.main');
+    if(main && _tabScrollPos[v] !== undefined) main.scrollTop = _tabScrollPos[v];
+  });
 }
 
 // ══════════════════════════════════════════
@@ -2368,6 +2472,8 @@ async function kDrop(e, newStatus) {
   try {
     await api('/bugs/'+bugId, 'PUT', { status: newStatus, _restricted: true });
     toast(`${bugId} → ${newStatus}`, 'ok');
+    // Push to ClickUp if linked
+    syncStatusToClickUp(bug, newStatus);
     // Notify on status change
     const cfg = getWebhookConfig();
     const bugUrl = APP_URL + '?bug=' + bugId;
@@ -2706,6 +2812,9 @@ function renderDashboard(){
 // ══════════════════════════════════════════
 function renderNotifs(){
   loadNotifs();const el=document.getElementById('notifsWrap');if(!el)return;
+  // Show push enable button if not granted
+  const pushBtn = document.getElementById('pushEnableBtn');
+  if(pushBtn) pushBtn.style.display = (('Notification' in window) && Notification.permission !== 'granted') ? '' : 'none';
 
   // Watchlist section
   const watched = getWatchedBugs();
@@ -2994,6 +3103,7 @@ function openDetail(id){
       ${DD_FIELDS.filter(f=>bug[f.key]).map(f=>`<div class="dgi"><div class="dgi-l">${esc(f.label)}</div><div class="dgi-v">${esc(bug[f.key])}</div></div>`).join("")}
       <div class="dgi"><div class="dgi-l">Build</div><div class="dgi-v" style="font-family:var(--mono);font-size:11px">${esc(bug.build||'—')}</div></div>
       ${bug.build_link?`<div class="dgi"><div class="dgi-l">Build Link</div><div class="dgi-v"><a href="${esc(bug.build_link)}" target="_blank" rel="noopener" style="color:var(--g2);text-decoration:none;font-size:11px;font-family:var(--mono);display:flex;align-items:center;gap:4px">📦 Download / Open ↗</a></div></div>`:''}
+      ${bug.clickup_task_id?`<div class="dgi"><div class="dgi-l">ClickUp Task</div><div class="dgi-v"><a href="https://app.clickup.com/t/${esc(bug.clickup_task_id)}" target="_blank" rel="noopener" style="color:var(--g1);font-family:var(--mono);font-size:11px;text-decoration:none">${esc(bug.clickup_task_id)} ↗</a></div></div>`:''}
       <div class="dgi"><div class="dgi-l">Device / UID</div><div class="dgi-v">${esc(bug.device||'—')}</div></div>
       <div class="dgi"><div class="dgi-l">Created</div><div class="dgi-v" style="font-family:var(--mono);font-size:10px">${esc(bug.created_at||'—')}</div></div>
       <div class="dgi"><div class="dgi-l">Updated</div><div class="dgi-v" style="font-family:var(--mono);font-size:10px">${esc(bug.updated_at||'—')}</div></div>
@@ -3212,9 +3322,32 @@ const NATASHA_IMGS={
   celebrate:['natasha_celebrate.png','center'],
   search:   ['natasha1.png',        'center'],
 };
+// ── Natasha pref ──────────────────────────────────────────────────────────────
+const NATASHA_PREF_KEY = u => `hwt_natasha_${(u||'').replace(/\W/g,'_')}`;
+
+function loadNatashaPref() {
+  try {
+    const off = localStorage.getItem(NATASHA_PREF_KEY(S.user?.email)) === 'off';
+    const icon = document.getElementById('natashaPrefIcon');
+    const lbl  = document.getElementById('natashaPrefLabel');
+    if(icon) icon.textContent = off ? '🔔' : '🔕';
+    if(lbl)  lbl.textContent  = off ? 'Enable Natasha' : 'Disable Natasha';
+    return off;
+  } catch(e) { return false; }
+}
+
+function toggleNatashaPref() {
+  const off = loadNatashaPref();
+  try { localStorage.setItem(NATASHA_PREF_KEY(S.user?.email), off ? 'on' : 'off'); } catch(e) {}
+  loadNatashaPref();
+  toast(off ? 'Natasha re-enabled 🏏' : 'Natasha disabled 🔕', 'ok');
+}
+
 function showNatasha(msg, mood='default'){
   const intro=document.getElementById('natashaIntro');
   if(!intro) return; // guard — DOM not ready yet
+  // Respect user pref
+  if(S.user && localStorage.getItem(NATASHA_PREF_KEY(S.user?.email)) === 'off') return;
   const wrap=intro.querySelector('.natasha-wrap');
   const img=document.getElementById('natashaImg');
   if(img){
@@ -3435,6 +3568,58 @@ function deleteTemplate(id) {
   toast('Template deleted', 'ok');
 }
 
+// ══════════════════════════════════════════
+// FEATURE KANBAN VIEW IN BUG FORM
+// ══════════════════════════════════════════
+function openFeatureKanban() {
+  const features = [...new Set(S.bugs.map(b=>b.feature).filter(Boolean))].sort();
+  const systems  = [...new Set(S.bugs.map(b=>b.pod||b.platform).filter(Boolean))].sort();
+
+  document.getElementById('panelTitle').textContent = '🎮 FEATURE / SYSTEM VIEW';
+  document.getElementById('panelId').textContent = S.bugs.length + ' bugs';
+  document.getElementById('panelFooter').innerHTML = `
+    <button class="btn btn-g" onclick="closePanel()">Close</button>`;
+
+  const COLORS = ['#7c3aed','#06b6d4','#f59e0b','#10b981','#ef4444','#db2777','#0d9488','#a78bfa'];
+  const statusOpen = s => !['Dev Fixed','Done','QA Pass','Closed'].includes(s);
+
+  // Group by feature, show open bugs only
+  const featGroups = features.map((feat, i) => {
+    const bugs = S.bugs.filter(b => b.feature === feat && statusOpen(b.status));
+    if(!bugs.length) return '';
+    const c = COLORS[i % COLORS.length];
+    const crit = bugs.filter(b => ['Critical','Urgent'].includes(b.priority)).length;
+    return `
+      <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:10px;min-width:220px;max-width:260px;flex-shrink:0;display:flex;flex-direction:column">
+        <div style="padding:9px 12px;border-bottom:1px solid var(--bd);background:var(--bg3);border-radius:10px 10px 0 0">
+          <div style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:${c}">${esc(feat)}</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">${bugs.length} open${crit?' · '+`<span style="color:var(--g5)">${crit} crit</span>`:''}
+          </div>
+        </div>
+        <div style="padding:6px;display:flex;flex-direction:column;gap:5px;flex:1;overflow-y:auto;max-height:380px">
+          ${bugs.sort((a,b) => (['Critical','Urgent'].includes(b.priority)?1:0) - (['Critical','Urgent'].includes(a.priority)?1:0))
+            .map(bug => `
+            <div onclick="closePanel();setTimeout(()=>openDetail('${bug.id}'),100)"
+              style="background:var(--bg3);border:1px solid var(--bd);border-radius:7px;padding:8px 10px;cursor:pointer;transition:border-color .12s"
+              onmouseenter="this.style.borderColor='${c}'" onmouseleave="this.style.borderColor='var(--bd)'">
+              <div style="font-family:var(--mono);font-size:9px;color:${c};margin-bottom:3px">${esc(bug.id)}</div>
+              <div style="font-size:11px;font-weight:700;color:var(--text);line-height:1.4;margin-bottom:5px">${esc((bug.title||'').slice(0,60))}</div>
+              <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">${pChip(bug.priority)}${stChip(bug.status)}${avStack(bug.assignees||[],16)}</div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  }).filter(Boolean).join('');
+
+  document.getElementById('panelBody').innerHTML = `
+    <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:12px">
+      Showing open bugs by feature. Click any bug to open its detail.
+    </div>
+    <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;min-height:200px">
+      ${featGroups || '<div style="color:var(--dim);font-family:var(--mono);font-size:11px;padding:20px">No features found. Tag bugs with a Feature to see them here.</div>'}
+    </div>`;
+  openPanel();
+}
+
 function buildBugForm(bug,full){
   const spOpts=S.sprints.map(s=>`<option value="${esc(s.name)}"${bug?.sprint===s.name?' selected':''}>${esc(s.name)}</option>`).join('');
   const stOpts=ALL_STATUSES.map(v=>`<option value="${v}"${(bug?.status||'Open')===v?' selected':''}>${v}</option>`).join('');
@@ -3488,6 +3673,7 @@ function buildBugForm(bug,full){
       <div class="fg"><label class="fl">Sprint</label><select class="fi2" id="f-sp"><option value="">No Sprint</option>${spOpts}</select></div>
       <div class="fg"><label class="fl">Build Version</label><input class="fi2" id="f-build" value="${esc(bug?.build||'')}" placeholder="e.g. v3.2.1" list="buildHistoryList" oninput="onBuildInput(this.value)"><datalist id="buildHistoryList">${getRecentBuilds().map(b=>`<option value="${esc(b)}">`).join('')}</datalist></div>
       <div class="fg"><label class="fl">Build Link / APK URL <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label><input class="fi2" id="f-build-link" value="${esc(bug?.build_link||'')}" placeholder="https://drive.google.com/… or https://appdistribution/…"></div>
+      <div class="fg"><label class="fl">ClickUp Task ID <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">(optional — enables 2-way status sync)</span></label><input class="fi2" id="f-cu-id" value="${esc(bug?.clickup_task_id||'')}" placeholder="e.g. 86a1234bc or paste full ClickUp task URL"></div>
       <div class="build-notif-section">
         <div class="build-notif-title">🔔 NOTIFY TEAM ABOUT THIS BUG</div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:8px" id="notifChannelStatus">
@@ -3783,6 +3969,7 @@ async function saveBug(){
         steps:document.getElementById('f-steps')?.value||'',repro:document.getElementById('f-repro')?.value||'',expected:document.getElementById('f-expected')?.value||'',actual:document.getElementById('f-actual')?.value||'',
         attachment:getAttachmentValue(),
         build_link:document.getElementById('f-build-link')?.value||'',
+        clickup_task_id:(document.getElementById('f-cu-id')?.value||'').trim().replace(/.*\/t\//,'').split('/')[0]||'',
         ...ddVals,
         app_url:APP_URL,
       };
@@ -3792,6 +3979,7 @@ async function saveBug(){
         if(assignees.length)addNotif('Assignees updated',data.title,S.editing);
         if(prev&&data.status!==prev.status){
           addNotif(`Status: ${res.bug?.id||S.editing}`,`${data.title} → ${data.status}`,S.editing);
+          syncStatusToClickUp(res.bug||{...prev,...data}, data.status);
           setTimeout(()=>{const {mood,msg}=natashaMoodForStatus(data.status,data.title);showNatasha(msg,mood);},800);
         }
         toast('Bug updated ✓','ok');
@@ -4097,6 +4285,38 @@ async function applyBulk() {
   if(btn){ btn.disabled=false; btn.innerHTML='✓ Apply'; }
 }
 
+function copyBulkLink() {
+  if(!_bulkSelected.size) { toast('Select bugs first','err'); return; }
+  const ids = [..._bulkSelected].join(',');
+  const url = APP_URL + '?bugs=' + encodeURIComponent(ids);
+  navigator.clipboard.writeText(url).then(() => toast(`Link to ${_bulkSelected.size} bugs copied ✓`,'ok'));
+}
+
+function copyBulkReport() {
+  if(!_bulkSelected.size) { toast('Select bugs first','err'); return; }
+  const bugs = S.bugs.filter(b => _bulkSelected.has(b.id));
+  const bugLink = id => `${APP_URL}?bug=${id}`;
+  const lines = ['📋 BUG REPORT — ' + bugs.length + ' issue' + (bugs.length!==1?'s':''),
+    '━━━━━━━━━━━━━━━━━━━━━━━━',
+    'Generated: ' + new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
+    ''];
+  bugs.forEach(b => {
+    const assignees = (b.assignees||[]).map(a=>a.name).join(', ')||'Unassigned';
+    lines.push(`[${b.id}] ${b.title||''}`);
+    lines.push(`  Priority : ${b.priority||'—'} | Status: ${b.status||'—'} | Severity: ${b.severity||'—'}`);
+    lines.push(`  Feature  : ${b.feature||'—'} | Sprint: ${b.sprint||'—'} | Build: ${b.build||'—'}`);
+    lines.push(`  Assignee : ${assignees}`);
+    if(b.steps)   lines.push(`  Steps    : ${b.steps.slice(0,120)}`);
+    if(b.actual)  lines.push(`  Actual   : ${b.actual.slice(0,120)}`);
+    lines.push(`  🔗 ${bugLink(b.id)}`);
+    lines.push('');
+  });
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━');
+  lines.push(`Shared link: ${APP_URL}?bugs=${encodeURIComponent([..._bulkSelected].join(','))}`);
+  navigator.clipboard.writeText(lines.join('\n'))
+    .then(() => toast(`Report for ${bugs.length} bugs copied ✓`,'ok'));
+}
+
 function clearBulk() {
   _bulkSelected.clear();
   updateBulkBar();
@@ -4369,6 +4589,88 @@ async function cuFetch(path) {
   return r.json();
 }
 
+// ══════════════════════════════════════════
+// CLICKUP 2-WAY STATUS SYNC
+// ══════════════════════════════════════════
+
+// BugPulse status → ClickUp status name mapping (customisable)
+const CU_STATUS_PUSH_MAP = {
+  'Open':            'open',
+  'In Progress':     'in progress',
+  'In Review':       'review',
+  'Bugged':          'bug',
+  'Dev Fixed':       'dev fixed',
+  'QA Pass':         'qa pass',
+  'Done':            'complete',
+  'Closed':          'closed',
+  'Non-Recreatable': 'non-recreatable',
+  'Not a bug':       'not a bug',
+};
+
+// ClickUp status name → BugPulse status (for pull direction)
+const CU_STATUS_PULL_MAP = {
+  'open':            'Open',
+  'in progress':     'In Progress',
+  'in review':       'In Review',
+  'review':          'In Review',
+  'bug':             'Bugged',
+  'dev fixed':       'Dev Fixed',
+  'qa pass':         'QA Pass',
+  'complete':        'Done',
+  'closed':          'Closed',
+  'won\'t fix':     'Closed',
+};
+
+async function cuPushStatus(cuTaskId, bpStatus) {
+  if(!cuTaskId) return false;
+  const cuStatus = CU_STATUS_PUSH_MAP[bpStatus];
+  if(!cuStatus) return false;
+  try {
+    const r = await fetch(CU_API + '/task/' + cuTaskId, {
+      method: 'PUT',
+      headers: { Authorization: CU_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: cuStatus }),
+    });
+    if(!r.ok) { console.warn('[cu push] failed', r.status); return false; }
+    // Update local cache too
+    const task = _cuTasks.find(t => t.id === cuTaskId);
+    if(task) { task.status = { ...task.status, status: cuStatus }; }
+    return true;
+  } catch(e) { console.warn('[cu push]', e.message); return false; }
+}
+
+// Called after bug status changes — push to linked CU task
+async function syncStatusToClickUp(bug, newStatus) {
+  const cuId = (bug.clickup_task_id || '').trim();
+  if(!cuId) return;
+  const pushed = await cuPushStatus(cuId, newStatus);
+  if(pushed) toast(`Status synced to ClickUp ✓`, 'ok');
+}
+
+// Called during loadClickUp — pull CU status → BugPulse for linked bugs
+async function syncStatusFromClickUp() {
+  const linked = S.bugs.filter(b => b.clickup_task_id?.trim());
+  if(!linked.length || !_cuTasks.length) return;
+  let updated = 0;
+  for(const bug of linked) {
+    const cuId = bug.clickup_task_id.trim();
+    const cuTask = _cuTasks.find(t => t.id === cuId);
+    if(!cuTask) continue;
+    const cuStatus = (cuTask.status?.status || '').toLowerCase();
+    const bpStatus = CU_STATUS_PULL_MAP[cuStatus];
+    if(!bpStatus || bpStatus === bug.status) continue;
+    try {
+      await api('/bugs/' + bug.id, 'PUT', { status: bpStatus, _restricted: true });
+      bug.status = bpStatus;
+      updated++;
+    } catch(e) { console.warn('[cu pull]', bug.id, e.message); }
+  }
+  if(updated > 0) {
+    applyF();
+    toast(`${updated} bug${updated!==1?'s':''} updated from ClickUp ✓`, 'ok');
+  }
+}
+
 async function loadClickUp(force) {
   // Restore from cache first (instant, no spinner, no API call)
   if (!force && !_cuLoaded) {
@@ -4441,6 +4743,7 @@ async function loadClickUp(force) {
     document.getElementById('cu-sub').textContent = `${_cuTasks.length} tasks · ${_cuLists.length} lists · ${teams[0].name}`;
     cuRender();
     toast(`ClickUp synced — ${_cuTasks.length} tasks ✓`, 'ok');
+    syncStatusFromClickUp(); // pull CU status → BugPulse for linked bugs
   } catch(e) {
     document.getElementById('cuBody').innerHTML = `<div class="empty"><div class="empty-icon">🟣</div><h3>CLICKUP ERROR</h3><p>${esc(e.message)}</p></div>`;
     toast('ClickUp: '+e.message,'err');
@@ -5486,14 +5789,84 @@ function openNewTestRun() {
       <input class="fi2" id="tr-build" list="tr-build-list" placeholder="e.g. v3.2.1">
       <datalist id="tr-build-list">${builds.map(v=>`<option value="${esc(v)}">`).join('')}</datalist>
     </div>
-    <div class="fg"><label class="fl">Import bugs as test cases</label>
-      <select class="fi2" id="tr-filter">
-        <option value="">— All active bugs —</option>
-        ${S.sprints.map(s=>`<option value="sprint:${esc(s.name)}">Sprint: ${esc(s.name)}</option>`).join('')}
-        ${[...new Set(S.bugs.map(b=>b.feature).filter(Boolean))].map(f=>`<option value="feature:${esc(f)}">Feature: ${esc(f)}</option>`).join('')}
-      </select>
+    <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:14px">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g2);margin-bottom:10px">📋 IMPORT TEST CASES</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn ${!document.getElementById('tr-source-csv')?.checked?'btn-v':'btn-g'} btn-sm" id="tr-src-bugs" onclick="trSetSource('bugs')">From BugPulse Bugs</button>
+        <button class="btn btn-g btn-sm" id="tr-src-csv" onclick="trSetSource('csv')">📄 Upload CSV</button>
+      </div>
+      <div id="tr-source-bugs-panel">
+        <div class="fg" style="margin:0"><label class="fl">Filter bugs to import</label>
+          <select class="fi2" id="tr-filter">
+            <option value="">— All active bugs —</option>
+            ${S.sprints.map(s=>`<option value="sprint:${esc(s.name)}">Sprint: ${esc(s.name)}</option>`).join('')}
+            ${[...new Set(S.bugs.map(b=>b.feature).filter(Boolean))].map(f=>`<option value="feature:${esc(f)}">Feature: ${esc(f)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div id="tr-source-csv-panel" style="display:none">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:8px;line-height:1.8">
+          CSV columns: <b>id</b>, <b>title</b> (required) + optional: steps, expected, section<br>
+          Compatible with TestRail CSV export format.
+        </div>
+        <div style="border:2px dashed var(--bd2);border-radius:8px;padding:20px;text-align:center;cursor:pointer;background:rgba(124,58,237,.03)" onclick="document.getElementById('tr-csv-input').click()" id="tr-csv-drop" ondragover="event.preventDefault();this.style.borderColor='var(--g1)'" ondragleave="this.style.borderColor='var(--bd2)'" ondrop="trHandleCsvDrop(event)">
+          <div style="font-size:24px;margin-bottom:6px">📄</div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--dim)">Drop TestRail/CSV here or click to browse</div>
+          <div id="tr-csv-preview" style="margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--g4)"></div>
+        </div>
+        <input type="file" id="tr-csv-input" accept=".csv" style="display:none" onchange="trHandleCsvFile(this.files[0])">
+      </div>
     </div>`;
   openPanel();
+}
+
+let _trCsvCases = []; // parsed from CSV
+let _trSource = 'bugs'; // 'bugs' or 'csv'
+
+function trSetSource(src) {
+  _trSource = src;
+  document.getElementById('tr-source-bugs-panel').style.display = src === 'bugs' ? '' : 'none';
+  document.getElementById('tr-source-csv-panel').style.display  = src === 'csv'  ? '' : 'none';
+  document.getElementById('tr-src-bugs').className = 'btn ' + (src==='bugs'?'btn-v':'btn-g') + ' btn-sm';
+  document.getElementById('tr-src-csv').className  = 'btn ' + (src==='csv' ?'btn-v':'btn-g') + ' btn-sm';
+}
+
+function trHandleCsvDrop(e) {
+  e.preventDefault();
+  document.getElementById('tr-csv-drop').style.borderColor = 'var(--bd2)';
+  const file = e.dataTransfer?.files?.[0];
+  if(file) trHandleCsvFile(file);
+}
+
+function trHandleCsvFile(file) {
+  if(!file || !file.name.endsWith('.csv')) { toast('Select a .csv file','err'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const lines = ev.target.result.split(/\r?\n/).filter(l => l.trim());
+    if(lines.length < 2) { toast('CSV needs header + data rows','err'); return; }
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/[^a-z0-9_]/g,''));
+    _trCsvCases = [];
+    for(let i = 1; i < lines.length; i++) {
+      const vals = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+      const row = {};
+      headers.forEach((h,idx) => { row[h] = (vals[idx]||'').replace(/^"|"$/g,'').trim(); });
+      const title = row.title || row.name || row.test_case || row.case_title || row.summary || '';
+      if(!title) continue;
+      _trCsvCases.push({
+        bugId: row.id || row.case_id || row.tc_id || ('TC-'+(i)),
+        title,
+        steps:    row.steps || row.steps_to_reproduce || row.preconditions || '',
+        expected: row.expected || row.expected_result || '',
+        section:  row.section || row.suite || row.module || '',
+        result:   'pending',
+        note:     ''
+      });
+    }
+    const preview = document.getElementById('tr-csv-preview');
+    if(preview) preview.textContent = `✓ ${_trCsvCases.length} test cases loaded`;
+    toast(`${_trCsvCases.length} test cases parsed ✓`, 'ok');
+  };
+  reader.readAsText(file);
 }
 
 function createTestRun() {
@@ -5502,16 +5875,24 @@ function createTestRun() {
   const filter = document.getElementById('tr-filter')?.value || '';
   if(!name) { toast('Run name required', 'err'); return; }
 
-  let src = S.bugs.filter(b => !['Done','QA Pass','Closed'].includes(b.status));
-  if(filter.startsWith('sprint:'))  src = src.filter(b => b.sprint === filter.slice(7));
-  if(filter.startsWith('feature:')) src = src.filter(b => b.feature === filter.slice(8));
+  let cases;
+  if(_trSource === 'csv') {
+    if(!_trCsvCases.length) { toast('Upload a CSV file first','err'); return; }
+    cases = _trCsvCases.map(c => ({...c}));
+  } else {
+    let src = S.bugs.filter(b => !['Done','QA Pass','Closed'].includes(b.status));
+    if(filter.startsWith('sprint:'))  src = src.filter(b => b.sprint === filter.slice(7));
+    if(filter.startsWith('feature:')) src = src.filter(b => b.feature === filter.slice(8));
+    cases = src.map(b => ({ bugId: b.id, title: b.title||'', steps: b.steps||'', expected: b.expected||'', result: 'pending', note: '' }));
+  }
 
   const run = {
     id: Date.now(),
     name,
     build: build || '',
+    source: _trSource,
     date: new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'medium'}),
-    cases: src.map(b => ({ bugId: b.id, title: b.title||'', result: 'pending', note: '' })),
+    cases,
   };
   const runs = getTestRuns();
   runs.unshift(run);
@@ -5541,7 +5922,9 @@ function openTestRun(idx) {
         <div style="display:flex;align-items:flex-start;gap:10px">
           <div style="flex:1;min-width:0">
             <div style="font-size:12px;font-weight:600;color:var(--text)">${esc(c.title)}</div>
-            <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">${esc(c.bugId)}</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">${esc(c.bugId)}${c.section?' · '+esc(c.section):''}</div>
+            ${c.steps?`<div style="margin-top:5px;font-family:var(--mono);font-size:9px;color:var(--mute);line-height:1.6"><b style="color:var(--dim)">Steps:</b> ${esc(c.steps.slice(0,120))}</div>`:''}
+            ${c.expected?`<div style="font-family:var(--mono);font-size:9px;color:var(--mute)"><b style="color:var(--dim)">Expected:</b> ${esc(c.expected.slice(0,100))}</div>`:''}
           </div>
           <select onchange="setTestResult(${idx},${ci},this.value)"
             style="font-family:var(--mono);font-size:10px;padding:4px 8px;border-radius:7px;border:1px solid ${COLORS[c.result]||'var(--bd)'};background:var(--bg2);color:${COLORS[c.result]||'var(--text)'};cursor:pointer">
@@ -6200,7 +6583,10 @@ async function sendAutoEODReport() {
   const dateStr = new Date().toLocaleDateString('en-IN', {timeZone:'Asia/Kolkata', weekday:'long', day:'numeric', month:'long', year:'numeric'});
   const text = generateReportText(todayBugs, resolvedToday, critOpen, dateStr, closedToday);
   const sent = await sendGChatWebhook(text);
-  if (sent) toast('📊 EOD report auto-sent to GChat ✓','ok');
+  if (sent) {
+    toast('📊 EOD report auto-sent to GChat ✓','ok');
+    sendDesktopNotification('📊 EOD Report Sent', `${todayBugs.length} filed · ${resolvedToday.length} resolved · ${critOpen.length} critical open`);
+  }
 }
 
 async function sendGChatWebhook(text) {
@@ -6458,11 +6844,19 @@ function openDayEndReport() {
   document.getElementById('panelId').textContent = getTodayIST();
   document.getElementById('panelFooter').innerHTML = `
     <button class="btn btn-g" onclick="closePanel()">Close</button>
-    <button class="btn btn-v" onclick="copyDayEndReport()">📋 Copy Report</button>`;
+    <button class="btn btn-v" onclick="copyDayEndReport()">📋 Copy Report</button>
+    ${S.user?.role==='admin'?'<button class="btn btn-v" onclick="sendEODToGChat()" style="background:linear-gradient(135deg,var(--g4),var(--g2))">📢 Send to GChat</button>':''}`;
   document.getElementById('panelBody').innerHTML = `
     <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:12px;padding:16px 18px;margin-bottom:18px">
       <div style="font-family:var(--disp);font-size:11px;font-weight:800;letter-spacing:2px;color:var(--g2);margin-bottom:4px">DAILY BUG REPORT</div>
-      <div style="font-family:var(--mono);font-size:10px;color:var(--mute)">${dateStr}</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--mute);margin-bottom:10px">${dateStr}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <label style="font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:1px">FILTER BY TEAM:</label>
+        <select class="fi" id="eod-team-filter" style="width:auto;padding:4px 10px;font-size:11px" onchange="refreshEODReport()">
+          <option value="">All Teams</option>
+          ${DD_FIELDS.find(f=>f.key==='pod')?.options?.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('')||''}
+        </select>
+      </div>
     </div>
     <div class="dash-grid" style="margin-bottom:18px;margin-top:0;grid-template-columns:repeat(auto-fit,minmax(100px,1fr))">
       <div class="dash-card" style="text-align:center"><div class="sc-n" style="color:var(--g5);font-size:32px">${todayBugs.length}</div><div class="sc-l" style="margin-top:6px">FILED TODAY</div></div>
@@ -6534,6 +6928,49 @@ function openDayEndReport() {
     </div>`;
   openPanel();
 }
+function getEODTeamFilter() {
+  return document.getElementById('eod-team-filter')?.value || '';
+}
+
+function filterBugsByTeam(bugs, team) {
+  if(!team) return bugs;
+  // Filter by pod dropdown
+  return bugs.filter(b => (b.pod||'').toLowerCase() === team.toLowerCase());
+}
+
+function refreshEODReport() {
+  const team = getEODTeamFilter();
+  const allToday = getTodayBugs();
+  const allClosed = getClosedTodayBugs();
+  const allUpdated = getUpdatedTodayBugs();
+  const todayBugs = filterBugsByTeam(allToday, team);
+  const closedToday = filterBugsByTeam(allClosed, team);
+  const resolvedToday = filterBugsByTeam(allUpdated, team).filter(b => ['Dev Fixed','Done','QA Pass'].includes(b.status));
+  const critOpen = filterBugsByTeam(S.bugs.filter(b => ['Critical','Urgent'].includes(b.priority) && !['Dev Fixed','Done','QA Pass','Closed'].includes(b.status)), team);
+  const dateStr = new Date().toLocaleDateString('en-IN', {timeZone:'Asia/Kolkata', weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  const teamLabel = team ? ` [${team}]` : '';
+  const txt = generateReportText(todayBugs, resolvedToday, critOpen, dateStr + teamLabel, closedToday);
+  const el = document.getElementById('dayEndReportText');
+  if(el) el.value = txt;
+}
+
+async function sendEODToGChat() {
+  const txt = document.getElementById('dayEndReportText')?.value;
+  if(!txt) return;
+  const cfg = getWebhookConfig();
+  const team = getEODTeamFilter();
+  // Pick team-specific GChat URL if available
+  let gchatUrl = cfg.gchat_url;
+  if(team) {
+    const teamKey = 'jenkins_' + team.toLowerCase().replace(/\s+/g,'_') + '_gchat';
+    if(cfg[teamKey]) gchatUrl = cfg[teamKey];
+  }
+  if(!gchatUrl) { toast('No GChat webhook configured', 'err'); return; }
+  const sent = await fetch(gchatUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text:txt}) }).then(r=>r.ok).catch(()=>false);
+  if(sent) toast('EOD report sent to GChat ✓', 'ok');
+  else toast('GChat send failed', 'err');
+}
+
 function generateReportText(todayBugs, resolvedToday, critOpen, dateStr, closedToday) {
   closedToday = closedToday || [];
   const bugLink = id => `${APP_URL}?bug=${id}`;
