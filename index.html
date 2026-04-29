@@ -1594,11 +1594,19 @@ async function requestPushPermission() {
   toast('Step 1 OK: Permission granted', 'ok');
 
   try {
-    // Step 2: Get VAPID key
+    // Step 2: Get VAPID key (public endpoint — no auth needed)
     toast('Step 2: Fetching VAPID key from worker...', 'ok');
-    const keyRes = await api('/push/vapid-public-key');
+    let keyRes;
+    try {
+      const r = await fetch(WORKER + '/push/vapid-public-key');
+      keyRes = await r.json();
+      toast('Step 2 response: ' + JSON.stringify(keyRes).slice(0,80), 'ok');
+    } catch(fetchErr) {
+      toast('Step 2 FAIL: Network error — ' + fetchErr.message, 'err');
+      return false;
+    }
     if (!keyRes || !keyRes.key) {
-      toast('Step 2 FAIL: VAPID key missing — add VAPID_PUBLIC_KEY to Cloudflare env vars and redeploy', 'err');
+      toast('Step 2 FAIL: ' + (keyRes?.error || 'No key returned'), 'err');
       return false;
     }
     toast('Step 2 OK: Got VAPID key', 'ok');
