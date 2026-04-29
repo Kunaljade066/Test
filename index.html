@@ -1579,43 +1579,62 @@ function urlBase64ToUint8Array(base64String) {
 
 async function requestPushPermission() {
   if (!('serviceWorker' in navigator)) {
-    toast('Service worker not supported — make sure sw.js is deployed alongside index.html', 'err');
-    return false;
+    toast('Step 1 FAIL: Service worker not supported in this browser', 'err'); return false;
   }
-  if (!('Notification' in window)) { toast('Push not supported in this browser', 'err'); return false; }
+  if (!('Notification' in window)) {
+    toast('Step 1 FAIL: Notifications API not supported', 'err'); return false;
+  }
 
+  toast('Step 1: Requesting permission...', 'ok');
   const result = await Notification.requestPermission();
   _pushPermission = result;
-  if (result !== 'granted') { toast('Notifications blocked — check browser settings', 'err'); return false; }
+  if (result !== 'granted') {
+    toast('Step 1 FAIL: Permission denied — allow in browser settings', 'err'); return false;
+  }
+  toast('Step 1 OK: Permission granted', 'ok');
 
-  // Get VAPID public key from worker
   try {
+    // Step 2: Get VAPID key
+    toast('Step 2: Fetching VAPID key from worker...', 'ok');
     const keyRes = await api('/push/vapid-public-key');
-    if (!keyRes?.key) {
-      toast('VAPID key not configured — see setup instructions in Webhook Settings', 'err');
+    if (!keyRes || !keyRes.key) {
+      toast('Step 2 FAIL: VAPID key missing — add VAPID_PUBLIC_KEY to Cloudflare env vars and redeploy', 'err');
       return false;
     }
+    toast('Step 2 OK: Got VAPID key', 'ok');
 
-    // Subscribe to push
+    // Step 3: Subscribe
+    toast('Step 3: Subscribing to push...', 'ok');
     const reg = _swRegistration || await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(keyRes.key),
     });
+    toast('Step 3 OK: Subscribed to push', 'ok');
 
-    // Save subscription to worker
-    await api('/push/subscribe', 'POST', sub.toJSON());
+    // Step 4: Save to worker
+    toast('Step 4: Saving subscription...', 'ok');
+    const saved = await api('/push/subscribe', 'POST', sub.toJSON());
+    if (!saved?.ok) {
+      toast('Step 4 FAIL: Could not save subscription to worker', 'err'); return false;
+    }
+    toast('Step 4 OK: Subscription saved', 'ok');
+
     try { localStorage.setItem('hwt_push_enabled', '1'); } catch(e) {}
-    toast('Desktop notifications enabled — works even when browser is closed!', 'ok');
 
-    // Test notification
-    new Notification('BugPulse', {
-      body: 'Notifications active! You will be notified of new bugs and builds.',
-      icon: 'https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png',
-    });
+    // Step 5: Test notification
+    toast('ALL STEPS OK — sending test notification!', 'ok');
+    setTimeout(() => {
+      reg.showNotification('BugPulse', {
+        body: 'Push notifications are now active!',
+        icon: 'https://cdn.octathorpeweb.com/v1/webstore/hitwicket-logo.png',
+      });
+    }, 1000);
     return true;
+
   } catch(e) {
-    toast('Push setup failed: ' + e.message, 'err');
+    toast('FAILED at: ' + e.message, 'err');
+    console.error('[push]', e);
     return false;
   }
 }
