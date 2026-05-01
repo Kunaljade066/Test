@@ -7254,13 +7254,23 @@ async function sendReleaseNotesToGChat(version) {
 // &#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;
 // TEST RUN TRACKER
 // &#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;
-const TEST_RUNS_KEY = 'hwt_test_runs_v1';
+const TEST_RUNS_KEY  = 'hwt_test_runs_v1';
+const TC_MASTERS_KEY = 'hwt_tc_masters_v1';
+const TR_COUNTER_KEY = 'hwt_tr_counter_v1';
 
-function getTestRuns() {
-  try { return JSON.parse(localStorage.getItem(TEST_RUNS_KEY)||'[]'); } catch { return []; }
-}
-function saveTestRuns(runs) {
-  try { localStorage.setItem(TEST_RUNS_KEY, JSON.stringify(runs)); } catch(e) {}
+function getTestRuns()    { try { return JSON.parse(localStorage.getItem(TEST_RUNS_KEY)||'[]');   } catch { return []; } }
+function saveTestRuns(r)  { try { localStorage.setItem(TEST_RUNS_KEY,   JSON.stringify(r)); }      catch(e) {} }
+function getTcMasters()   { try { return JSON.parse(localStorage.getItem(TC_MASTERS_KEY)||'[]'); } catch { return []; } }
+function saveTcMasters(m) { try { localStorage.setItem(TC_MASTERS_KEY,  JSON.stringify(m)); }      catch(e) {} }
+function getTrCounters()  { try { return JSON.parse(localStorage.getItem(TR_COUNTER_KEY)||'{}'); } catch { return {}; } }
+function saveTrCounters(c){ try { localStorage.setItem(TR_COUNTER_KEY,  JSON.stringify(c)); }      catch(e) {} }
+
+// Returns next TR number for a master, e.g. "TR-003"
+function nextTrNumber(masterId) {
+  const c = getTrCounters();
+  c[masterId] = (c[masterId] || 0) + 1;
+  saveTrCounters(c);
+  return 'TR-' + String(c[masterId]).padStart(3, '0');
 }
 
 function goTestRuns() {
@@ -7284,50 +7294,85 @@ function goTestRuns() {
 function renderTestRuns() {
   const wrap = document.getElementById('testRunsWrap');
   if(!wrap) return;
-  const runs = getTestRuns();
+  const runs    = getTestRuns();
+  const masters = getTcMasters();
 
+  // ── MASTER LIBRARY ──────────────────────────────────────────────────
+  const mastersHtml = masters.length
+    ? masters.map((m, mi) => {
+        const runCount = runs.filter(r => r.masterId === m.id).length;
+        return `
+          <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="flex:1;min-width:150px">
+              <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(m.name)}</div>
+              <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">
+                ${m.cases.length} TCs · ${[...new Set(m.cases.map(c=>c.section).filter(Boolean))].length} sections · ${runCount} run${runCount!==1?'s':''}
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+              <button class="btn btn-v btn-sm" onclick="openRunFromMaster(${mi})" title="Start a new test run from this master">▶ New Run</button>
+              <button class="btn btn-g btn-sm" onclick="openMasterPreview(${mi})" title="Browse TCs">👁 View</button>
+              <button class="btn btn-r btn-sm" onclick="deleteMaster(${mi})" title="Delete master">✕</button>
+            </div>
+          </div>`;
+      }).join('')
+    : `<div style="text-align:center;padding:20px;font-family:var(--mono);font-size:10px;color:var(--dim)">No master TC sheets yet — upload one below</div>`;
+
+  // ── RUN LIST ─────────────────────────────────────────────────────────
   const runsHtml = runs.length ? runs.map((run, ri) => {
-    const total = run.cases?.length || 0;
-    const passed = run.cases?.filter(c => c.result === 'pass').length || 0;
-    const failed = run.cases?.filter(c => c.result === 'fail').length || 0;
+    const total   = run.cases?.length || 0;
+    const passed  = run.cases?.filter(c => c.result === 'pass').length    || 0;
+    const failed  = run.cases?.filter(c => c.result === 'fail').length    || 0;
     const blocked = run.cases?.filter(c => c.result === 'blocked').length || 0;
     const skipped = run.cases?.filter(c => c.result === 'skipped').length || 0;
     const pending = run.cases?.filter(c => c.result === 'pending').length || 0;
-    const pct = total ? Math.round(passed/total*100) : 0;
-    const pctCol = pct>=80?'var(--g4)':pct>=50?'var(--g3)':'var(--g5)';
+    const pct     = total ? Math.round(passed/total*100) : 0;
+    const pctCol  = pct>=80?'var(--g4)':pct>=50?'var(--g3)':'var(--g5)';
+    const masterName = run.masterName ? `<span style="font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(124,58,237,.15);color:var(--g1)">${esc(run.masterName)}</span>` : '';
+    const trBadge    = run.trNumber   ? `<span style="font-family:var(--mono);font-size:10px;font-weight:800;color:var(--g2)">${esc(run.trNumber)}</span>` : '';
     return `
-      <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:16px 18px;margin-bottom:12px;cursor:pointer" onclick="openTestRun(${ri})">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <div>
-            <div style="font-size:15px;font-weight:700;color:var(--text)">${esc(run.name||'Unnamed Run')}</div>
-            <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:3px">Build: ${esc(run.build||'—')} · ${esc(run.date||'')} · ${total} cases</div>
+      <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer" onclick="openTestRun(${ri})">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+              ${masterName}
+            </div>
+            <div style="font-size:14px;font-weight:700;color:var(--text)">${esc(run.name||'Unnamed Run')}</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">Build: ${esc(run.build||'—')} · ${esc(run.date||'')} · ${total} cases</div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center">
+          <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
             <div style="font-family:var(--mono);font-size:18px;font-weight:800;color:${pctCol}">${pct}%</div>
-            <button class="btn btn-g btn-sm" onclick="event.stopPropagation();openTestRun(${ri})">Open</button>
             <button class="btn btn-r btn-sm" onclick="event.stopPropagation();deleteTestRun(${ri})">✕</button>
           </div>
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-          <span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(16,185,129,.15);color:#34d399">✓ ${passed}</span>
-          <span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(239,68,68,.15);color:#f87171">✕ ${failed}</span>
-          ${blocked?`<span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(245,158,11,.15);color:#fbbf24">⊘ ${blocked}</span>`:''}
-          ${skipped?`<span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(99,102,241,.15);color:#818cf8">⏭ ${skipped}</span>`:''}
-          ${pending?`<span style="font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:20px;background:var(--bg3);color:var(--dim)">— ${pending} pending</span>`:''}
+        <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+          <span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:rgba(16,185,129,.15);color:#34d399">✓ ${passed}</span>
+          <span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:rgba(239,68,68,.15);color:#f87171">✕ ${failed}</span>
+          ${blocked?`<span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:rgba(245,158,11,.15);color:#fbbf24">⊘ ${blocked}</span>`:''}
+          ${skipped?`<span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:rgba(99,102,241,.15);color:#818cf8">⏭ ${skipped}</span>`:''}
+          ${pending?`<span style="font-family:var(--mono);font-size:10px;padding:2px 9px;border-radius:20px;background:var(--bg3);color:var(--dim)">— ${pending}</span>`:''}
         </div>
-        <div style="height:6px;background:var(--bg3);border-radius:4px;overflow:hidden;display:flex">
-          ${pct ? `<div style="height:100%;width:${pct}%;background:${pctCol}"></div>` : ''}
+        <div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;display:flex">
+          ${trProgressBar(passed,failed,blocked,skipped,pending,total)}
         </div>
       </div>`;
-  }).join('') : `<div class="empty"><div class="empty-icon">🧪</div><h3>NO TEST RUNS</h3><p>Create a test run to track pass/fail for a build</p></div>`;
+  }).join('') : `<div class="empty"><div class="empty-icon">🧪</div><h3>NO TEST RUNS YET</h3><p>Upload a master sheet above, then start a run for each release</p></div>`;
 
   wrap.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div style="font-family:var(--mono);font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--g2)">🧪 TEST RUNS</div>
-      <div style="display:flex;gap:8px">
+    <!-- MASTER LIBRARY HEADER -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--g1)">📚 MASTER TC LIBRARY</div>
+      <div style="display:flex;gap:7px">
         <button class="btn btn-g btn-sm" onclick="goTestRuns()">← Builds</button>
-        <button class="btn btn-v btn-sm" onclick="openNewTestRun()">＋ New Run</button>
+        <button class="btn btn-v btn-sm" onclick="openUploadMaster()">＋ Upload Master</button>
       </div>
+    </div>
+    ${mastersHtml}
+
+    <!-- RELEASE RUNS HEADER -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:18px 0 10px">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--g2)">🧪 RELEASE RUNS</div>
+      <button class="btn btn-g btn-sm" onclick="openNewTestRun()">＋ Manual Run</button>
     </div>
     ${runsHtml}`;
 }
@@ -7390,8 +7435,221 @@ function openNewTestRun() {
   openPanel();
 }
 
-let _trCsvCases = []; // parsed from CSV
-let _trSource = 'bugs'; // 'bugs' or 'csv'
+// ── MASTER TC LIBRARY ──────────────────────────────────────────────────────────
+
+let _masterUploadCases = [];  // staging area while uploading
+
+function openUploadMaster() {
+  _masterUploadCases = [];
+  document.getElementById('panelTitle').textContent = '📚 UPLOAD MASTER TC SHEET';
+  document.getElementById('panelId').textContent    = 'MASTER';
+  document.getElementById('panelFooter').innerHTML  = `
+    <button class="btn btn-g" onclick="closePanel()">Cancel</button>
+    <button class="btn btn-v" onclick="saveMaster()">💾 Save Master</button>`;
+  document.getElementById('panelBody').innerHTML = `
+    <div class="fg">
+      <label class="fl">Feature / Sprint Name <span style="color:var(--g5)">*</span></label>
+      <input class="fi2" id="master-name" placeholder="e.g. Training Rework, FTUE, PvP Road">
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g1);margin-bottom:10px">📄 UPLOAD TC SHEET</div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--dim);line-height:1.8;margin-bottom:10px">
+        Accepts <b>.xlsx</b> / <b>.csv</b> — any column layout<br>
+        Required column: <b>title</b> (or name / summary / test_case / test title)<br>
+        Optional: <b>id</b>, <b>section</b>, <b>priority</b>, <b>steps</b>, <b>expected</b>
+      </div>
+      <div style="border:2px dashed var(--bd2);border-radius:8px;padding:24px;text-align:center;cursor:pointer;background:rgba(124,58,237,.03)"
+           onclick="document.getElementById('master-file-input').click()"
+           id="master-drop-zone"
+           ondragover="event.preventDefault();this.style.borderColor='var(--g1)'"
+           ondragleave="this.style.borderColor='var(--bd2)'"
+           ondrop="masterHandleDrop(event)">
+        <div style="font-size:28px;margin-bottom:6px">📊</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--dim)">Drop your master TC sheet here or click to browse</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:3px">Excel (.xlsx) · CSV (.csv) · Auto-deduplicates</div>
+        <div id="master-file-preview" style="margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--g4)"></div>
+      </div>
+      <input type="file" id="master-file-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="masterHandleFile(this.files[0])">
+    </div>`;
+  openPanel();
+}
+
+function masterHandleDrop(e) {
+  e.preventDefault();
+  document.getElementById('master-drop-zone').style.borderColor = 'var(--bd2)';
+  masterHandleFile(e.dataTransfer?.files?.[0]);
+}
+
+function masterHandleFile(file) {
+  if(!file) return;
+  const name = file.name.toLowerCase();
+  const handleRows = rows => {
+    let cases = trParseRows(rows);
+    const before = cases.length;
+    cases = trDedupeAndLoad(cases);
+    _masterUploadCases = cases;
+    const sections = [...new Set(cases.map(c=>c.section).filter(Boolean))];
+    const preview = document.getElementById('master-file-preview');
+    if(preview) preview.innerHTML = `
+      <div style="color:var(--g4);margin-bottom:4px">✓ ${cases.length} TCs loaded${before>cases.length?' ('+( before-cases.length)+' dupes removed)':''}</div>
+      ${sections.length ? `<div style="color:var(--dim)">${sections.length} sections: ${sections.map(s=>`<b>${esc(s)}</b>`).join(', ')}</div>` : ''}`;
+  };
+  if(name.endsWith('.xlsx')||name.endsWith('.xls')) {
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const wb = XLSX.read(ev.target.result,{type:'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        handleRows(XLSX.utils.sheet_to_json(ws,{defval:''}));
+      } catch(e){ toast('Excel parse error: '+e.message,'err'); }
+    };
+    r.readAsArrayBuffer(file);
+  } else if(name.endsWith('.csv')) {
+    const r = new FileReader();
+    r.onload = ev => {
+      const lines = ev.target.result.split(/\r?\n/).filter(l=>l.trim());
+      if(lines.length<2){toast('CSV needs header + data rows','err');return;}
+      const hdrs = lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/[^a-z0-9_]/g,''));
+      const rows=[];
+      for(let i=1;i<lines.length;i++){
+        const vals=lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+        const row={};
+        hdrs.forEach((h,idx)=>{row[h]=(vals[idx]||'').replace(/^"|"$/g,'').trim();});
+        rows.push(row);
+      }
+      handleRows(rows);
+    };
+    r.readAsText(file);
+  } else {
+    toast('Select a .csv or .xlsx file','err');
+  }
+}
+
+function saveMaster() {
+  const name = document.getElementById('master-name')?.value?.trim();
+  if(!name) { toast('Feature / Sprint name required','err'); return; }
+  if(!_masterUploadCases.length) { toast('Upload a TC sheet first','err'); return; }
+  const masters = getTcMasters();
+  const master = {
+    id:      Date.now().toString(),
+    name,
+    cases:   _masterUploadCases.map(c=>({...c})),
+    created: new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'medium'}),
+  };
+  masters.unshift(master);
+  saveTcMasters(masters);
+  _masterUploadCases = [];
+  closePanel();
+  renderTestRuns();
+  toast(`Master "${name}" saved — ${master.cases.length} TCs ✓`, 'ok');
+}
+
+function deleteMaster(mi) {
+  const masters = getTcMasters();
+  const m = masters[mi];
+  if(!m) return;
+  if(!confirm(`Delete master "${m.name}"?\nThis won't affect existing test runs.`)) return;
+  masters.splice(mi,1);
+  saveTcMasters(masters);
+  renderTestRuns();
+  toast('Master deleted','ok');
+}
+
+function openMasterPreview(mi) {
+  const masters = getTcMasters();
+  const m = masters[mi];
+  if(!m) return;
+  const sections = {};
+  m.cases.forEach(c => {
+    const sec = c.section||'(No Section)';
+    if(!sections[sec]) sections[sec]=[];
+    sections[sec].push(c);
+  });
+  document.getElementById('panelTitle').textContent = '📚 ' + m.name;
+  document.getElementById('panelId').textContent    = `${m.cases.length} TCs · ${m.created}`;
+  document.getElementById('panelFooter').innerHTML  = `
+    <button class="btn btn-g" onclick="closePanel()">Close</button>
+    <button class="btn btn-v" onclick="closePanel();openRunFromMaster(${mi})">▶ Start New Run</button>`;
+  document.getElementById('panelBody').innerHTML = Object.entries(sections).map(([sec, cases]) => `
+    <div style="margin-bottom:14px">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g2);margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--bd)">${esc(sec)} <span style="color:var(--dim)">(${cases.length})</span></div>
+      ${cases.map(c=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+          <span style="font-family:var(--mono);font-size:9px;color:var(--g1);flex-shrink:0;width:56px">${esc(c.bugId)}</span>
+          <span style="font-size:12px;color:var(--text);flex:1">${esc(c.title)}</span>
+          ${c.priority?`<span style="font-family:var(--mono);font-size:8px;padding:1px 6px;border-radius:8px;background:rgba(124,58,237,.15);color:var(--ghost);flex-shrink:0">${esc(c.priority)}</span>`:''}
+        </div>`).join('')}
+    </div>`).join('');
+  openPanel();
+}
+
+// Opens the "start run from master" panel
+function openRunFromMaster(mi) {
+  const masters = getTcMasters();
+  const m = masters[mi];
+  if(!m) return;
+  const builds = [...new Set(S.bugs.map(b=>b.build).filter(Boolean))];
+
+  document.getElementById('panelTitle').textContent = '▶ NEW RUN — ' + m.name;
+  document.getElementById('panelId').textContent    = m.cases.length + ' TCs';
+  document.getElementById('panelFooter').innerHTML  = `
+    <button class="btn btn-g" onclick="closePanel()">Cancel</button>
+    <button class="btn btn-v" onclick="createRunFromMaster(${mi})">▶ Start Run</button>`;
+  document.getElementById('panelBody').innerHTML = `
+    <div style="background:var(--bg3);border:1px solid var(--bd2);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px">
+      <div style="font-size:22px">📚</div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(m.name)}</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">${m.cases.length} TCs · ${[...new Set(m.cases.map(c=>c.section).filter(Boolean))].length} sections — all results reset to pending</div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Test Run Name <span style="color:var(--g5)">*</span></label>
+      <input class="fi2" id="rfm-label" placeholder="e.g. v3.2.1 Regression · Sprint 14 Smoke · RC1 Full Pass">
+    </div>
+    <div class="fg">
+      <label class="fl">Build Version <span style="color:var(--dim);font-size:9px">(optional)</span></label>
+      <input class="fi2" id="rfm-build" list="rfm-build-list" placeholder="e.g. v3.2.1">
+      <datalist id="rfm-build-list">${builds.map(v=>`<option value="${esc(v)}">`).join('')}</datalist>
+    </div>`;
+  openPanel();
+}
+
+function createRunFromMaster(mi) {
+  const masters = getTcMasters();
+  const m = masters[mi];
+  if(!m) return;
+  const label = document.getElementById('rfm-label')?.value?.trim();
+  const build = document.getElementById('rfm-build')?.value?.trim();
+  if(!label) { toast('Run name required','err'); return; }
+
+  const run = {
+    id:         Date.now(),
+    masterId:   m.id,
+    masterName: m.name,
+    name:       label,
+    build:      build || '',
+    source:     'master',
+    date:       new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'medium'}),
+    cases:      m.cases.map(c => ({
+      bugId:        c.bugId,
+      title:        c.title,
+      steps:        c.steps||'',
+      expected:     c.expected||'',
+      section:      c.section||'',
+      priority:     c.priority||'',
+      result:       'pending',
+      note:         '',
+      linkedBugId:  ''
+    }))
+  };
+  const runs = getTestRuns();
+  runs.unshift(run);
+  saveTestRuns(runs);
+  closePanel();
+  renderTestRuns();
+  toast(`"${label}" started — ${run.cases.length} TCs ready ▶`, 'ok');
+}
 
 
 function downloadTestCaseTemplate() {
@@ -7606,6 +7864,9 @@ function openTestRun(idx) {
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
       <button class="btn btn-g btn-sm" onclick="closeTestRun()">← Runs</button>
       <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px">
+          ${run.masterName ? `<span style="font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(124,58,237,.2);color:var(--g1)">${esc(run.masterName)}</span>` : ''}
+        </div>
         <div style="font-size:16px;font-weight:800;color:var(--text)">${esc(run.name||'Test Run')}</div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">Build: ${esc(run.build||'—')} · ${esc(run.date||'')} · ${(run.cases||[]).length} cases</div>
       </div>
