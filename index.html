@@ -1108,7 +1108,7 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
         <span id="liveCount" style="font-family:var(--mono);font-size:10px;color:var(--g4);font-weight:700;white-space:nowrap"></span>
       </div>
       <div style="position:relative;display:inline-block" id="exportDropWrap"><button class="btn btn-g btn-sm" onclick="toggleExportDrop()" title="Export CSV">&#128229; &#9662;</button><div id="exportDrop" style="display:none;position:absolute;right:0;top:30px;background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:4px;z-index:999;min-width:150px;box-shadow:0 8px 24px rgba(0,0,0,.4)"><div class="jk-mi" onclick="exportCSV('filtered');toggleExportDrop()">&#128203; Export filtered (XLSX)</div><div class="jk-mi" onclick="exportCSV('all');toggleExportDrop()">&#128230; Export all bugs (XLSX)</div><div class="jk-mi" onclick="exportCSV('selection');toggleExportDrop()">&#9989; Export selected (XLSX)</div></div></div>
-      <button class="btn btn-g btn-sm" onclick="refreshAll()">&#8635;</button>
+      <button class="btn btn-g btn-sm" onclick="refreshAll()" title="Refresh">&#8635;</button><button class="btn btn-g btn-sm" onclick="forceRefresh()" title="Force full reload (bypass cache)" style="font-size:10px;padding:4px 7px">&#8635;&#8635;</button>
       <button class="btn btn-g btn-sm" onclick="document.getElementById('shortcutsModal').classList.add('on')" title="Keyboard shortcuts (?)">&#9000;</button>
       <button class="btn btn-v btn-sm" onclick="openNew()">&#65291; BUG</button>
               <button class="btn btn-g btn-sm" onclick="openTemplateSelector()">&#128203;</button>
@@ -1935,7 +1935,7 @@ function startFastSync(){
       // SAFETY GUARD: never overwrite with empty or suspiciously fewer bugs
       // Protects against D1 hiccups, auth errors returning empty arrays
       if(fresh.length===0 && S.bugs.length>0) return;
-      if(S.bugs.length>5 && fresh.length < S.bugs.length*0.8) return;
+      if(S.bugs.length>10 && fresh.length < S.bugs.length*0.5) return; // relax: sheet sync can add/remove many bugs
 
       const changed = fresh.length!==S.bugs.length
         || (fresh[0]?.id!==S.bugs[0]?.id)
@@ -2553,6 +2553,24 @@ function setCloud(s,l){
 // &#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;
 // REFRESH
 // &#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;
+
+async function forceRefresh() {
+  // Bypass safety guards — used after sheet sync or bulk operations
+  try {
+    const r = await fetch(WORKER+'/bugs', {headers:{'Content-Type':'application/json','X-Google-Token':S.user.idToken}});
+    if (!r.ok) return;
+    const d = await r.json();
+    const fresh = d.bugs || [];
+    fresh.forEach(b=>{if(!b.assignees)b.assignees=b.assignee_email?[{name:b.assignee||'',email:b.assignee_email,picture:b.assignee_picture||''}]:[];});
+    S.bugs = fresh;
+    updateSbBadges(); populateDropdowns(); applyF();
+    setCloud('ok', `☁ ${S.bugs.length}`);
+    if(S.view==='home') { renderHome(); setTimeout(renderHomePieCharts,100); }
+    else if(S.view==='board') renderBoard();
+    else if(S.view==='backlog') renderTable();
+    toast(`${fresh.length} bugs loaded ✓`, 'ok');
+  } catch(e) { console.warn('[forceRefresh]', e.message); }
+}
 
 async function refreshAll(){
   setCloud('busy','loading...');
@@ -4254,6 +4272,8 @@ function openDetail(id){
     ${bug.repro?`<div class="dsec"><div class="dsec-title">Repro Rate</div><div class="dtext">${esc(bug.repro)}</div></div>`:''}
     ${dsec('Expected Result',bug.expected)}
     ${dsec('Actual Result',bug.actual)}
+    ${bug.notes?`<div class="dsec"><div class="dsec-title">Notes</div><div class="dtext">${esc(bug.notes)}</div></div>`:''}
+    ${bug.notes?`<div class="dsec"><div class="dsec-title">Notes</div><div class="dtext">${esc(bug.notes)}</div></div>`:''}
     ${bug.attachment ? `<div class="dsec"><div class="dsec-title">Attachment</div>
       ${isImageUrl(bug.attachment) ? `
         <div style="margin-top:8px">
@@ -4685,6 +4705,7 @@ function applyTemplate(templateId) {
       if(d.actual)    { const el = document.getElementById('f-actual'); if(el) el.value = d.actual; }
       if(d.platform)  { const el = document.getElementById('f-dd-platform'); if(el) el.value = d.platform; }
       if(d.repro)     { const el = document.getElementById('f-repro'); if(el) el.value = d.repro; }
+      if(d.notes)     { const el = document.getElementById('f-notes'); if(el) el.value = d.notes; }
       if(d.device)    { const el = document.getElementById('f-dev'); if(el) el.value = d.device; }
       if(d.sprint)    { const el = document.getElementById('f-sp'); if(el) el.value = d.sprint; }
       if(d.title)     { const el = document.getElementById('f-title'); if(el && !el.value) el.value = d.title; }
@@ -5260,7 +5281,7 @@ async function saveBug(){
         sub_feature:document.getElementById('f-sub-feat')?.value?.trim()||'',sprint:document.getElementById('f-sp')?.value||'',
         build:document.getElementById('f-build')?.value||'',
         device:document.getElementById('f-dev')?.value||'',
-        steps:document.getElementById('f-steps')?.value||'',repro:document.getElementById('f-repro')?.value||'',expected:document.getElementById('f-expected')?.value||'',actual:document.getElementById('f-actual')?.value||'',
+        steps:document.getElementById('f-steps')?.value||'',repro:document.getElementById('f-repro')?.value||'',expected:document.getElementById('f-expected')?.value||'',actual:document.getElementById('f-actual')?.value||'',notes:document.getElementById('f-notes')?.value?.trim()||'',
         attachment:getAttachmentValue(),
         build_link:document.getElementById('f-build-link')?.value||'',
         clickup_task_id:(document.getElementById('f-cu-id')?.value||'').trim().replace(/.*\/t\//,'').split('/')[0]||'',
@@ -9314,30 +9335,65 @@ function populateCUFilters() {
 function exportBugsXLSX(ids) {
   const bugs = ids ? S.bugs.filter(b => ids.includes(b.id)) : S.filtered;
   if(!bugs.length) { toast('No bugs to export', 'err'); return; }
-  const headers = ['ID','Title','Priority','Severity','Status','Feature','Sprint','Build','Platform','Device','Pod','Assignee','Reporter','Steps','Actual','Expected','Issue Type','Created'];
-  const rows = bugs.map(b => [
-    b.id||'', b.title||'', b.priority||'', b.severity||'', b.status||'',
-    b.feature||'', b.sprint||'', b.build||'', b.platform||'', b.device||'',
-    b.pod||'', (b.assignees||[]).map(a=>a.name).join(', ')||b.assignee||'',
-    b.reporter||'', b.steps||'', b.actual||'', b.expected||'',
-    b.issue_type||'',
-    b.created_at ? new Date(b.created_at).toLocaleDateString('en-IN') : ''
-  ]);
-  // Build CSV as fallback if XLSX library not available
+
+  // ALL fields — matches GAS COLUMN_MAP exactly
+  const headers = [
+    'Bug ID','Title','Priority','Severity','Status',
+    'Feature','Sub-Feature','Sprint','Build','Build Link',
+    'Platform','Device','Pod','Issue Type',
+    'Steps to Reproduce','Repro Rate','Actual Result','Expected Result','Notes',
+    'Reporter','Reporter Email','Assignee','ClickUp Task ID','Attachment',
+    'Created','Updated','Age (days)'
+  ];
+
+  const today = new Date();
+  const rows = bugs.map(b => {
+    const created = b.created_at ? new Date(b.created_at) : null;
+    const updated = b.updated_at ? new Date(b.updated_at) : null;
+    const ageDays = created ? Math.floor((today - created) / 86400000) : '';
+    return [
+      b.id||'',
+      b.title||'',
+      b.priority||'',
+      b.severity||'',
+      b.status||'',
+      b.feature||'',
+      b.sub_feature||'',
+      b.sprint||'',
+      b.build||'',
+      b.build_link||'',
+      b.platform||'',
+      b.device||'',
+      b.pod||'',
+      b.issue_type||'',
+      b.steps||'',
+      b.repro||'',
+      b.actual||'',
+      b.expected||'',
+      b.notes||'',
+      b.reporter||'',
+      b.reporter_email||'',
+      (b.assignees||[]).map(a=>a.name).join(', ')||(b.assignee||''),
+      b.clickup_task_id||'',
+      b.attachment||'',
+      created ? created.toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'}) : '',
+      updated ? updated.toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'}) : '',
+      ageDays,
+    ];
+  });
+
   const csvRows = [headers, ...rows].map(r =>
-    r.map(v => '"' + String(v||'').replace(/"/g,'""') + '"').join(',')
+    r.map(v => '"' + String(v===null||v===undefined?'':v).replace(/"/g,'""').replace(/\r?\n/g,' | ') + '"').join(',')
   );
-  const csv = csvRows.join('\r\n');
+  const csv = '\uFEFF' + csvRows.join('\r\n'); // BOM for Excel UTF-8
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
   a.download = 'bugpulse_export_' + new Date().toISOString().slice(0,10) + '.csv';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
-  toast('Exported ' + bugs.length + ' bugs ✓', 'ok');
+  toast('Exported ' + bugs.length + ' bug' + (bugs.length!==1?'s':'') + ' (' + headers.length + ' fields) ✓', 'ok');
 }
 
 // &#9472;&#9472; Restored missing functions &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
