@@ -10362,11 +10362,9 @@ function tcShowView(which) {
 // ── Suite panel ───────────────────────────────────────────────────────────────
 var _tcUploadFiles = [];  // [{name, cases:[]}] — one entry per file
 var _tcManualRows  = [];
-// backward compat alias
-Object.defineProperty(window,'_tcUploadRows',{get:function(){return _tcUploadFiles.reduce(function(a,f){return a.concat(f.cases);},[]); },set:function(v){if(!v.length)_tcUploadFiles=[];}});
 
 function tcOpenUploadSuite(editId) {
-  _tcUploadRows = [];
+  _tcUploadFiles = [];
   var existing = editId ? _tcSuites.filter(function(s){return s.id===editId;})[0] : null;
   // Restore file groups on edit: each file as separate entry
   _tcUploadFiles = [];
@@ -10533,7 +10531,7 @@ function tcRenderManualList() {
 }
 
 function tcAddManualRow() {
-  var num=_tcManualRows.length+_tcUploadRows.length+1;
+  var num=_tcManualRows.length+_tcUploadFiles.reduce(function(a,f){return a+f.cases.length;},0)+1;
   _tcManualRows.push({id:'TC-'+String(num).padStart(3,'0'),title:'',section:'',priority:'',steps:'',expected:''});
   tcRefreshManualList();
   setTimeout(function(){
