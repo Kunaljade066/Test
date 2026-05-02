@@ -8923,13 +8923,13 @@ function buildJenkinsFields(cfg) {
     const tokenHtml = hasToken
       ? '<div style="display:flex;gap:6px;align-items:center">' +
           '<input class="fi2" id="wh-token-' + t + '" value="••••••••••••••••" readonly style="flex:1;color:var(--dim);font-family:var(--mono)" data-revealed="0">' +
-          '<button class="btn btn-g btn-sm" id="reveal-btn-' + t + '" onclick="revealToken('' + t + '')">👁 Reveal</button>' +
-          '<button class="btn btn-r btn-sm" onclick="regenToken('' + t + '')">↻ Regen</button>' +
+          '<button class="btn btn-g btn-sm" id="reveal-btn-' + t + '" onclick="revealToken(\' + t + \')">👁 Reveal</button>' +
+          '<button class="btn btn-r btn-sm" onclick="regenToken(\' + t + \')">↻ Regen</button>' +
         '</div>' +
         '<div style="font-family:var(--mono);font-size:9px;color:var(--g4);margin-top:4px">✓ Token set — Webhook URL: <span style="color:var(--g2);word-break:break-all">' + esc(workerBase + t + '&token=[TOKEN]') + '</span></div>'
       : '<div style="display:flex;gap:6px">' +
           '<input class="fi2" id="wh-token-' + t + '" value="" placeholder="Click Generate to create token" style="flex:1" data-revealed="1">' +
-          '<button class="btn btn-v btn-sm" onclick="genToken('' + t + '')">⚡ Generate</button>' +
+          '<button class="btn btn-v btn-sm" onclick="genToken(\' + t + \')">⚡ Generate</button>' +
         '</div>';
     return '<div style="background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.12);border-radius:8px;padding:10px 12px;margin-bottom:10px">' +
       '<div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--g3);margin-bottom:8px">' + label(t) + '</div>' +
