@@ -10472,16 +10472,20 @@ function tcRefreshFileList() {
   var preview=document.getElementById('tcs-file-preview');
   if(!preview) return;
   if(!_tcUploadFiles.length){preview.innerHTML='';tcRefreshCombined();return;}
-  preview.innerHTML=_tcUploadFiles.map(function(f){
-    var safe=f.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  preview.innerHTML=_tcUploadFiles.map(function(f,fi){
     return '<div style="display:flex;align-items:center;gap:8px;margin-top:5px;padding:5px 8px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:6px">'+
       '<span style="font-size:13px">&#128202;</span>'+
       '<span style="font-family:var(--mono);font-size:10px;color:var(--g4);flex:1">'+esc(f.name)+'</span>'+
       '<span style="font-family:var(--mono);font-size:9px;color:var(--dim)">'+f.cases.length+' TCs</span>'+
-      '<button onclick="tcRemoveFile(''+safe+'');event.stopPropagation()" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.2);border-radius:4px;padding:1px 7px;cursor:pointer;font-size:11px">&#10005;</button>'+
+      '<button onclick="tcRemoveFileIdx('+fi+')" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.2);border-radius:4px;padding:1px 7px;cursor:pointer;font-size:11px">&#10005;</button>'+
       '</div>';
   }).join('');
   tcRefreshCombined();
+}
+
+function tcRemoveFileIdx(idx) {
+  _tcUploadFiles.splice(idx, 1);
+  tcRefreshFileList();
 }
 
 function tcHandleFile(file){ if(file) tcHandleFiles([file]); }
@@ -11046,8 +11050,8 @@ async function tcGChatStats(runId) {
     '</select></div>' +
     '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:14px;line-height:1.7">Sends stats + failed TCs only (no full TC list)</div>' +
     '<div style="display:flex;gap:8px;justify-content:flex-end">' +
-    '<button class="btn btn-g" onclick="document.getElementById('tcGChatModal').remove()">Cancel</button>' +
-    '<button class="btn btn-v" onclick="tcGChatSendNow(''+runId+'')">&#128172; Send</button></div></div>';
+    '<button class="btn btn-g" onclick="document.getElementById(\'tcGChatModal\').remove()">Cancel</button>' +
+    '<button class="btn btn-v" onclick="tcGChatSendNow('+runId+')">&#128172; Send</button></div></div>';
   document.body.appendChild(modal);
 }
 
