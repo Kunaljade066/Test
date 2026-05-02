@@ -199,7 +199,8 @@ body.clicking #cur-bat{transform:translate(-50%,-50%) rotate(10deg)}
 .tb-logo-wrap img{width:28px;height:28px;object-fit:contain}
 .tb-name{font-family:var(--disp);font-size:14px;font-weight:800;letter-spacing:2px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;transition:text-shadow .2s;white-space:nowrap;}
 .tb-divider{width:1px;height:22px;background:var(--bd);margin:0 6px;flex-shrink:0}
-.tb-tabs{display:flex;flex:1;overflow-x:auto;gap:0}
+.tb-tabs{display:flex;flex:1;overflow-x:auto;gap:0;scrollbar-width:none;}
+.tb-tabs::-webkit-scrollbar{display:none}
 .tb-tabs::-webkit-scrollbar{display:none}
 .tb-tab{display:flex;align-items:center;gap:5px;height:54px;padding:0 14px;font-family:var(--body);font-size:13px;font-weight:600;letter-spacing:.3px;color:var(--mute);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;text-transform:uppercase;}
 .tb-tab:hover{color:var(--ghost)}
@@ -8936,6 +8937,22 @@ async function openWebhookSettings() {
           <textarea class="fi2" id="wh-emails" rows="2" placeholder="dev@hitwicket.com, qa@hitwicket.com">${esc(cfg.team_emails||'')}</textarea>
         </div>
       </div>
+      <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:14px 16px">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g3);margin-bottom:12px">⚡ MANUAL WEBHOOK FIRE</div>
+        <div class="fg" style="margin-bottom:10px"><label class="fl">Select Pod</label>
+          <select class="fi2" id="wh-fire-pod">
+            <option value="">— Global (all teams) —</option>
+            ${(DD_FIELDS.find(f=>f.key==='pod')?.options||[]).map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="fg" style="margin-bottom:10px"><label class="fl">Message</label>
+          <textarea class="fi2" id="wh-fire-msg" rows="2" placeholder="Custom message to send to GChat...">🔔 Manual notification from BugPulse QA</textarea>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-g btn-sm" onclick="whFireManual()">&#128172; Fire GChat</button>
+          <button class="btn btn-g btn-sm" onclick="whFireSlack()">&#128172; Fire Slack</button>
+        </div>
+      </div>
       <div style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:14px 16px">
         <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g1);margin-bottom:12px">⏰ EOD REPORT SCHEDULE</div>
         <div class="fg" style="margin-bottom:10px">
@@ -8951,6 +8968,19 @@ async function openWebhookSettings() {
       </div>
     </div>`;
   openPanel();
+}
+
+async function whFireManual() {
+  const pod = document.getElementById('wh-fire-pod')?.value||'';
+  const msg = document.getElementById('wh-fire-msg')?.value?.trim()||'🔔 Manual notification from BugPulse QA';
+  const ok = await sendGChatWebhook(msg, pod);
+  toast(ok ? '✓ GChat fired to '+(pod||'global') : '✗ No GChat webhook for this pod', ok?'ok':'err');
+}
+
+async function whFireSlack() {
+  const msg = document.getElementById('wh-fire-msg')?.value?.trim()||'🔔 Manual notification from BugPulse QA';
+  const ok = await sendSlackWebhook(msg, null);
+  toast(ok ? '✓ Slack fired' : '✗ No Slack webhook configured', ok?'ok':'err');
 }
 
 async function saveWebhookSettings() {
@@ -10285,29 +10315,26 @@ let _tcLoading = false;
 async function tcInit() {
   if (_tcLoading) return;
   _tcLoading = true;
-  // Show cached data immediately
+  // Always load from KV (source of truth) — localStorage only as loading placeholder
   _tcSuites = tcLsGetSuites();
   _tcRuns   = tcLsGetRuns();
   tcShowView('suites');
   tcRenderSuites();
   tcRenderRuns();
-  // Then fetch fresh from KV (cross-device)
   try {
     const [suites, runs] = await Promise.all([
       tcKvLoad(TC_SUITE_KV_KEY),
       tcKvLoad(TC_RUNS_KV_KEY),
     ]);
-    if (suites.length || !_tcSuites.length) {
-      _tcSuites = suites;
-      tcLsSaveSuites(suites);
-    }
-    if (runs.length || !_tcRuns.length) {
-      _tcRuns = runs;
-      tcLsSaveRuns(runs);
-    }
+    // Always overwrite with KV data (admin deletes must propagate)
+    _tcSuites = suites;
+    _tcRuns   = runs;
+    tcLsSaveSuites(suites);
+    tcLsSaveRuns(runs);
     tcRenderSuites();
     tcRenderRuns();
-  } catch(e) { /* keep localStorage data */ }
+    if(_tcRunOpen) tcRenderExecute();
+  } catch(e) { /* keep localStorage data on network failure */ }
   _tcLoading = false;
 }
 
@@ -10333,13 +10360,26 @@ function tcShowView(which) {
 }
 
 // ── Suite panel ───────────────────────────────────────────────────────────────
-var _tcUploadRows = [];
-var _tcManualRows = [];
+var _tcUploadFiles = [];  // [{name, cases:[]}] — one entry per file
+var _tcManualRows  = [];
+// backward compat alias
+Object.defineProperty(window,'_tcUploadRows',{get:function(){return _tcUploadFiles.reduce(function(a,f){return a.concat(f.cases);},[]); },set:function(v){if(!v.length)_tcUploadFiles=[];}});
 
 function tcOpenUploadSuite(editId) {
   _tcUploadRows = [];
   var existing = editId ? _tcSuites.filter(function(s){return s.id===editId;})[0] : null;
-  _tcManualRows = existing ? existing.cases.map(function(c){return Object.assign({},c);}) : [];
+  // Restore file groups on edit: each file as separate entry
+  _tcUploadFiles = [];
+  if(existing && existing.files && existing.files.length) {
+    var runningIdx = 0;
+    existing.files.forEach(function(f){
+      _tcUploadFiles.push({name:f.name, cases:existing.cases.slice(runningIdx, runningIdx+f.count)});
+      runningIdx += f.count;
+    });
+    _tcManualRows = existing.cases.slice(runningIdx).map(function(cc){return Object.assign({},cc);});
+  } else {
+    _tcManualRows = existing ? existing.cases.map(function(cc){return Object.assign({},cc);}) : [];
+  }
 
   document.getElementById('panelTitle').textContent = editId ? 'EDIT SUITE' : 'NEW TEST SUITE';
   document.getElementById('panelId').textContent    = editId ? (existing?existing.name:'') : 'SUITE';
@@ -10351,6 +10391,10 @@ function tcOpenUploadSuite(editId) {
     '<div class="fg"><label class="fl">Suite Name <span style="color:var(--g5)">*</span></label>' +
     '<input class="fi2" id="tcs-name" placeholder="e.g. Old User, New User, Full Regression" value="'+esc(existing?existing.name:'')+'"></div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+    '<div class="fg" style="margin:0"><label class="fl">Pod / Team</label>' +
+    '<select class="fi2" id="tcs-pod"><option value="">— All pods —</option>' +
+    (DD_FIELDS.find(function(f){return f.key==="pod";})||{options:[]}).options.map(function(p){return '<option'+(existing&&existing.pod===p?' selected':'')+' value="'+esc(p)+'">'+esc(p)+'</option>';}).join('') +
+    '</select></div>' +
     '<div class="fg" style="margin:0"><label class="fl">Type</label>' +
     '<input class="fi2" id="tcs-type" list="tcs-type-list" placeholder="Smoke / Regression / FTUE" value="'+esc(existing?existing.type||'':'') +'">' +
     '<datalist id="tcs-type-list"><option value="Smoke"><option value="Regression"><option value="Feature"><option value="FTUE"><option value="Sanity"><option value="Full Pass"></datalist></div>' +
@@ -10389,61 +10433,61 @@ function tcHandleFiles(fileList) {
   if(!fileList || !fileList.length) return;
   var files = Array.from(fileList);
   var pending = files.length;
-  var allRows = [].concat(_tcUploadRows); // keep existing
-  var fileNames = [];
-
-  function onFile(rows, fname) {
-    allRows = allRows.concat(tcParseRows(rows));
-    fileNames.push(fname + ' (' + tcParseRows(rows).length + ')');
+  function onFile(cases, fname) {
+    var idx = _tcUploadFiles.findIndex(function(f){return f.name===fname;});
+    if(idx>=0) _tcUploadFiles[idx]={name:fname,cases:cases};
+    else _tcUploadFiles.push({name:fname,cases:cases});
     pending--;
-    if(pending === 0) {
-      _tcUploadRows = allRows;
-      var preview = document.getElementById('tcs-file-preview');
-      var sections = [];
-      _tcUploadRows.forEach(function(c){ if(c.section && sections.indexOf(c.section)<0) sections.push(c.section); });
-      if(preview) preview.innerHTML =
-        '<div style="font-family:var(--mono);font-size:10px;color:var(--g4);margin-top:4px">&#10003; '+_tcUploadRows.length+' TCs from '+fileNames.length+' file'+(fileNames.length>1?'s':'')+'</div>' +
-        '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">'+fileNames.join(' &middot; ')+'</div>' +
-        (sections.length?'<div style="font-family:var(--mono);font-size:9px;color:var(--fog);margin-top:2px">'+sections.length+' sections: '+sections.slice(0,8).join(', ')+(sections.length>8?'…':'')+'</div>':'');
-      tcRefreshCombined();
-    }
+    if(pending===0) tcRefreshFileList();
   }
-
-  // Need to parse each file, track counts per file separately
   files.forEach(function(file) {
-    var fname = file.name;
-    var name = fname.toLowerCase();
+    var fname = file.name, name = fname.toLowerCase();
     if(name.endsWith('.xlsx')||name.endsWith('.xls')) {
       var r=new FileReader();
       r.onload=function(ev){
-        try{
-          var wb=XLSX.read(ev.target.result,{type:'array'});
-          var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
-          onFile(rows, fname);
-        }catch(e){ pending--; toast('Error reading '+fname+': '+e.message,'err'); }
-      };
-      r.readAsArrayBuffer(file);
+        try{var wb=XLSX.read(ev.target.result,{type:'array'});onFile(tcParseRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''})),fname);}
+        catch(e){pending--;toast('Error: '+fname+': '+e.message,'err');}
+      };r.readAsArrayBuffer(file);
     } else {
       var r2=new FileReader();
       r2.onload=function(ev){
-        var lines=ev.target.result.split(/\r?\n/).filter(function(l){return l.trim();});
-        if(lines.length<2){ pending--; toast(fname+': needs header + data rows','err'); return; }
+        var lines=ev.target.result.split(/
+?
+/).filter(function(l){return l.trim();});
+        if(lines.length<2){pending--;toast(fname+': needs header + data','err');return;}
         var hdrs=lines[0].split(',').map(function(h){return h.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');});
         var rows=[];
         for(var i=1;i<lines.length;i++){
           var vals=lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
-          var row={};
-          hdrs.forEach(function(h,idx){row[h]=(vals[idx]||'').replace(/^"|"$/g,'').trim();});
-          rows.push(row);
+          var row={};hdrs.forEach(function(h,idx2){row[h]=(vals[idx2]||'').replace(/^"|"$/g,'').trim();});rows.push(row);
         }
-        onFile(rows, fname);
-      };
-      r2.readAsText(file);
+        onFile(tcParseRows(rows),fname);
+      };r2.readAsText(file);
     }
   });
 }
 
-// keep old single-file handler as alias
+function tcRemoveFile(fname) {
+  _tcUploadFiles=_tcUploadFiles.filter(function(f){return f.name!==fname;});
+  tcRefreshFileList();
+}
+
+function tcRefreshFileList() {
+  var preview=document.getElementById('tcs-file-preview');
+  if(!preview) return;
+  if(!_tcUploadFiles.length){preview.innerHTML='';tcRefreshCombined();return;}
+  preview.innerHTML=_tcUploadFiles.map(function(f){
+    var safe=f.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return '<div style="display:flex;align-items:center;gap:8px;margin-top:5px;padding:5px 8px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:6px">'+
+      '<span style="font-size:13px">&#128202;</span>'+
+      '<span style="font-family:var(--mono);font-size:10px;color:var(--g4);flex:1">'+esc(f.name)+'</span>'+
+      '<span style="font-family:var(--mono);font-size:9px;color:var(--dim)">'+f.cases.length+' TCs</span>'+
+      '<button onclick="tcRemoveFile(''+safe+'');event.stopPropagation()" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.2);border-radius:4px;padding:1px 7px;cursor:pointer;font-size:11px">&#10005;</button>'+
+      '</div>';
+  }).join('');
+  tcRefreshCombined();
+}
+
 function tcHandleFile(file){ if(file) tcHandleFiles([file]); }
 
 function tcParseRows(rows) {
@@ -10505,24 +10549,38 @@ function tcRefreshManualList() {
 }
 
 function tcRenderCombinedPreview() {
-  var all=_tcUploadRows.concat(_tcManualRows.filter(function(r){return r.title&&r.title.trim();}));
-  if(!all.length) return '';
-  var sections={};
-  all.forEach(function(c){var s=c.section||'(No Section)';if(!sections[s])sections[s]=[];sections[s].push(c);});
+  var manualCases = _tcManualRows.filter(function(r){return r.title&&r.title.trim();});
+  var totalUpload = _tcUploadFiles.reduce(function(n,f){return n+f.cases.length;},0);
+  var total = totalUpload + manualCases.length;
+  if(!total) return '';
   var html='<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:12px 14px">' +
-    '<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mute);margin-bottom:8px">PREVIEW &mdash; '+all.length+' TCs TOTAL</div>';
-  Object.keys(sections).forEach(function(sec){
-    var cs=sections[sec];
-    html+='<div style="margin-bottom:8px"><div style="font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g2);padding:3px 0;border-bottom:1px solid var(--bd);margin-bottom:3px">'+esc(sec)+' <span style="color:var(--dim)">('+cs.length+')</span></div>';
-    cs.forEach(function(c){
-      html+='<div style="display:flex;align-items:center;gap:8px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03)">' +
-        '<span style="font-family:var(--mono);font-size:9px;color:var(--g1);flex-shrink:0;min-width:52px">'+esc(c.id||'')+'</span>' +
-        '<span style="font-size:11px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(c.title||'')+'</span>' +
-        (c.priority?'<span style="font-family:var(--mono);font-size:8px;padding:1px 5px;border-radius:6px;background:rgba(124,58,237,.12);color:var(--ghost)">'+esc(c.priority)+'</span>':'') +
-        '</div>';
+    '<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mute);margin-bottom:10px">SUITE PREVIEW &mdash; '+total+' TCs TOTAL</div>';
+  // Show each file as a collapsible group
+  _tcUploadFiles.forEach(function(f){
+    html+='<div style="margin-bottom:10px;background:rgba(6,182,212,.06);border:1px solid rgba(6,182,212,.15);border-radius:7px;padding:8px 10px">' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">' +
+      '<span style="font-size:11px">&#128202;</span>' +
+      '<span style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--g2)">'+esc(f.name)+'</span>' +
+      '<span style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-left:auto">'+f.cases.length+' TCs</span></div>';
+    f.cases.slice(0,8).forEach(function(tc){
+      html+='<div style="display:flex;align-items:center;gap:7px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03)">' +
+        '<span style="font-family:var(--mono);font-size:9px;color:var(--g1);flex-shrink:0;min-width:50px">'+esc(tc.id||'')+'</span>' +
+        '<span style="font-size:11px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(tc.title||'')+'</span>' +
+        (tc.section?'<span style="font-family:var(--mono);font-size:8px;color:var(--fog)">'+esc(tc.section)+'</span>':'') + '</div>';
     });
+    if(f.cases.length>8) html+='<div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:4px">&hellip; and '+(f.cases.length-8)+' more</div>';
     html+='</div>';
   });
+  if(manualCases.length){
+    html+='<div style="margin-bottom:4px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.15);border-radius:7px;padding:8px 10px">' +
+      '<div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--g1);margin-bottom:5px">&#9999; Manual ('+manualCases.length+')</div>';
+    manualCases.forEach(function(tc){
+      html+='<div style="display:flex;align-items:center;gap:7px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03)">' +
+        '<span style="font-family:var(--mono);font-size:9px;color:var(--g1);flex-shrink:0;min-width:50px">'+esc(tc.id||'')+'</span>' +
+        '<span style="font-size:11px;color:var(--text);flex:1">'+esc(tc.title||'')+'</span></div>';
+    });
+    html+='</div>';
+  }
   return html+'</div>';
 }
 
@@ -10534,7 +10592,8 @@ function tcRefreshCombined() {
 async function tcSaveSuite(editId) {
   var name=document.getElementById('tcs-name')&&document.getElementById('tcs-name').value.trim();
   if(!name){toast('Suite name required','err');return;}
-  var allCases=_tcUploadRows.concat(_tcManualRows.filter(function(r){return r.title&&r.title.trim();}));
+  var allCases=_tcUploadFiles.reduce(function(a,f){return a.concat(f.cases);}, []).concat(_tcManualRows.filter(function(r){return r.title&&r.title.trim();}));
+  var suiteFiles=_tcUploadFiles.map(function(f){return {name:f.name,count:f.cases.length};});
   if(!allCases.length){toast('Add at least one TC — upload files or add manually','err');return;}
 
   var btn=document.querySelector('#panelFooter .btn-v');
@@ -10544,8 +10603,10 @@ async function tcSaveSuite(editId) {
     id:         editId||('suite_'+Date.now()),
     name:       name,
     type:       document.getElementById('tcs-type')&&document.getElementById('tcs-type').value.trim()||'',
+    pod:        document.getElementById('tcs-pod')&&document.getElementById('tcs-pod').value.trim()||'',
     desc:       document.getElementById('tcs-desc')&&document.getElementById('tcs-desc').value.trim()||'',
     cases:      allCases,
+    files:      suiteFiles,
     created_by: S.user&&S.user.name||'',
     created_at: new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'medium'}),
   };
@@ -10558,7 +10619,7 @@ async function tcSaveSuite(editId) {
   // Save to KV (cross-device)
   await tcKvSave(TC_SUITE_KV_KEY, _tcSuites);
 
-  _tcUploadRows=[]; _tcManualRows=[];
+  _tcUploadFiles=[]; _tcManualRows=[];
   closePanel();
   tcRenderSuites();
   toast('Suite "'+name+'" saved — '+allCases.length+' TCs ✓','ok');
@@ -10570,7 +10631,8 @@ function tcDeleteSuite(suiteId) {
   if(!suite) return;
   if(!confirm('Delete suite "'+suite.name+'"?\nExisting runs are not affected.')) return;
   _tcSuites=_tcSuites.filter(function(s){return s.id!==suiteId;});
-  tcLsSaveSuites(_tcSuites);
+  // Wipe localStorage immediately so other tabs/devices don't see stale data
+  tcLsSaveSuites([]);
   tcKvSave(TC_SUITE_KV_KEY, _tcSuites);
   tcRenderSuites();
   toast('Suite deleted','ok');
@@ -10968,8 +11030,37 @@ async function tcEmailStats(runId) {
 
 async function tcGChatStats(runId) {
   var run=_tcRuns.filter(function(r){return r.id===runId;})[0]; if(!run) return;
-  var ok=await sendGChatWebhook(tcBuildStatsText(run),'');
-  if(ok) toast('Sent to GChat ✓','ok'); else{toast('No GChat webhook','warn');tcCopyStats(runId);}
+  // Build pod choices
+  var cfg=getWebhookConfig();
+  var pods=[];
+  (DD_FIELDS.find(function(f){return f.key==='pod';})||{options:[]}).options.forEach(function(p){
+    var k='pod_gchat_'+p.toLowerCase().replace(/[^a-z0-9]/g,'_');
+    if(cfg[k]) pods.push(p);
+  });
+  if(!pods.length && !cfg.gchat_url){toast('No GChat webhook configured','warn');tcCopyStats(runId);return;}
+  // Show pod picker modal
+  var modal=document.createElement('div');
+  modal.id='tcGChatModal';
+  modal.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)';
+  modal.innerHTML='<div style="background:var(--bg2);border:1px solid var(--bd2);border-radius:16px;padding:24px;max-width:380px;width:90%;box-shadow:var(--sh2)">' +
+    '<div style="font-family:var(--disp);font-size:14px;font-weight:800;letter-spacing:2px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:14px">&#128172; SEND TO GCHAT</div>' +
+    '<div class="fg" style="margin-bottom:12px"><label class="fl">Select Pod / Destination</label>' +
+    '<select class="fi2" id="tc-gchat-pod-sel"><option value="">— Global webhook —</option>' +
+    pods.map(function(p){return '<option value="'+esc(p)+'">'+esc(p)+'</option>';}).join('') +
+    '</select></div>' +
+    '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:14px;line-height:1.7">Sends stats + failed TCs only (no full TC list)</div>' +
+    '<div style="display:flex;gap:8px;justify-content:flex-end">' +
+    '<button class="btn btn-g" onclick="document.getElementById('tcGChatModal').remove()">Cancel</button>' +
+    '<button class="btn btn-v" onclick="tcGChatSendNow(''+runId+'')">&#128172; Send</button></div></div>';
+  document.body.appendChild(modal);
+}
+
+async function tcGChatSendNow(runId) {
+  var run=_tcRuns.filter(function(r){return r.id===runId;})[0]; if(!run) return;
+  var pod=(document.getElementById('tc-gchat-pod-sel')||{}).value||'';
+  document.getElementById('tcGChatModal')&&document.getElementById('tcGChatModal').remove();
+  var ok=await sendGChatWebhook(tcBuildStatsText(run),pod);
+  if(ok) toast('Sent to GChat ✓','ok'); else{toast('Webhook not configured for this pod','err');tcCopyStats(runId);}
 }
 
 TAB_TIPS['testcases'] = {
