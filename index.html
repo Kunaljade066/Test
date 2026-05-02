@@ -5762,7 +5762,7 @@ async function deleteBulkSelected() {
   }
   _bulkSelected.clear();
   applyF();
-  renderBulkBar();
+  updateBulkBar();
   toast(`Deleted ${done} bug${done!==1?'s':''}`, 'ok');
 }
 
