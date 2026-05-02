@@ -1097,6 +1097,7 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
       <div class="tb-tab"    id="tt-sprints"   onclick="goTab('sprints')">&#127939; Sprints</div>
       <div class="tb-tab"    id="tt-features"  onclick="goTab('features')">&#127918; Features</div>
       <div class="tb-tab"    id="tt-builds"    onclick="goTab('builds')">&#128230; Builds</div>
+      <div class="tb-tab"    id="tt-testcases" onclick="goTab('testcases')">&#129514; Test Cases</div>
       <div class="tb-tab"    id="tt-dashboard" onclick="goTab('dashboard')">&#128202; Dashboard</div>
       <div class="tb-tab"    id="tt-notifs"    onclick="goTab('notifs')">&#128276;<span class="tb-badge" id="notifBadge" style="display:none">0</span></div>
       <div class="tb-tab"    id="tt-clickup"   onclick="goTab('clickup')">&#128995; ClickUp</div>
@@ -1108,7 +1109,7 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
         <span id="liveCount" style="font-family:var(--mono);font-size:10px;color:var(--g4);font-weight:700;white-space:nowrap"></span>
       </div>
       <div style="position:relative;display:inline-block" id="exportDropWrap"><button class="btn btn-g btn-sm" onclick="toggleExportDrop()" title="Export CSV">&#128229; &#9662;</button><div id="exportDrop" style="display:none;position:absolute;right:0;top:30px;background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:4px;z-index:999;min-width:150px;box-shadow:0 8px 24px rgba(0,0,0,.4)"><div class="jk-mi" onclick="exportCSV('filtered');toggleExportDrop()">&#128203; Export filtered (XLSX)</div><div class="jk-mi" onclick="exportCSV('all');toggleExportDrop()">&#128230; Export all bugs (XLSX)</div><div class="jk-mi" onclick="exportCSV('selection');toggleExportDrop()">&#9989; Export selected (XLSX)</div></div></div>
-      <button class="btn btn-g btn-sm" onclick="refreshAll()" title="Refresh">&#8635;</button><button class="btn btn-g btn-sm" onclick="forceRefresh()" title="Force full reload (bypass cache)" style="font-size:10px;padding:4px 7px">&#8635;&#8635;</button>
+      <button class="btn btn-g btn-sm" onclick="refreshAll()">&#8635;</button>
       <button class="btn btn-g btn-sm" onclick="document.getElementById('shortcutsModal').classList.add('on')" title="Keyboard shortcuts (?)">&#9000;</button>
       <button class="btn btn-v btn-sm" onclick="openNew()">&#65291; BUG</button>
               <button class="btn btn-g btn-sm" onclick="openTemplateSelector()">&#128203;</button>
@@ -1317,7 +1318,7 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
           <div class="ph">
             <div><h1>BUILDS</h1><p id="builds-sub">Track what's in each build</p></div>
             <div class="ph-r">
-              <button class="btn btn-g" onclick="goTCManager()">&#129514; Test Cases</button>
+              <button class="btn btn-g" onclick="goTestRuns()">&#129514; Test Runs</button>
               <button class="btn btn-v" onclick="openNewBuild()">&#65291; LOG BUILD</button>
             </div>
           </div>
@@ -1332,9 +1333,9 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
             <div class="ph">
               <div><h1>TEST CASES</h1><p id="tc-sub" style="font-family:var(--mono);font-size:10px;color:var(--mute);margin-top:3px">Suites · Upload · Execute · Track</p></div>
               <div class="ph-r" id="tc-ph-r">
-                <button class="btn btn-g btn-sm" onclick="tcShowView(&quot;suites&quot;)" id="tc-btn-suites">&#128218; Suites</button>
-                <button class="btn btn-g btn-sm" onclick="tcShowView(&quot;runs&quot;)" id="tc-btn-runs">&#9654; Runs</button>
-                <button class="btn btn-g btn-sm" onclick="tcOpenLibrary()">&#128218; TC Library</button> <button class="btn btn-v btn-sm" onclick="tcOpenUploadSuite()">&#65291; New Suite</button>
+                <button class="btn btn-g btn-sm" onclick="tcShowView('suites')" id="tc-btn-suites">&#128218; Suites</button>
+                <button class="btn btn-g btn-sm" onclick="tcShowView('runs')" id="tc-btn-runs">&#9654; Runs</button>
+                <button class="btn btn-v btn-sm" onclick="tcOpenUploadSuite()">&#65291; New Suite</button>
               </div>
             </div>
             <div id="tc-view-suites">
@@ -1520,16 +1521,18 @@ const APP_URL   = window.location.origin + window.location.pathname;
 // &#9472;&#9472; CHANGED: try to fetch config from worker; fall back to hardcoded values &#9472;&#9472;
 async function fetchConfig() {
   try {
-    const res  = await fetch(WORKER + '/config');
-    if (!res.ok) return; // worker has no /config — use hardcoded defaults
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000); // 3s max — never block init
+    const res = await fetch(WORKER + '/config', { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!res.ok) return;
     const data = await res.json();
     if (data.google_client_id) {
       GOOGLE_ID = data.google_client_id;
       ALLOWED   = data.allowed_domain || 'hitwicket.com';
     }
   } catch(e) {
-    // Network error or no /config endpoint &#8212; hardcoded values already set, carry on
-    console.warn('[config] fetchConfig failed, using hardcoded client ID:', e.message);
+    console.warn('[config] fetchConfig skipped:', e.message);
   }
 }
 
@@ -1935,7 +1938,7 @@ function startFastSync(){
       // SAFETY GUARD: never overwrite with empty or suspiciously fewer bugs
       // Protects against D1 hiccups, auth errors returning empty arrays
       if(fresh.length===0 && S.bugs.length>0) return;
-      if(S.bugs.length>10 && fresh.length < S.bugs.length*0.5) return; // relax: sheet sync can add/remove many bugs
+      if(S.bugs.length>5 && fresh.length < S.bugs.length*0.8) return;
 
       const changed = fresh.length!==S.bugs.length
         || (fresh[0]?.id!==S.bugs[0]?.id)
@@ -2554,24 +2557,6 @@ function setCloud(s,l){
 // REFRESH
 // &#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;
 
-async function forceRefresh() {
-  // Bypass safety guards — used after sheet sync or bulk operations
-  try {
-    const r = await fetch(WORKER+'/bugs', {headers:{'Content-Type':'application/json','X-Google-Token':S.user.idToken}});
-    if (!r.ok) return;
-    const d = await r.json();
-    const fresh = d.bugs || [];
-    fresh.forEach(b=>{if(!b.assignees)b.assignees=b.assignee_email?[{name:b.assignee||'',email:b.assignee_email,picture:b.assignee_picture||''}]:[];});
-    S.bugs = fresh;
-    updateSbBadges(); populateDropdowns(); applyF();
-    setCloud('ok', `☁ ${S.bugs.length}`);
-    if(S.view==='home') { renderHome(); setTimeout(renderHomePieCharts,100); }
-    else if(S.view==='board') renderBoard();
-    else if(S.view==='backlog') renderTable();
-    toast(`${fresh.length} bugs loaded ✓`, 'ok');
-  } catch(e) { console.warn('[forceRefresh]', e.message); }
-}
-
 async function refreshAll(){
   setCloud('busy','loading...');
   try{
@@ -3072,7 +3057,7 @@ function goTab(v){
     url.searchParams.set('tab', v);
     history.pushState({ tab: v }, '', url.toString());
   } catch(e) {}
-  ['home','backlog','board','sprints','features','dashboard','notifs','clickup','import','builds'].forEach(n=>{
+  ['home','backlog','board','sprints','features','dashboard','notifs','clickup','import','builds','testcases'].forEach(n=>{
     const el=document.getElementById('v-'+n);if(el)el.style.display=n===v?'':'none';
     document.getElementById('tt-'+n)?.classList.toggle('on',n===v);
   });
@@ -3086,6 +3071,7 @@ function goTab(v){
   if(v==='backlog')renderTable();
   if(v==='clickup')loadClickUp();
   if(v==='builds'){renderBuildsPage();document.getElementById('testRunsWrap').style.display='none';document.getElementById('buildsWrap').style.display='';document.getElementById('buildsCurrentBanner').style.display='';}
+  if(v==='testcases'){tcInit();}
   // Restore scroll position
   requestAnimationFrame(() => {
     const main = document.querySelector('.main');
@@ -4242,7 +4228,6 @@ function openDetail(id){
       </div>
     </div>
     <button class="btn btn-g" onclick="openEdit('${bug.id}')">✏️ Edit</button>
-    <button class="btn btn-g" id="fire-alert-btn" onclick="openFireAlertPanel('${bug.id}')" title="Fire GChat alert for this bug">🔔 Alert</button>
     ${S.user?.role==='admin'?`<button class="btn btn-r" onclick="delBug('${bug.id}');closePanel()">🗑 Delete</button>`:''}`;
   document.getElementById('panelBody').innerHTML=`
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px">
@@ -4272,8 +4257,6 @@ function openDetail(id){
     ${bug.repro?`<div class="dsec"><div class="dsec-title">Repro Rate</div><div class="dtext">${esc(bug.repro)}</div></div>`:''}
     ${dsec('Expected Result',bug.expected)}
     ${dsec('Actual Result',bug.actual)}
-    ${bug.notes?`<div class="dsec"><div class="dsec-title">Notes</div><div class="dtext">${esc(bug.notes)}</div></div>`:''}
-    ${bug.notes?`<div class="dsec"><div class="dsec-title">Notes</div><div class="dtext">${esc(bug.notes)}</div></div>`:''}
     ${bug.attachment ? `<div class="dsec"><div class="dsec-title">Attachment</div>
       ${isImageUrl(bug.attachment) ? `
         <div style="margin-top:8px">
@@ -4565,7 +4548,7 @@ function dismissNatasha(){
 })();
 
 function syncMobileNav(v){
-  const map={home:'mn-home',backlog:'mn-backlog',board:'mn-board',sprints:'mn-sprints',features:null,dashboard:'mn-dashboard',notifs:'mn-notifs',clickup:'mn-clickup',import:null,builds:'mn-builds'};
+  const map={home:'mn-home',backlog:'mn-backlog',board:'mn-board',sprints:'mn-sprints',features:null,dashboard:'mn-dashboard',notifs:'mn-notifs',clickup:'mn-clickup',import:null,builds:'mn-builds',testcases:null};
   document.querySelectorAll('.mn-item').forEach(el=>el.classList.remove('on'));
   const id=map[v];if(id)document.getElementById(id)?.classList.add('on');
 }
@@ -4705,7 +4688,6 @@ function applyTemplate(templateId) {
       if(d.actual)    { const el = document.getElementById('f-actual'); if(el) el.value = d.actual; }
       if(d.platform)  { const el = document.getElementById('f-dd-platform'); if(el) el.value = d.platform; }
       if(d.repro)     { const el = document.getElementById('f-repro'); if(el) el.value = d.repro; }
-      if(d.notes)     { const el = document.getElementById('f-notes'); if(el) el.value = d.notes; }
       if(d.device)    { const el = document.getElementById('f-dev'); if(el) el.value = d.device; }
       if(d.sprint)    { const el = document.getElementById('f-sp'); if(el) el.value = d.sprint; }
       if(d.title)     { const el = document.getElementById('f-title'); if(el && !el.value) el.value = d.title; }
@@ -4932,7 +4914,10 @@ function buildBugForm(bug,full){
             oninput="featureInputFilter(this.value)"
             onfocus="featureInputFilter(this.value)"
             autocomplete="off">
-          <div id="featDropdown" style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:9999;background:var(--bg2);border:1px solid var(--bd2);border-radius:10px;box-shadow:var(--sh2);display:none;max-height:220px;overflow-y:auto"></div>
+          <div id="featDropdown" style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:9999;background:var(--bg2);border:1px solid var(--bd2);border-radius:10px;box-shadow:var(--sh2);display:none;max-height:220px;overflow-y:auto">
+            <div style="padding:6px 10px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--dim);border-bottom:1px solid var(--bd)">RECENTLY USED</div>
+            ${(()=>{const fu={};S.bugs.forEach(b=>{if(b.feature)fu[b.feature]=Math.max(fu[b.feature]||0,b.created_ts||0);});const sf=Object.entries(fu).sort((a,b2)=>b2[1]-a[1]).map(([f])=>f);return sf.slice(0,6).map(f=>`<div onclick="selectFeature('${esc(f)}')" style="padding:9px 13px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px;transition:background .1s" onmouseenter="this.style.background='rgba(124,58,237,.1)'" onmouseleave="this.style.background=''"><span style="font-size:14px">🕐</span><span>${esc(f)}</span><span style="margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--dim)">${S.bugs.filter(b=>b.feature===f).length} bugs</span></div>`).join('')+sf.slice(6).map(f=>`<div onclick="selectFeature('${esc(f)}')" style="padding:9px 13px;cursor:pointer;font-size:13px;font-weight:600;color:var(--mist);border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px;transition:background .1s" onmouseenter="this.style.background='rgba(124,58,237,.08)'" onmouseleave="this.style.background=''"><span>${esc(f)}</span><span style="margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--dim)">${S.bugs.filter(b=>b.feature===f).length} bugs</span></div>`).join('');})()}
+          </div>
         </div>
       </div>
       <div class="fg"><label class="fl">Sub-feature / Screen <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">(optional — e.g. "Login Flow", "Icon Issue")</span></label>
@@ -5194,46 +5179,6 @@ function natashaMoodForStatus(status, title){
   }
 }
 
-function featureInputFilter(val) {
-  const dd = document.getElementById('featDropdown');
-  if(!dd) return;
-  const q = (val||'').toLowerCase().trim();
-  // Collect all features
-  const fu={};
-  S.bugs.forEach(b=>{if(b.feature)fu[b.feature]=(fu[b.feature]||0)+1;});
-  // Also include DD_FIELDS feature options if any
-  const ddFeat=(DD_FIELDS.find(f=>f.key==='feature')||{options:[]}).options||[];
-  ddFeat.forEach(f=>{if(!fu[f])fu[f]=0;});
-  let features=Object.entries(fu).sort((a,b)=>b[1]-a[1]).map(([f])=>f);
-  if(q) features=features.filter(f=>f.toLowerCase().includes(q));
-  if(!features.length){dd.style.display='none';return;}
-  dd.innerHTML=features.map(f=>{
-    const cnt=S.bugs.filter(b=>b.feature===f).length;
-    return '<div onclick="selectFeature(\'' + esc(f) + '\')" '+
-      'style="padding:9px 13px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px;transition:background .1s" '+
-      'onmouseenter="this.style.background=\'rgba(124,58,237,.1)\'" '+
-      'onmouseleave="this.style.background=\'\'">'
-      +'<span>'+esc(f)+'</span>'
-      +(cnt?'<span style="margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--dim)">'+cnt+' bugs</span>':'')
-      +'</div>';
-  }).join('');
-  dd.style.display='block';
-}
-
-function selectFeature(val) {
-  const inp=document.getElementById('f-feat');
-  if(inp) inp.value=val;
-  const dd=document.getElementById('featDropdown');
-  if(dd) dd.style.display='none';
-}
-
-// Close feature dropdown on outside click
-document.addEventListener('click', function(e){
-  const dd=document.getElementById('featDropdown');
-  const inp=document.getElementById('f-feat');
-  if(dd && inp && !inp.contains(e.target) && !dd.contains(e.target)) dd.style.display='none';
-}, true);
-
 async function saveBug(){
   const btn=document.getElementById('panelSave');
   btn.disabled=true;btn.innerHTML='<span class="spin"></span>';
@@ -5281,7 +5226,7 @@ async function saveBug(){
         sub_feature:document.getElementById('f-sub-feat')?.value?.trim()||'',sprint:document.getElementById('f-sp')?.value||'',
         build:document.getElementById('f-build')?.value||'',
         device:document.getElementById('f-dev')?.value||'',
-        steps:document.getElementById('f-steps')?.value||'',repro:document.getElementById('f-repro')?.value||'',expected:document.getElementById('f-expected')?.value||'',actual:document.getElementById('f-actual')?.value||'',notes:document.getElementById('f-notes')?.value?.trim()||'',
+        steps:document.getElementById('f-steps')?.value||'',repro:document.getElementById('f-repro')?.value||'',expected:document.getElementById('f-expected')?.value||'',actual:document.getElementById('f-actual')?.value||'',
         attachment:getAttachmentValue(),
         build_link:document.getElementById('f-build-link')?.value||'',
         clickup_task_id:(document.getElementById('f-cu-id')?.value||'').trim().replace(/.*\/t\//,'').split('/')[0]||'',
@@ -5312,8 +5257,6 @@ async function saveBug(){
         else if(S.view==='board')renderBoard();
         broadcastChange('bug_changed');
         debouncedRefresh(300);
-        // Auto-alert if priority is high/critical and enabled
-        autoFirePriorityAlert(existingBug).catch(()=>{});
         return;
       }else{
         // Offline: queue locally if no network
@@ -5539,7 +5482,7 @@ function toast(msg,type='ok'){
   w.appendChild(t);requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
   setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),400);},4500);
 }
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'"');}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePanel();closeInlineDrawer();}});
 
 
@@ -5762,7 +5705,7 @@ async function deleteBulkSelected() {
   }
   _bulkSelected.clear();
   applyF();
-  updateBulkBar();
+  renderBulkBar();
   toast(`Deleted ${done} bug${done!==1?'s':''}`, 'ok');
 }
 
@@ -5946,12 +5889,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (sess?.user) {
     S.user = sess.user;
     setLoad(40, 'RESTORING SESSION');
+    const _authController = new AbortController();
+    const _authTimeout = setTimeout(() => _authController.abort(), 5000);
     fetch(WORKER + '/auth/verify', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ id_token: sess.user.idToken })
+      body:    JSON.stringify({ id_token: sess.user.idToken }),
+      signal:  _authController.signal,
     })
-    .then(r => r.json())
+    .then(r => { clearTimeout(_authTimeout); return r.json(); })
     .then(d => {
       if (d.ok) {
         S.user = { ...d, idToken: sess.user.idToken };
@@ -6769,27 +6715,22 @@ function importHandleFile(file) {
         // Reporter: use sheet's reporter column, NOT the logged-in user
         const sheetReporter = row.reporter || row.reported_by || row.tester || row.created_by || '';
         _importRows.push({
-          title:       cleanTitle,
-          priority:    row.priority      || row.p           || 'Medium',
-          severity:    row.severity      || '',
-          status:      row.status        || 'Open',
-          feature:     row.feature       || row.module      || '',
-          sub_feature: row.sub_feature   || row.screen      || row.sub_feat || '',
-          sprint:      row.sprint        || '',
-          build:       row.build         || row.build_version || '',
-          build_link:  row.build_link    || row.apk_url     || '',
-          platform:    row.platform      || row.device_type || '',
-          device:      row.device        || row.device_model || '',
-          pod:         row.pod           || row.team        || '',
-          issue_type:  row.issue_type    || row.type        || '',
-          steps:       extractedSteps,
-          actual:      row.actual        || row.actual_result || '',
-          expected:    row.expected      || row.expected_result || '',
-          notes:       row.notes         || row.description || '',
-          reporter:    sheetReporter,
-          assignees:   row.assignees     || row.assignee    || row.assigned_to || row.dev || '',
-          clickup_task_id: row.clickup_task_id || row.clickup_id || '',
-          attachment:  row.attachment    || '',
+          title: cleanTitle,
+          priority:  row.priority  || row.p || 'Medium',
+          severity:  row.severity  || '',
+          status:    row.status    || 'Open',
+          feature:   row.feature   || row.module || '',
+          sub_feature: row.sub_feature || row.screen || '',
+          sprint:    row.sprint    || '',
+          build:     row.build     || row.build_version || '',
+          platform:  row.platform  || row.device_type || '',
+          device:    row.device    || '',
+          pod:       row.pod       || row.team || '',
+          steps:     extractedSteps,
+          actual:    row.actual    || row.actual_result || '',
+          expected:  row.expected  || row.expected_result || '',
+          notes:     row.notes     || row.description || '',
+          reporter:  sheetReporter,
         });
       }
       if (!_importRows.length) { toast('No rows with a title found', 'err'); return; }
@@ -6802,11 +6743,11 @@ function importHandleFile(file) {
 
 function importShowPreview() {
   document.getElementById('importPreviewLabel').textContent = `Preview — ${_importRows.length} bug${_importRows.length!==1?'s':''} ready to import`;
-  let h = '<table><thead><tr><th>#</th><th>Title</th><th>Priority</th><th>Status</th><th>Feature</th><th>Pod</th><th>Assignee</th><th>Build</th></tr></thead><tbody>';
+  let h = '<table><thead><tr><th>#</th><th>Title</th><th>Priority</th><th>Status</th><th>Feature</th><th>Sprint</th></tr></thead><tbody>';
   _importRows.slice(0,10).forEach((row,i) => {
     const fullTitle = row.title||'';
     const displayTitle = fullTitle.replace(/\n/g,' ').replace(/\r/g,'');
-    h += `<tr><td class="tc-id">${i+1}</td><td class="tc-title" title="${esc(fullTitle)}">${esc(displayTitle.slice(0,100))}${displayTitle.length>100?'…':''}</td><td>${pChip(row.priority||'Medium')}</td><td>${stChip(row.status||'Open')}</td><td>${esc(row.feature||'—')}</td><td>${esc(row.pod||'—')}</td><td>${esc(row.assignees||'—')}</td><td>${esc(row.build||'—')}</td></tr>`;
+    h += `<tr><td class="tc-id">${i+1}</td><td class="tc-title" title="${esc(fullTitle)}">${esc(displayTitle.slice(0,120))}${displayTitle.length>120?'…':''}</td><td>${pChip(row.priority||'Medium')}</td><td>${stChip(row.status||'Open')}</td><td>${esc(row.feature||'—')}</td><td>${esc(row.sprint||'—')}</td></tr>`;
   });
   if(_importRows.length>10) h+=`<tr><td colspan="6" style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--dim);padding:10px">…and ${_importRows.length-10} more</td></tr>`;
   h += '</tbody></table>';
@@ -6832,40 +6773,24 @@ async function importSubmit() {
   let done = 0, failed = 0;
   _importedBugIds = [];
   for (const row of _importRows) {
-    // Build assignees array from sheet assignee column
-    const rawAssignees = row.assignees || row.assignee || row.assigned_to || row.dev || '';
-    const assigneeList = rawAssignees ? rawAssignees.split(/[,;]+/).map(n=>n.trim()).filter(Boolean)
-      .map(name => {
-        // Try to match against known team members
-        const m = (S.teamMembers||[]).find(tm=>tm.name&&tm.name.toLowerCase()===name.toLowerCase());
-        return m ? {name:m.name, email:m.email||'', picture:m.picture||''} : {name, email:'', picture:''};
-      }) : [];
     const data = {
-      // id intentionally omitted — worker generates a fresh HW-XXXXX id
-      title:       row.title,
-      priority:    row.priority    || 'Medium',
-      status:      row.status      || 'Open',
-      severity:    row.severity    || '',
-      feature:     row.feature     || '',
-      sub_feature: row.sub_feature || row.sub_feat || row.screen || row.subscreeen || '',
-      sprint:      row.sprint      || '',
-      build:       row.build       || row.build_version || '',
-      build_link:  row.build_link  || row.apk_url || row.apk || '',
-      platform:    row.platform    || row.os || '',
-      device:      row.device      || row.device_model || '',
-      pod:         row.pod         || row.team || '',
-      issue_type:  row.issue_type  || row.type || '',
-      steps:       row.steps       || row.steps_to_reproduce || row['steps to reproduce'] || '',
-      actual:      row.actual      || row.actual_result      || row['actual result']      || '',
-      expected:    row.expected    || row.expected_result    || row['expected result']    || '',
-      notes:       row.notes       || row.description        || '',
-      reporter:    row.reporter    || '',
-      reporter_email:   row.reporter ? '' : (S.user?.email   || ''),
+      // id intentionally omitted &#8212; worker generates a fresh HW-XXXXX id
+      title:    row.title,
+      priority: row.priority  || 'Medium',
+      status:   row.status    || 'Open',
+      severity: row.severity  || '',
+      feature:  row.feature   || '',
+      sprint:   row.sprint    || '',
+      build:    row.build     || '',
+      device:   row.device    || '',
+      steps:    row.steps     || row['steps to reproduce'] || '',
+      actual:   row.actual    || row['actual result']      || '',
+      expected: row.expected  || row['expected result']    || '',
+      reporter: row.reporter || '',
+      reporter_email:   row.reporter ? '' : (S.user?.email || ''),
       reporter_picture: row.reporter ? '' : (S.user?.picture || ''),
-      clickup_task_id: row.clickup_task_id || row.clickup_id || row.cu_id || '',
-      attachment:  row.attachment  || '',
-      assignees:   assigneeList,
-      app_url:     APP_URL,
+      attachment: row.attachment || '',
+      assignees: [], app_url: APP_URL,
     };
     try {
       const res = await api('/bugs', 'POST', data);
@@ -7420,27 +7345,6 @@ function goTestRuns() {
   }
 }
 
-// goTCManager — opens TC Suite manager (suites+runs) inside builds page
-async function goTCManager() {
-  const wrap = document.getElementById('testRunsWrap');
-  const buildsWrap = document.getElementById('buildsWrap');
-  const banner = document.getElementById('buildsCurrentBanner');
-  if(!wrap) return;
-  buildsWrap.style.display = 'none';
-  banner.style.display = 'none';
-  wrap.style.display = '';
-  // Render TC manager inside testRunsWrap using the TC engine
-  _tcSuites = tcLsGetSuites();
-  _tcRuns   = tcLsGetRuns();
-  tcRenderBuildsSection();
-  // Also async-load from KV
-  Promise.all([tcKvLoad(TC_SUITE_KV_KEY), tcKvLoad(TC_RUNS_KV_KEY)]).then(function(res){
-    _tcSuites = res[0]||_tcSuites; _tcRuns = res[1]||_tcRuns;
-    tcLsSaveSuites(_tcSuites); tcLsSaveRuns(_tcRuns);
-    tcRenderBuildsSection();
-  }).catch(function(){});
-}
-
 function renderTestRuns() {
   const wrap = document.getElementById('testRunsWrap');
   if(!wrap) return;
@@ -7573,7 +7477,7 @@ function openNewTestRun() {
             📥 Download Template
           </button>
         </div>
-        <div style="border:2px dashed var(--bd2);border-radius:8px;padding:20px;text-align:center;cursor:pointer;background:rgba(124,58,237,.03)" onclick="document.getElementById('tr-csv-input').click()" id="tr-csv-drop" ondragover="event.preventDefault();this.style.borderColor=\'var(--g1)\'" ondragleave="this.style.borderColor=\'var(--bd2)\'" ondrop="trHandleCsvDrop(event)">
+        <div style="border:2px dashed var(--bd2);border-radius:8px;padding:20px;text-align:center;cursor:pointer;background:rgba(124,58,237,.03)" onclick="document.getElementById('tr-csv-input').click()" id="tr-csv-drop" ondragover="event.preventDefault();this.style.borderColor='var(--g1)'" ondragleave="this.style.borderColor='var(--bd2)'" ondrop="trHandleCsvDrop(event)">
           <div style="font-size:24px;margin-bottom:6px">📄</div>
           <div style="font-family:var(--mono);font-size:10px;color:var(--dim)">Drop CSV / Excel here or click to browse</div>
           <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:4px">Supports .csv · .xlsx · TestRail export · BugPulse template · Duplicates auto-removed</div>
@@ -8735,122 +8639,6 @@ async function sendGChatCard(card, pod) {
   } catch(e) { console.warn('[gchat card]', e); return false; }
 }
 
-// ── Fire GChat Alert panel (manual, from bug detail) ─────────────────────────
-function openFireAlertPanel(bugId) {
-  const bug = S.bugs.find(b => b.id === bugId);
-  if (!bug) return;
-  const cfg = getWebhookConfig();
-  // Collect all configured pods/webhooks
-  const pods = [];
-  if (cfg.gchat_url) pods.push({ label: 'Global (all pods)', key: '' });
-  (DD_FIELDS.find(f => f.key === 'pod') || {options:[]}).options.forEach(p => {
-    const k = 'pod_gchat_' + p.toLowerCase().replace(/[^a-z0-9]/g,'_');
-    if (cfg[k]) pods.push({ label: p, key: p });
-  });
-  if (!pods.length) { toast('No GChat webhook configured — set one in Webhook Settings', 'err'); return; }
-
-  const isPriority = ['critical','urgent','high'].includes((bug.priority||'').toLowerCase());
-  const podOpts = pods.map(p =>
-    `<option value="${esc(p.key)}"${(!p.key ? ' selected' : '')}>${esc(p.label)}</option>`
-  ).join('');
-
-  document.getElementById('panelTitle').textContent = '🔔 FIRE ALERT';
-  document.getElementById('panelId').textContent    = bug.id || '';
-  document.getElementById('panelFooter').innerHTML  = `
-    <button class="btn btn-g" onclick="closePanel()">Cancel</button>
-    <button class="btn btn-v" id="fire-alert-send-btn">🔔 Send Alert</button>`;
-
-  document.getElementById('panelBody').innerHTML = `
-    <div style="background:${isPriority?'rgba(239,68,68,.08)':'rgba(124,58,237,.06)'};border:1px solid ${isPriority?'rgba(239,68,68,.25)':'rgba(124,58,237,.2)'};border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px">
-      <div style="font-size:24px">${isPriority?'🚨':'🐛'}</div>
-      <div>
-        <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(bug.title||'')}</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:3px">
-          ${esc(bug.priority||'')} · ${esc(bug.status||'')} · ${esc(bug.feature||'—')} · ${esc(bug.id||'')}
-        </div>
-      </div>
-    </div>
-    <div class="fg">
-      <label class="fl">Send to Pod / Webhook</label>
-      <select class="fi2" id="fire-alert-pod">${podOpts}</select>
-    </div>
-    <div class="fg">
-      <label class="fl">Message</label>
-      <textarea class="fi2" id="fire-alert-msg" rows="4" style="resize:vertical">${esc(buildFireAlertText(bug))}</textarea>
-    </div>
-    <div class="fg">
-      <label class="fl">Also send to</label>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
-          <input type="checkbox" id="fire-gchat-chk" checked> GChat
-        </label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
-          <input type="checkbox" id="fire-slack-chk"> Slack
-        </label>
-      </div>
-    </div>`;
-
-  // Bind send button via JS to avoid onclick quoting
-  document.getElementById('fire-alert-send-btn').onclick = function() { doFireAlert(bugId); };
-  openPanel();
-}
-
-function buildFireAlertText(bug) {
-  var icon = (bug.priority==='Critical'||bug.priority==='Urgent') ? String.fromCodePoint(0x1F6A8) : bug.priority==='High' ? String.fromCodePoint(0x26A0,0xFE0F) : String.fromCodePoint(0x1F41B);
-  var nl = '\n';
-  var parts = [
-    icon + ' *[' + (bug.priority||'') + '] ' + (bug.id||'') + '* — ' + (bug.title||''),
-    'Status: ' + (bug.status||'Open') + '  |  Feature: ' + (bug.feature||'—') + '  |  Build: ' + (bug.build||'—'),
-  ];
-  if (bug.assignees && bug.assignees.length) parts.push('Assigned: ' + bug.assignees.map(function(a){return a.name;}).join(', '));
-  if (bug.steps) parts.push('Steps: ' + bug.steps.slice(0,200) + (bug.steps.length>200?'…':''));
-  if (bug.pod) parts.push('Pod: ' + bug.pod);
-  parts.push('— BugPulse');
-  return parts.join(nl);
-}
-
-async function doFireAlert(bugId) {
-  const pod  = document.getElementById('fire-alert-pod')?.value || '';
-  const msg  = document.getElementById('fire-alert-msg')?.value || '';
-  const gchat= document.getElementById('fire-gchat-chk')?.checked;
-  const slack= document.getElementById('fire-slack-chk')?.checked;
-  if (!msg.trim()) { toast('Message is empty', 'err'); return; }
-
-  const btn = document.getElementById('fire-alert-send-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
-
-  let sent = 0;
-  if (gchat) {
-    const ok = await sendGChatWebhook(msg, pod);
-    if (ok) sent++;
-    else toast('GChat send failed — check webhook URL in settings', 'err');
-  }
-  if (slack) {
-    const ok = await sendSlackWebhook(msg);
-    if (ok) sent++;
-    else toast('Slack send failed — check webhook URL in settings', 'err');
-  }
-
-  if (sent > 0) {
-    closePanel();
-    toast('Alert sent to ' + sent + ' channel' + (sent > 1 ? 's' : '') + ' ✓', 'ok');
-    // Log to activity
-    try { logActivity('alerted', bugId, msg.slice(0, 80)); } catch(e) {}
-  }
-  if (btn) { btn.disabled = false; btn.textContent = '🔔 Send Alert'; }
-}
-
-// ── Auto-fire alert when bug is saved with high priority ──────
-// Called from saveBug after successful save
-async function autoFirePriorityAlert(bug) {
-  const cfg = getWebhookConfig();
-  if (!cfg.auto_alert_priority) return;  // disabled unless opted in
-  const level = (bug.priority || '').toLowerCase();
-  if (!['critical','urgent','high'].includes(level)) return;
-  const msg = buildFireAlertText(bug);
-  await sendGChatWebhook(msg, bug.pod || '');
-}
-
 async function sendGChatWebhook(text, pod) {
   const cfg = getWebhookConfig();
   let url = cfg.gchat_url;
@@ -9123,7 +8911,101 @@ function buildPodGChatFields(cfg) {
   }).join('');
 }
 
+function buildJenkinsFields(cfg) {
+  const TEAMS = ['openers','middle_order','tech_infra','liveops'];
+  const label = t => t.split('_').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ');
+  const workerBase = 'https://bugpulse-worker.kunal-249.workers.dev/webhook/jenkins?team=';
+  return TEAMS.map(t => {
+    const tokenKey = 'jenkins_' + t + '_token';
+    const gchatKey = 'jenkins_' + t + '_gchat';
+    const emailKey = 'jenkins_' + t + '_emails';
+    const hasToken = !!(cfg[tokenKey]);
+    const tokenHtml = hasToken
+      ? '<div style="display:flex;gap:6px;align-items:center">' +
+          '<input class="fi2" id="wh-token-' + t + '" value="••••••••••••••••" readonly style="flex:1;color:var(--dim);font-family:var(--mono)" data-revealed="0">' +
+          '<button class="btn btn-g btn-sm" id="reveal-btn-' + t + '" onclick="revealToken('' + t + '')">👁 Reveal</button>' +
+          '<button class="btn btn-r btn-sm" onclick="regenToken('' + t + '')">↻ Regen</button>' +
+        '</div>' +
+        '<div style="font-family:var(--mono);font-size:9px;color:var(--g4);margin-top:4px">✓ Token set — Webhook URL: <span style="color:var(--g2);word-break:break-all">' + esc(workerBase + t + '&token=[TOKEN]') + '</span></div>'
+      : '<div style="display:flex;gap:6px">' +
+          '<input class="fi2" id="wh-token-' + t + '" value="" placeholder="Click Generate to create token" style="flex:1" data-revealed="1">' +
+          '<button class="btn btn-v btn-sm" onclick="genToken('' + t + '')">⚡ Generate</button>' +
+        '</div>';
+    return '<div style="background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.12);border-radius:8px;padding:10px 12px;margin-bottom:10px">' +
+      '<div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--g3);margin-bottom:8px">' + label(t) + '</div>' +
+      '<div class="fg" style="margin-bottom:6px"><label class="fl" style="text-transform:none;letter-spacing:0;font-size:11px">🔑 Webhook Token</label>' + tokenHtml + '</div>' +
+      '<div class="fg" style="margin-bottom:6px"><label class="fl" style="text-transform:none;letter-spacing:0;font-size:11px">💬 GChat URL</label>' +
+        '<input class="fi2" id="wh-jk-gchat-' + t + '" value="' + esc(cfg[gchatKey]||'') + '" placeholder="https://chat.googleapis.com/…"></div>' +
+      '<div class="fg" style="margin-bottom:0"><label class="fl" style="text-transform:none;letter-spacing:0;font-size:11px">📧 Emails</label>' +
+        '<input class="fi2" id="wh-jk-emails-' + t + '" value="' + esc(cfg[emailKey]||'') + '" placeholder="dev@hitwicket.com"></div>' +
+      '</div>';
+  }).join('');
+}
+
+function buildJenkinsTokensFromForm() {
+  const TEAMS = ['openers','middle_order','tech_infra','liveops'];
+  const out = {};
+  TEAMS.forEach(t => {
+    const inp = document.getElementById('wh-token-' + t);
+    const val = inp?.value?.trim()||'';
+    // Only save if revealed/new — skip the masked placeholder
+    if (val && val !== '••••••••••••••••') out['jenkins_' + t + '_token'] = val;
+    out['jenkins_' + t + '_gchat']  = document.getElementById('wh-jk-gchat-'+t)?.value?.trim()||'';
+    out['jenkins_' + t + '_emails'] = document.getElementById('wh-jk-emails-'+t)?.value?.trim()||'';
+  });
+  return out;
+}
+
+async function revealToken(team) {
+  const btn = document.getElementById('reveal-btn-' + team);
+  const inp = document.getElementById('wh-token-' + team);
+  if (!inp) return;
+  if (inp.dataset.revealed === '1') {
+    inp.value = '••••••••••••••••'; inp.readOnly = true;
+    if (btn) btn.textContent = '👁 Reveal';
+    inp.dataset.revealed = '0';
+    return;
+  }
+  try {
+    const d = await api('/settings');
+    const token = d?.settings?.['jenkins_' + team + '_token'] || '';
+    if (!token) { toast('No token saved for ' + team + ' yet','err'); return; }
+    inp.value = token; inp.readOnly = false;
+    if (btn) btn.textContent = '🙈 Hide';
+    inp.dataset.revealed = '1';
+    // Auto-hide after 30s
+    setTimeout(() => {
+      if (inp.dataset.revealed === '1') {
+        inp.value = '••••••••••••••••'; inp.readOnly = true;
+        if (btn) btn.textContent = '👁 Reveal';
+        inp.dataset.revealed = '0';
+      }
+    }, 30000);
+  } catch(e) { toast('Failed to load token: ' + e.message,'err'); }
+}
+
+function regenToken(team) {
+  if (!confirm('Regenerate token for ' + team.split('_').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ') + '?\n\nThe OLD token stops working IMMEDIATELY. You must update Jenkins with the new one before the next build.')) return;
+  const token = Math.random().toString(36).slice(2) + Date.now().toString(36) + Math.random().toString(36).slice(2);
+  const inp = document.getElementById('wh-token-' + team);
+  if (inp) { inp.value = token; inp.readOnly = false; inp.dataset.revealed = '1'; }
+  const btn = document.getElementById('reveal-btn-' + team);
+  if (btn) btn.textContent = '🙈 Hide';
+  navigator.clipboard.writeText(token).catch(()=>{});
+  toast('New token generated & copied to clipboard — click Save Settings to activate ✓','ok');
+}
+
+function genToken(team) {
+  const token = Math.random().toString(36).slice(2) + Date.now().toString(36) + Math.random().toString(36).slice(2);
+  const inp = document.getElementById('wh-token-' + team);
+  if (inp) { inp.value = token; inp.dataset.revealed = '1'; }
+  navigator.clipboard.writeText(token).catch(()=>{});
+  toast('Token generated & copied — click Save Settings to activate ✓','ok');
+}
+
+
 async function openWebhookSettings() {
+  if (S.user?.role !== 'admin') { toast('Admin only','err'); return; }
   const data = await api('/settings').catch(()=>({settings:{}}));
   const cfg = Object.assign({}, getWebhookConfig(), data?.settings||{});
   _webhookCfgCache = cfg;
@@ -9190,15 +9072,19 @@ async function openWebhookSettings() {
           <button class="btn btn-g btn-sm" onclick="whFireSlack()">&#128172; Fire Slack</button>
         </div>
       </div>
-      <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:14px 16px">
-        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#f87171;margin-bottom:12px">🚨 AUTO-ALERT ON HIGH PRIORITY</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);line-height:1.8;margin-bottom:10px">
-          When a bug is saved/updated with <b style="color:#fbbf24">Critical</b>, <b style="color:#f87171">Urgent</b>, or <b style="color:#fb923c">High</b> priority,
-          automatically fire a GChat alert to the bug's pod webhook (or global if no pod match).
+      <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:14px 16px">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g3);margin-bottom:6px">🔧 JENKINS WEBHOOKS</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:12px;line-height:1.8">
+          Jenkins POSTs to <code style="color:var(--g2)">/webhook/jenkins?team=TEAM&amp;token=TOKEN</code> with <code style="color:var(--g2)">{version, platform, link, notes, tasks}</code><br>
+          Tokens are one-way encrypted. Once saved they show as masked — use <b>Reveal</b> to view (30s), <b>Regen</b> to replace.
         </div>
+        ${buildJenkinsFields(cfg)}
+      </div>
+      <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:14px 16px">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#f87171;margin-bottom:10px">🚨 AUTO-ALERT HIGH PRIORITY</div>
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
           <input type="checkbox" id="wh-auto-alert" ${cfg.auto_alert_priority?'checked':''} style="width:16px;height:16px;cursor:pointer">
-          <span style="font-size:13px;color:var(--text)">Enable auto-alert for Critical / Urgent / High bugs</span>
+          <span style="font-size:13px;color:var(--text)">Auto-alert team on Critical / Urgent / High bugs via GChat</span>
         </label>
       </div>
       <div style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:14px 16px">
@@ -9251,7 +9137,8 @@ async function saveWebhookSettings() {
     notif_day_end_report: document.getElementById('wh-ev-day_end_report')?.classList.contains('on'),
     eod_time: document.getElementById('wh-eod-time')?.value||'21:00',
     eod_schedule_on: document.getElementById('wh-eod-on')?.classList.contains('on'),
-    auto_alert_priority: document.getElementById('wh-auto-alert')?.checked || false,
+    auto_alert_priority: document.getElementById('wh-auto-alert')?.checked||false,
+    ...buildJenkinsTokensFromForm(),
   };
   await saveWebhookConfig(cfg);
   toast('Webhook settings saved ✓','ok');
@@ -9335,65 +9222,30 @@ function populateCUFilters() {
 function exportBugsXLSX(ids) {
   const bugs = ids ? S.bugs.filter(b => ids.includes(b.id)) : S.filtered;
   if(!bugs.length) { toast('No bugs to export', 'err'); return; }
-
-  // ALL fields — matches GAS COLUMN_MAP exactly
-  const headers = [
-    'Bug ID','Title','Priority','Severity','Status',
-    'Feature','Sub-Feature','Sprint','Build','Build Link',
-    'Platform','Device','Pod','Issue Type',
-    'Steps to Reproduce','Repro Rate','Actual Result','Expected Result','Notes',
-    'Reporter','Reporter Email','Assignee','ClickUp Task ID','Attachment',
-    'Created','Updated','Age (days)'
-  ];
-
-  const today = new Date();
-  const rows = bugs.map(b => {
-    const created = b.created_at ? new Date(b.created_at) : null;
-    const updated = b.updated_at ? new Date(b.updated_at) : null;
-    const ageDays = created ? Math.floor((today - created) / 86400000) : '';
-    return [
-      b.id||'',
-      b.title||'',
-      b.priority||'',
-      b.severity||'',
-      b.status||'',
-      b.feature||'',
-      b.sub_feature||'',
-      b.sprint||'',
-      b.build||'',
-      b.build_link||'',
-      b.platform||'',
-      b.device||'',
-      b.pod||'',
-      b.issue_type||'',
-      b.steps||'',
-      b.repro||'',
-      b.actual||'',
-      b.expected||'',
-      b.notes||'',
-      b.reporter||'',
-      b.reporter_email||'',
-      (b.assignees||[]).map(a=>a.name).join(', ')||(b.assignee||''),
-      b.clickup_task_id||'',
-      b.attachment||'',
-      created ? created.toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'}) : '',
-      updated ? updated.toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'}) : '',
-      ageDays,
-    ];
-  });
-
+  const headers = ['ID','Title','Priority','Severity','Status','Feature','Sprint','Build','Platform','Device','Pod','Assignee','Reporter','Steps','Actual','Expected','Issue Type','Created'];
+  const rows = bugs.map(b => [
+    b.id||'', b.title||'', b.priority||'', b.severity||'', b.status||'',
+    b.feature||'', b.sprint||'', b.build||'', b.platform||'', b.device||'',
+    b.pod||'', (b.assignees||[]).map(a=>a.name).join(', ')||b.assignee||'',
+    b.reporter||'', b.steps||'', b.actual||'', b.expected||'',
+    b.issue_type||'',
+    b.created_at ? new Date(b.created_at).toLocaleDateString('en-IN') : ''
+  ]);
+  // Build CSV as fallback if XLSX library not available
   const csvRows = [headers, ...rows].map(r =>
-    r.map(v => '"' + String(v===null||v===undefined?'':v).replace(/"/g,'""').replace(/\r?\n/g,' | ') + '"').join(',')
+    r.map(v => '"' + String(v||'').replace(/"/g,'""') + '"').join(',')
   );
-  const csv = '\uFEFF' + csvRows.join('\r\n'); // BOM for Excel UTF-8
+  const csv = csvRows.join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
   a.download = 'bugpulse_export_' + new Date().toISOString().slice(0,10) + '.csv';
-  document.body.appendChild(a); a.click(); a.remove();
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
   URL.revokeObjectURL(url);
-  toast('Exported ' + bugs.length + ' bug' + (bugs.length!==1?'s':'') + ' (' + headers.length + ' fields) ✓', 'ok');
+  toast('Exported ' + bugs.length + ' bugs ✓', 'ok');
 }
 
 // &#9472;&#9472; Restored missing functions &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
@@ -10596,202 +10448,13 @@ let _tcRunOpen = null;
 let _tcLoading = false;
 
 // ── Init — load from KV, fall back to localStorage ───────────────────────────
-// ── Renders TC manager inside the Builds page testRunsWrap ──────────────────
-function tcRenderBuildsSection() {
-  var wrap = document.getElementById('testRunsWrap');
-  if(!wrap) return;
-  // Header
-  wrap.innerHTML =
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">' +
-    '<div style="font-family:var(--disp);font-size:15px;font-weight:800;letter-spacing:2px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent">&#129514; TEST CASES</div>' +
-    '<div style="display:flex;gap:7px;flex-wrap:wrap">' +
-    '<button class="btn btn-g btn-sm" onclick="tcBuildBack()">&#8592; Builds</button>' +
-    '<button class="btn '+((_tcBuildView||'suites')==='suites'?'btn-v':'btn-g')+' btn-sm" id="tcb-btn-suites" onclick="tcBuildShowView(&quot;suites&quot;)">&#128218; Suites</button>' +
-    '<button class="btn '+((_tcBuildView||'suites')==='runs'?'btn-v':'btn-g')+' btn-sm" id="tcb-btn-runs" onclick="tcBuildShowView(&quot;runs&quot;)">&#9654; Runs</button>' +
-    '<button class="btn btn-v btn-sm" onclick="tcOpenUploadSuite()">&#65291; New Suite</button>' +
-    '</div></div>' +
-    '<div id="tcb-view-suites">' + (_tcBuildView==='runs'?'':'tcRenderSuites placeholder') + '</div>' +
-    '<div id="tcb-view-runs" style="display:none"></div>' +
-    '<div id="tcb-view-execute" style="display:none"></div>';
-  // Override tcShowView to use tcb- divs
-  _tcInBuilds = true;
-  tcBuildShowView(_tcBuildView||'suites');
-}
-
-var _tcBuildView = 'suites';
-var _tcInBuilds  = false;
-
-function tcBuildBack() {
-  _tcInBuilds = false;
-  var wrap = document.getElementById('testRunsWrap');
-  var buildsWrap = document.getElementById('buildsWrap');
-  var banner = document.getElementById('buildsCurrentBanner');
-  if(wrap) wrap.style.display = 'none';
-  if(buildsWrap) buildsWrap.style.display = '';
-  if(banner) banner.style.display = '';
-}
-
-function tcBuildShowView(which) {
-  _tcBuildView = which;
-  ['suites','runs','execute'].forEach(function(v){
-    var el=document.getElementById('tcb-view-'+v);
-    if(el) el.style.display = v===which?'':'none';
-  });
-  var bs=document.getElementById('tcb-btn-suites'), br=document.getElementById('tcb-btn-runs');
-  if(bs) bs.className='btn btn-sm '+(which==='suites'?'btn-v':'btn-g');
-  if(br) br.className='btn btn-sm '+(which==='runs'?'btn-v':'btn-g');
-  if(which==='suites') {
-    var el=document.getElementById('tcb-view-suites');
-    if(el) { var old=document.getElementById('tc-suites-wrap'); el.innerHTML=''; el.appendChild(old||document.createElement('div')); }
-    tcRenderSuitesInto('tcb-view-suites');
-  } else if(which==='runs') {
-    tcRenderRunsInto('tcb-view-runs');
-  }
-}
-
-function tcRenderSuitesInto(containerId) {
-  var wrap=document.getElementById(containerId);
-  if(!wrap) return;
-  var features=[]; _tcSuites.forEach(function(s){if(s.feature_tag&&features.indexOf(s.feature_tag)<0)features.push(s.feature_tag);});
-  var filterVal=wrap._filterFeature||'';
-  var suites=filterVal?_tcSuites.filter(function(s){return s.feature_tag===filterVal;}):_tcSuites;
-  if(!suites.length){
-    wrap.innerHTML='<div class="empty"><div class="empty-icon">&#128218;</div><h3>NO SUITES YET</h3><p>Create a suite with &#65291; New Suite button above</p></div>';
-    var fbarEmpty=tcBuildFeatureFilterBar(features,filterVal,containerId);
-    if(fbarEmpty) wrap.insertAdjacentElement('afterbegin',fbarEmpty);
-    return;
-  }
-  var isAdmin=S.user&&S.user.role==='admin';
-  wrap.innerHTML=suites.map(function(suite,si){
-    var runCount=_tcRuns.filter(function(r){return r.suiteId===suite.id;}).length;
-    var fileCount=suite.files&&suite.files.length||0;
-    var tcCount=suite.cases&&suite.cases.length||0;
-    return '<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;margin-bottom:10px">'+
-      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">'+
-      '<div style="flex:1;min-width:160px">'+
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">'+
-      '<span style="font-size:14px;font-weight:700;color:var(--text)">'+esc(suite.name)+'</span>'+
-      (suite.feature_tag?'<span style="font-family:var(--mono);font-size:8px;padding:1px 7px;border-radius:10px;background:rgba(6,182,212,.15);color:var(--g2)">'+esc(suite.feature_tag)+'</span>':'')+
-      (suite.type?'<span style="font-family:var(--mono);font-size:8px;padding:1px 7px;border-radius:10px;background:rgba(124,58,237,.15);color:var(--g1)">'+esc(suite.type)+'</span>':'')+
-      (suite.pod?'<span style="font-family:var(--mono);font-size:8px;padding:1px 7px;border-radius:10px;background:rgba(6,182,212,.12);color:var(--g2)">'+esc(suite.pod)+'</span>':'')+
-      '</div>'+
-      (suite.desc?'<div style="font-size:11px;color:var(--mist);margin-bottom:4px">'+esc(suite.desc)+'</div>':'')+
-      '<div style="font-family:var(--mono);font-size:9px;color:var(--dim)">'+
-      '<b style="color:var(--ghost)">'+tcCount+'</b> TCs'+
-      (fileCount?' &middot; <b style="color:var(--ghost)">'+fileCount+'</b> file'+(fileCount>1?'s':''):'')+
-      ' &middot; <b style="color:var(--ghost)">'+runCount+'</b> run'+(runCount!==1?'s':'')+
-      ' &middot; '+esc(suite.created_by||'')+
-      '</div></div>'+
-      '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap" data-suite-id="'+esc(suite.id)+'" data-suite-idx="'+si+'">'+
-      '<button class="btn btn-v btn-sm tcb-replicate">&#10765; Replicate</button>'+
-      '<button class="btn btn-g btn-sm tcb-manage-tcs">&#9999; TCs</button>'+
-      '<button class="btn btn-g btn-sm tcb-preview">&#128065; View</button>'+
-      '<button class="btn btn-g btn-sm tcb-edit">&#128221; Edit</button>'+
-      (isAdmin?'<button class="btn btn-r btn-sm tcb-delete">&#10005;</button>':'')+
-      '</div></div></div>';
-  }).join('');
-  var fbar=tcBuildFeatureFilterBar(features,filterVal,containerId);
-  if(fbar) wrap.insertAdjacentElement('afterbegin',fbar);
-  // Bind click events using data attributes (avoids onclick quoting hell)
-  wrap.querySelectorAll('[data-suite-id]').forEach(function(row){
-    var sid=row.getAttribute('data-suite-id');
-    row.querySelector('.tcb-replicate')&&(row.querySelector('.tcb-replicate').onclick=function(){tcOpenReplicate(sid);});
-    row.querySelector('.tcb-manage-tcs')&&(row.querySelector('.tcb-manage-tcs').onclick=function(){tcManageTCs(sid);});
-    row.querySelector('.tcb-preview')&&(row.querySelector('.tcb-preview').onclick=function(){tcPreviewSuite(sid);});
-    row.querySelector('.tcb-edit')&&(row.querySelector('.tcb-edit').onclick=function(){tcOpenUploadSuite(sid);});
-    row.querySelector('.tcb-delete')&&(row.querySelector('.tcb-delete').onclick=function(){tcDeleteSuite(sid);});
-  });
-}
-
-
-function tcRenderRunsInto(containerId) {
-  var wrap=document.getElementById(containerId);
-  if(!wrap) return;
-  if(!_tcRuns.length){
-    wrap.innerHTML='<div class="empty"><div class="empty-icon">&#129514;</div><h3>NO RUNS YET</h3><p>Replicate a suite to start a test run</p></div>';
-    return;
-  }
-  var isAdmin=S.user&&S.user.role==='admin';
-  var html=_tcRuns.map(function(run){
-    var t=run.cases&&run.cases.length||0,
-        p=run.cases&&run.cases.filter(function(c){return c.result==='pass';}).length||0,
-        f=run.cases&&run.cases.filter(function(c){return c.result==='fail';}).length||0,
-        nd=run.cases&&run.cases.filter(function(c){return c.result==='pending';}).length||0;
-    var pct=t?Math.round(p/t*100):0,pc=pct>=80?'var(--g4)':pct>=50?'var(--g3)':'var(--g5)';
-    // Encode run.id safely — no raw variable names in onclick
-    var rid=JSON.stringify(run.id);
-    return '<div class="tcb-run-row" style="background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer" data-run-id="'+esc(run.id)+'">'+
-      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
-      '<span style="font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(124,58,237,.15);color:var(--g1)">'+esc(run.suiteName||'')+'</span>'+
-      (run.tester?'<span style="font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(6,182,212,.12);color:var(--g2)">&#128100; '+esc(run.tester)+'</span>':'')+
-      '<span style="font-size:13px;font-weight:700;color:var(--text);flex:1">'+esc(run.label||'')+'</span>'+
-      '<span style="font-family:var(--mono);font-size:16px;font-weight:800;color:'+pc+'">'+pct+'%</span>'+
-      (isAdmin?'<button class="btn btn-r btn-sm tcb-del-run" style="pointer-events:auto">&#10005;</button>':'')+
-      '</div>'+
-      '<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">'+
-      '<span style="font-family:var(--mono);font-size:9px;padding:1px 7px;border-radius:10px;background:rgba(16,185,129,.12);color:#34d399">&#10003; '+p+'</span>'+
-      '<span style="font-family:var(--mono);font-size:9px;padding:1px 7px;border-radius:10px;background:rgba(239,68,68,.12);color:#f87171">&#10005; '+f+'</span>'+
-      (nd?'<span style="font-family:var(--mono);font-size:9px;padding:1px 7px;border-radius:10px;background:var(--bg3);color:var(--dim)">&mdash; '+nd+'</span>':'')+
-      '<span style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-left:auto">'+esc(run.build||'—')+' &middot; '+esc(run.date||'')+'</span>'+
-      '</div></div>';
-  }).join('');
-  wrap.innerHTML=html;
-  // Bind events via data attributes — no raw IDs in onclick
-  wrap.querySelectorAll('.tcb-run-row').forEach(function(row){
-    var rid=row.getAttribute('data-run-id');
-    row.addEventListener('click', function(e){
-      if(e.target.classList.contains('tcb-del-run')) return;
-      tcBuildOpenRun(rid);
-    });
-    var delBtn=row.querySelector('.tcb-del-run');
-    if(delBtn) delBtn.addEventListener('click', function(e){
-      e.stopPropagation(); tcDeleteRun(rid);
-    });
-  });
-}
-
-
-function tcBuildOpenRun(runId) {
-  _tcRunOpen = runId;
-  tcBuildShowView("execute");
-  // Render execute into tcb-view-execute
-  var wrap = document.getElementById('tcb-view-execute');
-  if(!wrap) return;
-  var run = _tcRuns.filter(function(r){return r.id===runId;})[0];
-  if(!run){wrap.innerHTML='<div class="empty"><h3>RUN NOT FOUND</h3></div>';return;}
-  // Use same render as tcRenderExecute but target this wrap
-  _tcRunOpen = runId;
-  // Temporarily point tc-execute-wrap to tcb-view-execute
-  var fakeWrap = document.createElement('div');
-  fakeWrap.id = 'tc-execute-wrap-temp';
-  wrap.innerHTML = '';
-  wrap.appendChild(fakeWrap);
-  // Render using existing function but swap wrap
-  var origEl = document.getElementById('tc-execute-wrap');
-  fakeWrap.id = 'tc-execute-wrap';
-  tcRenderExecute();
-  fakeWrap.id = 'tc-execute-wrap-temp';
-  if(origEl) origEl.id = 'tc-execute-wrap';
-  // Add back button
-  wrap.insertAdjacentHTML('afterbegin',
-    '<button class="btn btn-g btn-sm" style="margin-bottom:10px" onclick="tcBuildShowView(&quot;runs&quot;)">&#8592; Runs</button>');
-}
-
-function tcBuildPreview(suiteId) {
-  // Open suite preview panel
-  tcPreviewSuite(suiteId);
-}
-
-// Override tcShowView when in builds context
-var _origTcShowView = null;
-
 async function tcInit() {
   if (_tcLoading) return;
   _tcLoading = true;
   // Always load from KV (source of truth) — localStorage only as loading placeholder
   _tcSuites = tcLsGetSuites();
   _tcRuns   = tcLsGetRuns();
-  tcShowView("suites");
+  tcShowView('suites');
   tcRenderSuites();
   tcRenderRuns();
   try {
@@ -10858,25 +10521,38 @@ function tcOpenUploadSuite(editId) {
     '<button class="btn btn-g" onclick="closePanel()">Cancel</button> ' +
     '<button class="btn btn-v" onclick="tcSaveSuite(\''+(editId||'')+'\')">&#128190; Save Suite</button>';
 
-    var podOpts='<option value="">— All pods —</option>'+(DD_FIELDS.find(function(f){return f.key==="pod";})||{options:[]}).options.map(function(p){return '<option'+(existing&&existing.pod===p?' selected':'')+' value="'+esc(p)+'">'+esc(p)+'</option>';}).join('');
   document.getElementById('panelBody').innerHTML =
     '<div class="fg"><label class="fl">Suite Name <span style="color:var(--g5)">*</span></label>' +
     '<input class="fi2" id="tcs-name" placeholder="e.g. Old User, New User, Full Regression" value="'+esc(existing?existing.name:'')+'"></div>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">' +
-    '<div class="fg" style="margin:0"><label class="fl">Feature Tag</label>' +
-    '<select class="fi2" id="tcs-feature"><option value="">— None —</option>' +
-    ['FTUE','PvP','Store','Alliance','Auction','Events','Match','Inventory','Social','Settings'].concat((DD_FIELDS.find(function(f){return f.key==="feature";})||{options:[]}).options||[]).filter(function(v,i,a){return a.indexOf(v)===i;}).map(function(f){return "<option"+(existing&&existing.feature_tag===f?" selected":"")+" value=\""+esc(f)+"\">"+esc(f)+"</option>";}).join("") +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+    '<div class="fg" style="margin:0"><label class="fl">Pod / Team</label>' +
+    '<select class="fi2" id="tcs-pod"><option value="">— All pods —</option>' +
+    (DD_FIELDS.find(function(f){return f.key==="pod";})||{options:[]}).options.map(function(p){return '<option'+(existing&&existing.pod===p?' selected':'')+' value="'+esc(p)+'">'+esc(p)+'</option>';}).join('') +
     '</select></div>' +
-    '<div class="fg" style="margin:0"><label class="fl">Pod / Team</label><select class="fi2" id="tcs-pod">'+podOpts+'</select></div>' +
     '<div class="fg" style="margin:0"><label class="fl">Type</label>' +
-    '<input class="fi2" id="tcs-type" list="tcs-type-list" placeholder="Smoke / Regression / FTUE" value="'+esc(existing?existing.type||'':'')+'">' +
-    '<datalist id="tcs-type-list"><option value="Smoke"><option value="Regression"><option value="Feature"><option value="FTUE"><option value="Sanity"><option value="Full Pass"></datalist></div></div>' +
-    '<div class="fg"><label class="fl">Description <span style="color:var(--dim);font-weight:400">(optional)</span></label>' +
-    '<input class="fi2" id="tcs-desc" placeholder="Brief note about this suite" value="'+esc(existing?existing.desc||'':'')+'"></div>' +
-    '<div style="background:rgba(6,182,212,.06);border:1px solid rgba(6,182,212,.2);border-radius:10px;padding:12px 14px;font-family:var(--mono);font-size:10px;color:var(--ghost);line-height:1.9">' +
-    '&#128218; <b style="color:var(--g2)">Save suite first</b>, then use <b style="color:var(--g2)">&#9999; TCs</b> button to upload files or add test cases manually.<br>' +
-    'Each uploaded file stays as a separate group &mdash; great for organising by user type.' +
-    '</div>';
+    '<input class="fi2" id="tcs-type" list="tcs-type-list" placeholder="Smoke / Regression / FTUE" value="'+esc(existing?existing.type||'':'') +'">' +
+    '<datalist id="tcs-type-list"><option value="Smoke"><option value="Regression"><option value="Feature"><option value="FTUE"><option value="Sanity"><option value="Full Pass"></datalist></div>' +
+    '<div class="fg" style="margin:0"><label class="fl">Description</label>' +
+    '<input class="fi2" id="tcs-desc" placeholder="Brief note" value="'+esc(existing?existing.desc||'':'')+'"></div></div>' +
+    // MULTI-FILE UPLOAD
+    '<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:14px;margin:12px 0">' +
+    '<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g1);margin-bottom:6px">&#128202; UPLOAD FILES <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">— select multiple xlsx/csv at once</span></div>' +
+    '<div style="border:2px dashed var(--bd2);border-radius:8px;padding:18px;text-align:center;cursor:pointer;background:rgba(124,58,237,.03)" ' +
+    'id="tcs-drop-zone" onclick="document.getElementById(\'tcs-file-input\').click()" ' +
+    'ondragover="event.preventDefault();this.style.borderColor=\'var(--g1)\'" ' +
+    'ondragleave="this.style.borderColor=\'var(--bd2)\'" ondrop="tcHandleDrop(event)">' +
+    '<div style="font-size:24px;margin-bottom:4px">&#128230;</div>' +
+    '<div style="font-family:var(--mono);font-size:10px;color:var(--mist)">Drop files here or click to browse</div>' +
+    '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:3px">.xlsx &middot; .csv &middot; multiple files supported &middot; no deduplication</div>' +
+    '<div id="tcs-file-preview" style="margin-top:8px"></div></div>' +
+    '<input type="file" id="tcs-file-input" accept=".csv,.xlsx,.xls" multiple style="display:none" onchange="tcHandleFiles(this.files)"></div>' +
+    // MANUAL ENTRY
+    '<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:12px">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
+    '<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g2)">&#9999; MANUAL TEST CASES</div>' +
+    '<button class="btn btn-g btn-sm" onclick="tcAddManualRow()">+ Add TC</button></div>' +
+    '<div id="tcs-manual-list">'+tcRenderManualList()+'</div></div>' +
+    '<div id="tcs-combined-preview">'+tcRenderCombinedPreview()+'</div>';
 
   openPanel();
 }
@@ -10963,16 +10639,13 @@ function tcParseRows(rows) {
   };
   return rows.map(function(r,i){
     return {
-      id:            fc(r,['id','tcid','testid','bugid','caseid','case_id'])||('TC-'+String(i+1).padStart(3,'0')),
-      title:         fc(r,['title','name','summary','testcase','testtitle','testname'])||'',
-      section:       fc(r,['section','module','area','category','group','suite']),
-      priority:      fc(r,['priority','prio']),
-      type:          fc(r,['type','testtype','test_type','casetype']),
-      preconditions: fc(r,['preconditions','precondition','prereq','prerequisites']),
-      steps:         fc(r,['steps','stepstoproduce','teststeps','step']),
-      expected:      fc(r,['expected','expectedresult','expect']),
-      tags:          fc(r,['tags','tag','labels','label']),
-      notes:         fc(r,['notes','note','comment']),
+      id:       fc(r,['id','tcid','testid','bugid','caseid'])||('TC-'+String(i+1).padStart(3,'0')),
+      title:    fc(r,['title','name','summary','testcase','testtitle','testname'])||'',
+      section:  fc(r,['section','module','area','category','group','suite']),
+      priority: fc(r,['priority','prio']),
+      steps:    fc(r,['steps','stepstoproduce','teststeps','step']),
+      expected: fc(r,['expected','expectedresult','expect']),
+      notes:    fc(r,['notes','note','comment']),
     };
   }).filter(function(r){return r.title&&r.title.trim();});
 }
@@ -11052,130 +10725,12 @@ function tcRefreshCombined() {
   if(el) el.innerHTML=tcRenderCombinedPreview();
 }
 
-// ── TC Management panel: add files + manual TCs to existing suite ──────────────
-function tcManageTCs(suiteId) {
-  var suite = _tcSuites.filter(function(s){return s.id===suiteId;})[0];
-  if(!suite) return;
-  _tcUploadFiles = [];
-  _tcManualRows  = [];
-  if(suite.files && suite.files.length) {
-    var ri=0; suite.files.forEach(function(f){ _tcUploadFiles.push({name:f.name,cases:suite.cases.slice(ri,ri+f.count)}); ri+=f.count; });
-    _tcManualRows = suite.cases.slice(ri).map(function(cc){return Object.assign({},cc);});
-  } else if(suite.cases && suite.cases.length) {
-    _tcManualRows = suite.cases.map(function(cc){return Object.assign({},cc);});
-  }
-
-  document.getElementById('panelTitle').textContent = 'MANAGE TCs: '+suite.name;
-  document.getElementById('panelId').textContent = (suite.cases&&suite.cases.length||0)+' TCs';
-  document.getElementById('panelFooter').innerHTML =
-    '<button class="btn btn-g" onclick="closePanel()">Cancel</button> '+
-    '<button class="btn btn-v" id="tc-save-tcs-btn">&#128190; Save TCs</button>';
-  document.getElementById('tc-save-tcs-btn').onclick = function(){ tcSaveTCsToSuite(suiteId); };
-
-  var body = document.getElementById('panelBody');
-  body.innerHTML = '';
-
-  // File upload section
-  var uploadDiv = document.createElement('div');
-  uploadDiv.style.cssText = 'background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:12px';
-  uploadDiv.innerHTML = '<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g1);margin-bottom:8px">&#128202; UPLOAD FILES <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">(.xlsx / .csv — each file is a separate group)</span></div>';
-  
-  var dropZone = document.createElement('div');
-  dropZone.id = 'tcs-drop-zone';
-  dropZone.style.cssText = 'border:2px dashed var(--bd2);border-radius:8px;padding:16px;text-align:center;cursor:pointer;background:rgba(124,58,237,.03)';
-  dropZone.onclick = function(){ document.getElementById('tcs-file-input').click(); };
-  dropZone.ondragover = function(e){ e.preventDefault(); dropZone.style.borderColor='var(--g1)'; };
-  dropZone.ondragleave = function(){ dropZone.style.borderColor='var(--bd2)'; };
-  dropZone.ondrop = function(e){ e.preventDefault(); dropZone.style.borderColor='var(--bd2)'; tcHandleFiles(e.dataTransfer&&e.dataTransfer.files); };
-  dropZone.innerHTML = '<div style="font-size:22px;margin-bottom:3px">&#128230;</div><div style="font-family:var(--mono);font-size:10px;color:var(--mist)">Drop files or click to browse — multiple files OK, no deduplication</div><div id="tcs-file-preview" style="margin-top:6px"></div>';
-  uploadDiv.appendChild(dropZone);
-
-  var fileInput = document.createElement('input');
-  fileInput.type='file'; fileInput.id='tcs-file-input'; fileInput.accept='.csv,.xlsx,.xls'; fileInput.multiple=true; fileInput.style.display='none';
-  fileInput.onchange = function(){ tcHandleFiles(this.files); };
-  uploadDiv.appendChild(fileInput);
-  body.appendChild(uploadDiv);
-
-  // Manual TC entry section
-  var manualDiv = document.createElement('div');
-  manualDiv.style.cssText = 'background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:12px';
-  manualDiv.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g2)">&#9999; MANUAL TEST CASES</div><button class="btn btn-g btn-sm" id="tc-add-row-btn">+ Add TC</button></div><div id="tcs-manual-list">'+tcRenderManualList()+'</div>';
-  body.appendChild(manualDiv);
-  document.getElementById('tc-add-row-btn').onclick = tcAddManualRow;
-
-  // Preview
-  var previewDiv = document.createElement('div');
-  previewDiv.id = 'tcs-combined-preview';
-  previewDiv.innerHTML = tcRenderCombinedPreview();
-  body.appendChild(previewDiv);
-
-  // Refresh file list if there are existing files
-  if(_tcUploadFiles.length) setTimeout(tcRefreshFileList, 50);
-
-  openPanel();
-}
-
-async function tcSaveTCsToSuite(suiteId) {
-  var allCases=_tcUploadFiles.reduce(function(a,f){return a.concat(f.cases);}, []).concat(_tcManualRows.filter(function(r){return r.title&&r.title.trim();}));
-  var suiteFiles=_tcUploadFiles.map(function(f){return {name:f.name,count:f.cases.length};});
-  var suites=tcLsGetSuites();
-  var idx=suites.findIndex(function(s){return s.id===suiteId;});
-  if(idx<0){toast('Suite not found','err');return;}
-  suites[idx].cases=allCases;
-  suites[idx].files=suiteFiles;
-  tcLsSaveSuites(suites);
-  _tcSuites=suites;
-  tcKvSave(TC_SUITE_KV_KEY,_tcSuites);
-  _tcUploadFiles=[]; _tcManualRows=[];
-  closePanel();
-  if(_tcInBuilds) tcRenderSuitesInto('tcb-view-suites');
-  else tcRenderSuites();
-  toast('TCs saved ✓ ('+allCases.length+' total)','ok');
-}
-
-
-// ── TC Library: flat view of all TCs across all suites ──────────────────────
-function tcOpenLibrary() {
-  document.getElementById('panelTitle').textContent = '&#128218; TC LIBRARY';
-  document.getElementById('panelId').textContent = 'ALL TEST CASES';
-  document.getElementById('panelFooter').innerHTML = '<button class="btn btn-g" onclick="closePanel()">Close</button>';
-  var allTCs = [];
-  _tcSuites.forEach(function(suite){
-    suite.cases.forEach(function(tc){
-      allTCs.push(Object.assign({},tc,{suiteName:suite.name,suiteId:suite.id}));
-    });
-  });
-  if(!allTCs.length){
-    document.getElementById('panelBody').innerHTML='<div class="empty"><h3>No TCs yet</h3><p>Create suites and add test cases to see them here</p></div>';
-    openPanel(); return;
-  }
-  // Group by suite
-  var bySuite={};
-  allTCs.forEach(function(tc){if(!bySuite[tc.suiteName])bySuite[tc.suiteName]=[];bySuite[tc.suiteName].push(tc);});
-  var html='<div style="font-family:var(--mono);font-size:9px;color:var(--g2);margin-bottom:10px">'+allTCs.length+' TCs across '+Object.keys(bySuite).length+' suites</div>';
-  Object.keys(bySuite).forEach(function(sn){
-    var tcs=bySuite[sn];
-    html+='<div style="margin-bottom:14px"><div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g1);border-bottom:1px solid var(--bd);padding-bottom:5px;margin-bottom:6px">'+esc(sn)+' <span style="color:var(--dim)">('+tcs.length+')</span></div>';
-    tcs.forEach(function(tc){
-      html+='<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03)">'+
-        '<span style="font-family:var(--mono);font-size:9px;color:var(--g1);flex-shrink:0;min-width:56px">'+esc(tc.id||'')+'</span>'+
-        '<span style="font-size:12px;color:var(--text);flex:1">'+esc(tc.title)+'</span>'+
-        (tc.section?'<span style="font-family:var(--mono);font-size:8px;color:var(--fog)">'+esc(tc.section)+'</span>':'')+
-        (tc.priority?'<span style="font-family:var(--mono);font-size:8px;padding:1px 5px;border-radius:6px;background:rgba(124,58,237,.12);color:var(--ghost)">'+esc(tc.priority)+'</span>':'')+
-        '</div>';
-    });
-    html+='</div>';
-  });
-  document.getElementById('panelBody').innerHTML=html;
-  openPanel();
-}
-
 async function tcSaveSuite(editId) {
   var name=document.getElementById('tcs-name')&&document.getElementById('tcs-name').value.trim();
   if(!name){toast('Suite name required','err');return;}
   var allCases=_tcUploadFiles.reduce(function(a,f){return a.concat(f.cases);}, []).concat(_tcManualRows.filter(function(r){return r.title&&r.title.trim();}));
   var suiteFiles=_tcUploadFiles.map(function(f){return {name:f.name,count:f.cases.length};});
-  // Suite can be saved empty — TCs added via Manage TCs afterwards
+  if(!allCases.length){toast('Add at least one TC — upload files or add manually','err');return;}
 
   var btn=document.querySelector('#panelFooter .btn-v');
   if(btn){btn.disabled=true;btn.innerHTML='<span class="spin"></span> Saving…';}
@@ -11184,7 +10739,6 @@ async function tcSaveSuite(editId) {
     id:         editId||('suite_'+Date.now()),
     name:       name,
     type:       document.getElementById('tcs-type')&&document.getElementById('tcs-type').value.trim()||'',
-    feature_tag: document.getElementById('tcs-feature')&&document.getElementById('tcs-feature').value.trim()||'',
     pod:        document.getElementById('tcs-pod')&&document.getElementById('tcs-pod').value.trim()||'',
     desc:       document.getElementById('tcs-desc')&&document.getElementById('tcs-desc').value.trim()||'',
     cases:      allCases,
@@ -11221,40 +10775,10 @@ function tcDeleteSuite(suiteId) {
 }
 
 // ── Suites list ───────────────────────────────────────────────────────────────
-function tcBuildFeatureFilterBar(features, active, wrapId) {
-  if(!features||features.length<=1) return null;
-  var div=document.createElement('div');
-  div.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px';
-  var allBtn=document.createElement('button');
-  allBtn.className='btn btn-sm '+(active?'btn-g':'btn-v');
-  allBtn.textContent='All';
-  allBtn.onclick=function(){tcSuiteFilter('',wrapId);};
-  div.appendChild(allBtn);
-  features.forEach(function(f){
-    var btn=document.createElement('button');
-    btn.className='btn btn-sm '+(active===f?'btn-v':'btn-g');
-    btn.textContent=f;
-    btn.onclick=function(){tcSuiteFilter(f,wrapId);};
-    div.appendChild(btn);
-  });
-  return div;
-}
-
-function tcSuiteFilter(f, wrapId) {
-  var wid=wrapId||'tc-suites-wrap';
-  var wrap=document.getElementById(wid);
-  if(wrap) wrap._filterFeature=f;
-  if(wid==='tcb-view-suites') tcRenderSuitesInto(wid); else tcRenderSuites();
-}
-
 function tcRenderSuites() {
   var wrap=document.getElementById('tc-suites-wrap');
   if(!wrap) return;
-  // Feature filter bar (built via DOM to avoid quoting issues)
-  var features=[]; _tcSuites.forEach(function(s){if(s.feature_tag&&features.indexOf(s.feature_tag)<0)features.push(s.feature_tag);});
-  var filterVal=wrap._filterFeature||'';
-  var suites=filterVal?_tcSuites.filter(function(s){return s.feature_tag===filterVal;}):_tcSuites;
-  if(!suites.length){
+  if(!_tcSuites.length){
     wrap.innerHTML='<div class="empty"><div class="empty-icon">&#128218;</div><h3>NO SUITES YET</h3><p>Create a suite &mdash; upload TC sheets or add TCs manually</p></div>';
     return;
   }
@@ -11421,7 +10945,7 @@ async function tcCreateRun(suiteId) {
   tcLsSaveRuns(_tcRuns);
   tcKvSave(TC_RUNS_KV_KEY, _tcRuns); // fire-and-forget, never blocks UI
   closePanel();
-  tcShowView("runs");
+  tcShowView('runs');
   tcRenderRuns();
   toast('Run "'+label+'" started — '+run.cases.length+' TCs ✓','ok');
 }
@@ -11477,7 +11001,7 @@ async function tcDeleteRun(runId) {
   _tcRuns=_tcRuns.filter(function(r){return r.id!==runId;});
   tcLsSaveRuns(_tcRuns);
   await tcKvSave(TC_RUNS_KV_KEY, _tcRuns);
-  if(_tcRunOpen===runId){_tcRunOpen=null;tcShowView("runs");}
+  if(_tcRunOpen===runId){_tcRunOpen=null;tcShowView('runs');}
   tcRenderRuns();
   toast('Run deleted','ok');
 }
@@ -11485,7 +11009,7 @@ async function tcDeleteRun(runId) {
 // ── Execute ────────────────────────────────────────────────────────────────────
 function tcOpenRun(runId) {
   _tcRunOpen=runId;
-  tcShowView("execute");
+  tcShowView('execute');
   tcRenderExecute();
 }
 
@@ -11568,41 +11092,30 @@ function tcRenderExecute() {
     });
   }
   wrap.innerHTML=html;
-  // Delegate note input events — avoids oninput quoting issues
-  wrap.querySelectorAll('.tc-note-input').forEach(function(inp){
-    inp.addEventListener('input',function(){tcSetNote(inp.dataset.run,+inp.dataset.idx,inp.value);});
-  });
 }
 
 function tcNegateTitle(title) {
-  var orig = title || '';
-  var t = orig;
-  // Strip verify/check/validate prefix
-  t = t.replace(/^(?:verify|check|validate|ensure|confirm|test that|test)\s+(?:that\s+)?/i, '');
-  // Replace positive state verbs with negative
-  var replaced = t
-    .replace(/\bis\s+working\b/i,       'is NOT working')
-    .replace(/\bworks\b/i,               'does NOT work')
-    .replace(/\bis\s+functional\b/i,    'is NOT functional')
-    .replace(/\bloads?\b/i,              'does NOT load')
-    .replace(/\bdisplays?\b/i,           'does NOT display')
-    .replace(/\bshows?\b/i,              'does NOT show')
-    .replace(/\bopens?\b/i,              'does NOT open')
-    .replace(/\bsaves?\b/i,              'does NOT save')
-    .replace(/\bsyncs?\b/i,              'does NOT sync')
-    .replace(/\bupdates?\b/i,            'does NOT update')
-    .replace(/\bsubmits?\b/i,            'does NOT submit')
-    .replace(/\bnavigates?\b/i,          'does NOT navigate')
-    .replace(/\blaunches?\b/i,           'does NOT launch')
-    .replace(/\bstarts?\b/i,             'does NOT start')
-    .replace(/\bcompletes?\b/i,          'does NOT complete')
-    .replace(/\bsends?\b/i,              'does NOT send')
-    .replace(/\bplays?\b/i,              'does NOT play')
-    .replace(/\bpurchases?\b/i,          'does NOT purchase');
-  // If a verb was replaced, return it
-  if (replaced !== t) return replaced;
-  // No verb match — always produce a negative by prepending [FAIL]
-  return '[FAIL] ' + t;
+  // Convert "Verify X working/functional/loads" -> "X NOT working/functional/loading"
+  var t = title || '';
+  // Pattern: Verify/Check/Validate/Ensure [that] ... working/functional/loads/displays
+  t = t.replace(/^(?:verify|check|validate|ensure|confirm|test)\s+(?:that\s+)?/i, '');
+  // Replace positive endings
+  t = t.replace(/\bis\s+working\b/i,    'is NOT working');
+  t = t.replace(/\bworks\b/i,            'does NOT work');
+  t = t.replace(/\bis\s+functional\b/i, 'is NOT functional');
+  t = t.replace(/\bloads?\b/i,           'does NOT load');
+  t = t.replace(/\bdisplays?\b/i,        'does NOT display');
+  t = t.replace(/\bshows?\b/i,           'does NOT show');
+  t = t.replace(/\bopens?\b/i,           'does NOT open');
+  t = t.replace(/\bsaves?\b/i,           'does NOT save');
+  t = t.replace(/\bsyncs?\b/i,           'does NOT sync');
+  t = t.replace(/\bupdates?\b/i,         'does NOT update');
+  t = t.replace(/\bsubmits?\b/i,         'does NOT submit');
+  // If we didn't match a positive verb, just prefix with "FAIL:"
+  if (t === (title||'').replace(/^(?:verify|check|validate|ensure|confirm|test)\s+(?:that\s+)?/i,'')) {
+    return t; // no verb match — return cleaned title as-is, badge shows FAIL
+  }
+  return t;
 }
 
 function tcRenderCaseRow(runId,c) {
@@ -11622,17 +11135,8 @@ function tcRenderCaseRow(runId,c) {
     (c.result==='fail'?'<button class="btn btn-r btn-sm" onclick="tcLogBug(\''+runId+'\','+c._idx+')" style="font-size:10px;padding:2px 7px">&#128027; Bug</button>':'') +
     '</div>' +
     (c.linkedBugId?'<div style="margin-top:2px;padding-left:54px;font-family:var(--mono);font-size:9px;color:var(--g5)">&#128027; '+esc(c.linkedBugId)+' linked</div>':'') +
-    ((c.preconditions||c.steps||c.expected||c.type||c.tags)?
-      '<details style="margin-top:4px;padding-left:54px"><summary style="font-family:var(--mono);font-size:9px;color:var(--g2);cursor:pointer;list-style:none;display:flex;align-items:center;gap:4px">&#9654; details</summary>'+
-      '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);line-height:1.8;margin-top:4px;padding:6px 8px;background:var(--bg3);border-radius:6px">'+
-      (c.type?'<div><b style="color:var(--g2)">Type:</b> '+esc(c.type)+'</div>':'')+
-      (c.preconditions?'<div><b style="color:var(--g2)">Preconditions:</b> '+esc(c.preconditions.slice(0,200))+'</div>':'')+
-      (c.steps?'<div><b style="color:var(--g2)">Steps:</b> '+esc(c.steps.slice(0,300))+'</div>':'')+
-      (c.expected?'<div><b style="color:var(--g2)">Expected:</b> '+esc(c.expected.slice(0,200))+'</div>':'')+
-      (c.tags?'<div><b style="color:var(--g2)">Tags:</b> '+esc(c.tags)+'</div>':'')+
-      '</div></details>' : '') +
-    '<div style="margin-top:4px;padding-left:54px">'+
-    '<input type="text" value="'+esc(c.note||'')+'" placeholder="Note..." class="fi2 tc-note-input" data-run="'+esc(runId)+'" data-idx="'+c._idx+'" style="font-size:11px;padding:3px 7px;height:auto;background:rgba(0,0,0,.2)">'+
+    '<div style="margin-top:4px;padding-left:54px">' +
+    '<input type="text" value="'+esc(c.note||'')+'" placeholder="Note..." class="fi2" oninput="tcSetNote(\''+runId+'\','+c._idx+',this.value)" style="font-size:11px;padding:3px 7px;height:auto;background:rgba(0,0,0,.2)">' +
     '</div></div>';
 }
 
@@ -11667,11 +11171,8 @@ function tcLogBug(runId,caseIdx) {
     var t=document.getElementById('f-title'); if(t) t.value=negTitle;
     var s=document.getElementById('f-steps'); if(s&&tc.steps) s.value=tc.steps;
     var e=document.getElementById('f-expected'); if(e&&tc.expected) e.value=tc.expected;
-    // Pre-fill actual result with failure description
-    var act=document.getElementById('f-actual');
-    if(act) act.value=negTitle+(tc.expected?' (Expected: '+tc.expected+')':'');
-    // Pre-fill expected with TC expected result
-    if(e&&!e.value&&tc.expected) e.value=tc.expected;
+    // Pre-fill actual result as the negated description
+    var act=document.getElementById('f-actual'); if(act) act.value=negTitle;
     window._pendingTcLink={_tcRunId:runId,_tcCaseIdx:caseIdx};
     toast('Bug pre-filled with failure description ✓','ok');
   },120);
