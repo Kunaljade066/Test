@@ -8942,7 +8942,7 @@ async function openWebhookSettings() {
         <div class="fg" style="margin-bottom:10px"><label class="fl">Select Pod</label>
           <select class="fi2" id="wh-fire-pod">
             <option value="">— Global (all teams) —</option>
-            ${(DD_FIELDS.find(f=>f.key==='pod')?.options||[]).map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('')}
+            ${(DD_FIELDS.find(f=>f.key==='pod')?.options||[]).map(p=>'<option value="'+esc(p)+'">'+esc(p)+'</option>').join('')}
           </select>
         </div>
         <div class="fg" style="margin-bottom:10px"><label class="fl">Message</label>
@@ -10449,9 +10449,7 @@ function tcHandleFiles(fileList) {
     } else {
       var r2=new FileReader();
       r2.onload=function(ev){
-        var lines=ev.target.result.split(/
-?
-/).filter(function(l){return l.trim();});
+        var lines=ev.target.result.split(/\r?\n/).filter(function(l){return l.trim();});
         if(lines.length<2){pending--;toast(fname+': needs header + data','err');return;}
         var hdrs=lines[0].split(',').map(function(h){return h.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');});
         var rows=[];
