@@ -4224,6 +4224,7 @@ function openDetail(id){
       </div>
     </div>
     <button class="btn btn-g" onclick="openEdit('${bug.id}')">✏️ Edit</button>
+    <button class="btn btn-g" id="fire-alert-btn" onclick="openFireAlertPanel('${bug.id}')" title="Fire GChat alert for this bug">🔔 Alert</button>
     ${S.user?.role==='admin'?`<button class="btn btn-r" onclick="delBug('${bug.id}');closePanel()">🗑 Delete</button>`:''}`;
   document.getElementById('panelBody').innerHTML=`
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px">
@@ -5290,6 +5291,8 @@ async function saveBug(){
         else if(S.view==='board')renderBoard();
         broadcastChange('bug_changed');
         debouncedRefresh(300);
+        // Auto-alert if priority is high/critical and enabled
+        autoFirePriorityAlert(existingBug).catch(()=>{});
         return;
       }else{
         // Offline: queue locally if no network
@@ -6745,22 +6748,27 @@ function importHandleFile(file) {
         // Reporter: use sheet's reporter column, NOT the logged-in user
         const sheetReporter = row.reporter || row.reported_by || row.tester || row.created_by || '';
         _importRows.push({
-          title: cleanTitle,
-          priority:  row.priority  || row.p || 'Medium',
-          severity:  row.severity  || '',
-          status:    row.status    || 'Open',
-          feature:   row.feature   || row.module || '',
-          sub_feature: row.sub_feature || row.screen || '',
-          sprint:    row.sprint    || '',
-          build:     row.build     || row.build_version || '',
-          platform:  row.platform  || row.device_type || '',
-          device:    row.device    || '',
-          pod:       row.pod       || row.team || '',
-          steps:     extractedSteps,
-          actual:    row.actual    || row.actual_result || '',
-          expected:  row.expected  || row.expected_result || '',
-          notes:     row.notes     || row.description || '',
-          reporter:  sheetReporter,
+          title:       cleanTitle,
+          priority:    row.priority      || row.p           || 'Medium',
+          severity:    row.severity      || '',
+          status:      row.status        || 'Open',
+          feature:     row.feature       || row.module      || '',
+          sub_feature: row.sub_feature   || row.screen      || row.sub_feat || '',
+          sprint:      row.sprint        || '',
+          build:       row.build         || row.build_version || '',
+          build_link:  row.build_link    || row.apk_url     || '',
+          platform:    row.platform      || row.device_type || '',
+          device:      row.device        || row.device_model || '',
+          pod:         row.pod           || row.team        || '',
+          issue_type:  row.issue_type    || row.type        || '',
+          steps:       extractedSteps,
+          actual:      row.actual        || row.actual_result || '',
+          expected:    row.expected      || row.expected_result || '',
+          notes:       row.notes         || row.description || '',
+          reporter:    sheetReporter,
+          assignees:   row.assignees     || row.assignee    || row.assigned_to || row.dev || '',
+          clickup_task_id: row.clickup_task_id || row.clickup_id || '',
+          attachment:  row.attachment    || '',
         });
       }
       if (!_importRows.length) { toast('No rows with a title found', 'err'); return; }
@@ -6773,11 +6781,11 @@ function importHandleFile(file) {
 
 function importShowPreview() {
   document.getElementById('importPreviewLabel').textContent = `Preview — ${_importRows.length} bug${_importRows.length!==1?'s':''} ready to import`;
-  let h = '<table><thead><tr><th>#</th><th>Title</th><th>Priority</th><th>Status</th><th>Feature</th><th>Sprint</th></tr></thead><tbody>';
+  let h = '<table><thead><tr><th>#</th><th>Title</th><th>Priority</th><th>Status</th><th>Feature</th><th>Pod</th><th>Assignee</th><th>Build</th></tr></thead><tbody>';
   _importRows.slice(0,10).forEach((row,i) => {
     const fullTitle = row.title||'';
     const displayTitle = fullTitle.replace(/\n/g,' ').replace(/\r/g,'');
-    h += `<tr><td class="tc-id">${i+1}</td><td class="tc-title" title="${esc(fullTitle)}">${esc(displayTitle.slice(0,120))}${displayTitle.length>120?'…':''}</td><td>${pChip(row.priority||'Medium')}</td><td>${stChip(row.status||'Open')}</td><td>${esc(row.feature||'—')}</td><td>${esc(row.sprint||'—')}</td></tr>`;
+    h += `<tr><td class="tc-id">${i+1}</td><td class="tc-title" title="${esc(fullTitle)}">${esc(displayTitle.slice(0,100))}${displayTitle.length>100?'…':''}</td><td>${pChip(row.priority||'Medium')}</td><td>${stChip(row.status||'Open')}</td><td>${esc(row.feature||'—')}</td><td>${esc(row.pod||'—')}</td><td>${esc(row.assignees||'—')}</td><td>${esc(row.build||'—')}</td></tr>`;
   });
   if(_importRows.length>10) h+=`<tr><td colspan="6" style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--dim);padding:10px">…and ${_importRows.length-10} more</td></tr>`;
   h += '</tbody></table>';
@@ -6803,24 +6811,40 @@ async function importSubmit() {
   let done = 0, failed = 0;
   _importedBugIds = [];
   for (const row of _importRows) {
+    // Build assignees array from sheet assignee column
+    const rawAssignees = row.assignees || row.assignee || row.assigned_to || row.dev || '';
+    const assigneeList = rawAssignees ? rawAssignees.split(/[,;]+/).map(n=>n.trim()).filter(Boolean)
+      .map(name => {
+        // Try to match against known team members
+        const m = (S.teamMembers||[]).find(tm=>tm.name&&tm.name.toLowerCase()===name.toLowerCase());
+        return m ? {name:m.name, email:m.email||'', picture:m.picture||''} : {name, email:'', picture:''};
+      }) : [];
     const data = {
-      // id intentionally omitted &#8212; worker generates a fresh HW-XXXXX id
-      title:    row.title,
-      priority: row.priority  || 'Medium',
-      status:   row.status    || 'Open',
-      severity: row.severity  || '',
-      feature:  row.feature   || '',
-      sprint:   row.sprint    || '',
-      build:    row.build     || '',
-      device:   row.device    || '',
-      steps:    row.steps     || row['steps to reproduce'] || '',
-      actual:   row.actual    || row['actual result']      || '',
-      expected: row.expected  || row['expected result']    || '',
-      reporter: row.reporter || '',
-      reporter_email:   row.reporter ? '' : (S.user?.email || ''),
+      // id intentionally omitted — worker generates a fresh HW-XXXXX id
+      title:       row.title,
+      priority:    row.priority    || 'Medium',
+      status:      row.status      || 'Open',
+      severity:    row.severity    || '',
+      feature:     row.feature     || '',
+      sub_feature: row.sub_feature || row.sub_feat || row.screen || row.subscreeen || '',
+      sprint:      row.sprint      || '',
+      build:       row.build       || row.build_version || '',
+      build_link:  row.build_link  || row.apk_url || row.apk || '',
+      platform:    row.platform    || row.os || '',
+      device:      row.device      || row.device_model || '',
+      pod:         row.pod         || row.team || '',
+      issue_type:  row.issue_type  || row.type || '',
+      steps:       row.steps       || row.steps_to_reproduce || row['steps to reproduce'] || '',
+      actual:      row.actual      || row.actual_result      || row['actual result']      || '',
+      expected:    row.expected    || row.expected_result    || row['expected result']    || '',
+      notes:       row.notes       || row.description        || '',
+      reporter:    row.reporter    || '',
+      reporter_email:   row.reporter ? '' : (S.user?.email   || ''),
       reporter_picture: row.reporter ? '' : (S.user?.picture || ''),
-      attachment: row.attachment || '',
-      assignees: [], app_url: APP_URL,
+      clickup_task_id: row.clickup_task_id || row.clickup_id || row.cu_id || '',
+      attachment:  row.attachment  || '',
+      assignees:   assigneeList,
+      app_url:     APP_URL,
     };
     try {
       const res = await api('/bugs', 'POST', data);
@@ -8690,6 +8714,122 @@ async function sendGChatCard(card, pod) {
   } catch(e) { console.warn('[gchat card]', e); return false; }
 }
 
+// ── Fire GChat Alert panel (manual, from bug detail) ─────────────────────────
+function openFireAlertPanel(bugId) {
+  const bug = S.bugs.find(b => b.id === bugId);
+  if (!bug) return;
+  const cfg = getWebhookConfig();
+  // Collect all configured pods/webhooks
+  const pods = [];
+  if (cfg.gchat_url) pods.push({ label: 'Global (all pods)', key: '' });
+  (DD_FIELDS.find(f => f.key === 'pod') || {options:[]}).options.forEach(p => {
+    const k = 'pod_gchat_' + p.toLowerCase().replace(/[^a-z0-9]/g,'_');
+    if (cfg[k]) pods.push({ label: p, key: p });
+  });
+  if (!pods.length) { toast('No GChat webhook configured — set one in Webhook Settings', 'err'); return; }
+
+  const isPriority = ['critical','urgent','high'].includes((bug.priority||'').toLowerCase());
+  const podOpts = pods.map(p =>
+    `<option value="${esc(p.key)}"${(!p.key ? ' selected' : '')}>${esc(p.label)}</option>`
+  ).join('');
+
+  document.getElementById('panelTitle').textContent = '🔔 FIRE ALERT';
+  document.getElementById('panelId').textContent    = bug.id || '';
+  document.getElementById('panelFooter').innerHTML  = `
+    <button class="btn btn-g" onclick="closePanel()">Cancel</button>
+    <button class="btn btn-v" id="fire-alert-send-btn">🔔 Send Alert</button>`;
+
+  document.getElementById('panelBody').innerHTML = `
+    <div style="background:${isPriority?'rgba(239,68,68,.08)':'rgba(124,58,237,.06)'};border:1px solid ${isPriority?'rgba(239,68,68,.25)':'rgba(124,58,237,.2)'};border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px">
+      <div style="font-size:24px">${isPriority?'🚨':'🐛'}</div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(bug.title||'')}</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:3px">
+          ${esc(bug.priority||'')} · ${esc(bug.status||'')} · ${esc(bug.feature||'—')} · ${esc(bug.id||'')}
+        </div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Send to Pod / Webhook</label>
+      <select class="fi2" id="fire-alert-pod">${podOpts}</select>
+    </div>
+    <div class="fg">
+      <label class="fl">Message</label>
+      <textarea class="fi2" id="fire-alert-msg" rows="4" style="resize:vertical">${esc(buildFireAlertText(bug))}</textarea>
+    </div>
+    <div class="fg">
+      <label class="fl">Also send to</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
+          <input type="checkbox" id="fire-gchat-chk" checked> GChat
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
+          <input type="checkbox" id="fire-slack-chk"> Slack
+        </label>
+      </div>
+    </div>`;
+
+  // Bind send button via JS to avoid onclick quoting
+  document.getElementById('fire-alert-send-btn').onclick = function() { doFireAlert(bugId); };
+  openPanel();
+}
+
+function buildFireAlertText(bug) {
+  var icon = (bug.priority==='Critical'||bug.priority==='Urgent') ? String.fromCodePoint(0x1F6A8) : bug.priority==='High' ? String.fromCodePoint(0x26A0,0xFE0F) : String.fromCodePoint(0x1F41B);
+  var nl = '\n';
+  var parts = [
+    icon + ' *[' + (bug.priority||'') + '] ' + (bug.id||'') + '* — ' + (bug.title||''),
+    'Status: ' + (bug.status||'Open') + '  |  Feature: ' + (bug.feature||'—') + '  |  Build: ' + (bug.build||'—'),
+  ];
+  if (bug.assignees && bug.assignees.length) parts.push('Assigned: ' + bug.assignees.map(function(a){return a.name;}).join(', '));
+  if (bug.steps) parts.push('Steps: ' + bug.steps.slice(0,200) + (bug.steps.length>200?'…':''));
+  if (bug.pod) parts.push('Pod: ' + bug.pod);
+  parts.push('— BugPulse');
+  return parts.join(nl);
+}
+
+async function doFireAlert(bugId) {
+  const pod  = document.getElementById('fire-alert-pod')?.value || '';
+  const msg  = document.getElementById('fire-alert-msg')?.value || '';
+  const gchat= document.getElementById('fire-gchat-chk')?.checked;
+  const slack= document.getElementById('fire-slack-chk')?.checked;
+  if (!msg.trim()) { toast('Message is empty', 'err'); return; }
+
+  const btn = document.getElementById('fire-alert-send-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+
+  let sent = 0;
+  if (gchat) {
+    const ok = await sendGChatWebhook(msg, pod);
+    if (ok) sent++;
+    else toast('GChat send failed — check webhook URL in settings', 'err');
+  }
+  if (slack) {
+    const ok = await sendSlackWebhook(msg);
+    if (ok) sent++;
+    else toast('Slack send failed — check webhook URL in settings', 'err');
+  }
+
+  if (sent > 0) {
+    closePanel();
+    toast('Alert sent to ' + sent + ' channel' + (sent > 1 ? 's' : '') + ' ✓', 'ok');
+    // Log to activity
+    try { logActivity('alerted', bugId, msg.slice(0, 80)); } catch(e) {}
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '🔔 Send Alert'; }
+}
+
+// ── Auto-fire alert when bug is saved with high priority ──────
+// Called from saveBug after successful save
+async function autoFirePriorityAlert(bug) {
+  const cfg = getWebhookConfig();
+  if (!cfg.auto_alert_priority) return;  // disabled unless opted in
+  const level = (bug.priority || '').toLowerCase();
+  if (!['critical','urgent','high'].includes(level)) return;
+  const msg = buildFireAlertText(bug);
+  await sendGChatWebhook(msg, bug.pod || '');
+}
+
 async function sendGChatWebhook(text, pod) {
   const cfg = getWebhookConfig();
   let url = cfg.gchat_url;
@@ -9029,6 +9169,17 @@ async function openWebhookSettings() {
           <button class="btn btn-g btn-sm" onclick="whFireSlack()">&#128172; Fire Slack</button>
         </div>
       </div>
+      <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:14px 16px">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#f87171;margin-bottom:12px">🚨 AUTO-ALERT ON HIGH PRIORITY</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);line-height:1.8;margin-bottom:10px">
+          When a bug is saved/updated with <b style="color:#fbbf24">Critical</b>, <b style="color:#f87171">Urgent</b>, or <b style="color:#fb923c">High</b> priority,
+          automatically fire a GChat alert to the bug's pod webhook (or global if no pod match).
+        </div>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input type="checkbox" id="wh-auto-alert" ${cfg.auto_alert_priority?'checked':''} style="width:16px;height:16px;cursor:pointer">
+          <span style="font-size:13px;color:var(--text)">Enable auto-alert for Critical / Urgent / High bugs</span>
+        </label>
+      </div>
       <div style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:14px 16px">
         <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g1);margin-bottom:12px">⏰ EOD REPORT SCHEDULE</div>
         <div class="fg" style="margin-bottom:10px">
@@ -9079,6 +9230,7 @@ async function saveWebhookSettings() {
     notif_day_end_report: document.getElementById('wh-ev-day_end_report')?.classList.contains('on'),
     eod_time: document.getElementById('wh-eod-time')?.value||'21:00',
     eod_schedule_on: document.getElementById('wh-eod-on')?.classList.contains('on'),
+    auto_alert_priority: document.getElementById('wh-auto-alert')?.checked || false,
   };
   await saveWebhookConfig(cfg);
   toast('Webhook settings saved ✓','ok');
