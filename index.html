@@ -4910,10 +4910,7 @@ function buildBugForm(bug,full){
             oninput="featureInputFilter(this.value)"
             onfocus="featureInputFilter(this.value)"
             autocomplete="off">
-          <div id="featDropdown" style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:9999;background:var(--bg2);border:1px solid var(--bd2);border-radius:10px;box-shadow:var(--sh2);display:none;max-height:220px;overflow-y:auto">
-            <div style="padding:6px 10px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--dim);border-bottom:1px solid var(--bd)">RECENTLY USED</div>
-            ${(()=>{const fu={};S.bugs.forEach(b=>{if(b.feature)fu[b.feature]=Math.max(fu[b.feature]||0,b.created_ts||0);});const sf=Object.entries(fu).sort((a,b2)=>b2[1]-a[1]).map(([f])=>f);return sf.slice(0,6).map(f=>`<div onclick="selectFeature('${esc(f)}')" style="padding:9px 13px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px;transition:background .1s" onmouseenter="this.style.background='rgba(124,58,237,.1)'" onmouseleave="this.style.background=''"><span style="font-size:14px">🕐</span><span>${esc(f)}</span><span style="margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--dim)">${S.bugs.filter(b=>b.feature===f).length} bugs</span></div>`).join('')+sf.slice(6).map(f=>`<div onclick="selectFeature('${esc(f)}')" style="padding:9px 13px;cursor:pointer;font-size:13px;font-weight:600;color:var(--mist);border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px;transition:background .1s" onmouseenter="this.style.background='rgba(124,58,237,.08)'" onmouseleave="this.style.background=''"><span>${esc(f)}</span><span style="margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--dim)">${S.bugs.filter(b=>b.feature===f).length} bugs</span></div>`).join('');})()}
-          </div>
+          <div id="featDropdown" style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:9999;background:var(--bg2);border:1px solid var(--bd2);border-radius:10px;box-shadow:var(--sh2);display:none;max-height:220px;overflow-y:auto"></div>
         </div>
       </div>
       <div class="fg"><label class="fl">Sub-feature / Screen <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">(optional — e.g. "Login Flow", "Icon Issue")</span></label>
@@ -5174,6 +5171,46 @@ function natashaMoodForStatus(status, title){
       return {mood:'default', msg:`📋 ${t} → ${status}. Keep the momentum! 🏏`};
   }
 }
+
+function featureInputFilter(val) {
+  const dd = document.getElementById('featDropdown');
+  if(!dd) return;
+  const q = (val||'').toLowerCase().trim();
+  // Collect all features
+  const fu={};
+  S.bugs.forEach(b=>{if(b.feature)fu[b.feature]=(fu[b.feature]||0)+1;});
+  // Also include DD_FIELDS feature options if any
+  const ddFeat=(DD_FIELDS.find(f=>f.key==='feature')||{options:[]}).options||[];
+  ddFeat.forEach(f=>{if(!fu[f])fu[f]=0;});
+  let features=Object.entries(fu).sort((a,b)=>b[1]-a[1]).map(([f])=>f);
+  if(q) features=features.filter(f=>f.toLowerCase().includes(q));
+  if(!features.length){dd.style.display='none';return;}
+  dd.innerHTML=features.map(f=>{
+    const cnt=S.bugs.filter(b=>b.feature===f).length;
+    return '<div onclick="selectFeature(\'' + esc(f) + '\')" '+
+      'style="padding:9px 13px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px;transition:background .1s" '+
+      'onmouseenter="this.style.background=\'rgba(124,58,237,.1)\'" '+
+      'onmouseleave="this.style.background=\'\'">'
+      +'<span>'+esc(f)+'</span>'
+      +(cnt?'<span style="margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--dim)">'+cnt+' bugs</span>':'')
+      +'</div>';
+  }).join('');
+  dd.style.display='block';
+}
+
+function selectFeature(val) {
+  const inp=document.getElementById('f-feat');
+  if(inp) inp.value=val;
+  const dd=document.getElementById('featDropdown');
+  if(dd) dd.style.display='none';
+}
+
+// Close feature dropdown on outside click
+document.addEventListener('click', function(e){
+  const dd=document.getElementById('featDropdown');
+  const inp=document.getElementById('f-feat');
+  if(dd && inp && !inp.contains(e.target) && !dd.contains(e.target)) dd.style.display='none';
+}, true);
 
 async function saveBug(){
   const btn=document.getElementById('panelSave');
@@ -10351,7 +10388,7 @@ let _tcRunOpen = null;
 let _tcLoading = false;
 
 // ── Init — load from KV, fall back to localStorage ───────────────────────────
-async // ── Renders TC manager inside the Builds page testRunsWrap ──────────────────
+// ── Renders TC manager inside the Builds page testRunsWrap ──────────────────
 function tcRenderBuildsSection() {
   var wrap = document.getElementById('testRunsWrap');
   if(!wrap) return;
@@ -10421,6 +10458,7 @@ function tcRenderSuitesInto(containerId) {
       '<div style="flex:1;min-width:160px">'+
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">'+
       '<span style="font-size:14px;font-weight:700;color:var(--text)">'+esc(suite.name)+'</span>'+
+      (suite.feature_tag?'<span style="font-family:var(--mono);font-size:8px;padding:1px 7px;border-radius:10px;background:rgba(6,182,212,.15);color:var(--g2)">'+esc(suite.feature_tag)+'</span>':'')+
       (suite.type?'<span style="font-family:var(--mono);font-size:8px;padding:1px 7px;border-radius:10px;background:rgba(124,58,237,.15);color:var(--g1)">'+esc(suite.type)+'</span>':'')+
       (suite.pod?'<span style="font-family:var(--mono);font-size:8px;padding:1px 7px;border-radius:10px;background:rgba(6,182,212,.12);color:var(--g2)">'+esc(suite.pod)+'</span>':'')+
       '</div>'+
@@ -10439,6 +10477,7 @@ function tcRenderSuitesInto(containerId) {
       (isAdmin?'<button class="btn btn-r btn-sm tcb-delete">&#10005;</button>':'')+
       '</div></div></div>';
   }).join('');
+  if(fbar) wrap.insertAdjacentElement('afterbegin',fbar);
   // Bind click events using data attributes (avoids onclick quoting hell)
   wrap.querySelectorAll('[data-suite-id]').forEach(function(row){
     var sid=row.getAttribute('data-suite-id');
@@ -10459,18 +10498,21 @@ function tcRenderRunsInto(containerId) {
     return;
   }
   var isAdmin=S.user&&S.user.role==='admin';
-  wrap.innerHTML=_tcRuns.map(function(run){
-    var t=run.cases&&run.cases.length||0,p=run.cases&&run.cases.filter(function(c){return c.result==='pass';}).length||0,
+  var html=_tcRuns.map(function(run){
+    var t=run.cases&&run.cases.length||0,
+        p=run.cases&&run.cases.filter(function(c){return c.result==='pass';}).length||0,
         f=run.cases&&run.cases.filter(function(c){return c.result==='fail';}).length||0,
         nd=run.cases&&run.cases.filter(function(c){return c.result==='pending';}).length||0;
     var pct=t?Math.round(p/t*100):0,pc=pct>=80?'var(--g4)':pct>=50?'var(--g3)':'var(--g5)';
-    return '<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer" onclick="tcBuildOpenRun('+run.id+')">'+
+    // Encode run.id safely — no raw variable names in onclick
+    var rid=JSON.stringify(run.id);
+    return '<div class="tcb-run-row" style="background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer" data-run-id="'+esc(run.id)+'">'+
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
       '<span style="font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(124,58,237,.15);color:var(--g1)">'+esc(run.suiteName||'')+'</span>'+
       (run.tester?'<span style="font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(6,182,212,.12);color:var(--g2)">&#128100; '+esc(run.tester)+'</span>':'')+
       '<span style="font-size:13px;font-weight:700;color:var(--text);flex:1">'+esc(run.label||'')+'</span>'+
       '<span style="font-family:var(--mono);font-size:16px;font-weight:800;color:'+pc+'">'+pct+'%</span>'+
-      (isAdmin?'<button class="btn btn-r btn-sm" onclick="event.stopPropagation();tcDeleteRun('+run.id+')">&#10005;</button>':'')+
+      (isAdmin?'<button class="btn btn-r btn-sm tcb-del-run" style="pointer-events:auto">&#10005;</button>':'')+
       '</div>'+
       '<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">'+
       '<span style="font-family:var(--mono);font-size:9px;padding:1px 7px;border-radius:10px;background:rgba(16,185,129,.12);color:#34d399">&#10003; '+p+'</span>'+
@@ -10479,7 +10521,21 @@ function tcRenderRunsInto(containerId) {
       '<span style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-left:auto">'+esc(run.build||'—')+' &middot; '+esc(run.date||'')+'</span>'+
       '</div></div>';
   }).join('');
+  wrap.innerHTML=html;
+  // Bind events via data attributes — no raw IDs in onclick
+  wrap.querySelectorAll('.tcb-run-row').forEach(function(row){
+    var rid=row.getAttribute('data-run-id');
+    row.addEventListener('click', function(e){
+      if(e.target.classList.contains('tcb-del-run')) return;
+      tcBuildOpenRun(rid);
+    });
+    var delBtn=row.querySelector('.tcb-del-run');
+    if(delBtn) delBtn.addEventListener('click', function(e){
+      e.stopPropagation(); tcDeleteRun(rid);
+    });
+  });
 }
+
 
 function tcBuildOpenRun(runId) {
   _tcRunOpen = runId;
@@ -10592,7 +10648,11 @@ function tcOpenUploadSuite(editId) {
   document.getElementById('panelBody').innerHTML =
     '<div class="fg"><label class="fl">Suite Name <span style="color:var(--g5)">*</span></label>' +
     '<input class="fi2" id="tcs-name" placeholder="e.g. Old User, New User, Full Regression" value="'+esc(existing?existing.name:'')+'"></div>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">' +
+    '<div class="fg" style="margin:0"><label class="fl">Feature Tag</label>' +
+    '<select class="fi2" id="tcs-feature"><option value="">— None —</option>' +
+    ['FTUE','PvP','Store','Alliance','Auction','Events','Match','Inventory','Social','Settings'].concat((DD_FIELDS.find(function(f){return f.key==="feature";})||{options:[]}).options||[]).filter(function(v,i,a){return a.indexOf(v)===i;}).map(function(f){return "<option"+(existing&&existing.feature_tag===f?" selected":"")+" value=\""+esc(f)+"\">"+esc(f)+"</option>";}).join("") +
+    '</select></div>' +
     '<div class="fg" style="margin:0"><label class="fl">Pod / Team</label><select class="fi2" id="tcs-pod">'+podOpts+'</select></div>' +
     '<div class="fg" style="margin:0"><label class="fl">Type</label>' +
     '<input class="fi2" id="tcs-type" list="tcs-type-list" placeholder="Smoke / Regression / FTUE" value="'+esc(existing?existing.type||'':'')+'">' +
@@ -10689,13 +10749,16 @@ function tcParseRows(rows) {
   };
   return rows.map(function(r,i){
     return {
-      id:       fc(r,['id','tcid','testid','bugid','caseid'])||('TC-'+String(i+1).padStart(3,'0')),
-      title:    fc(r,['title','name','summary','testcase','testtitle','testname'])||'',
-      section:  fc(r,['section','module','area','category','group','suite']),
-      priority: fc(r,['priority','prio']),
-      steps:    fc(r,['steps','stepstoproduce','teststeps','step']),
-      expected: fc(r,['expected','expectedresult','expect']),
-      notes:    fc(r,['notes','note','comment']),
+      id:            fc(r,['id','tcid','testid','bugid','caseid','case_id'])||('TC-'+String(i+1).padStart(3,'0')),
+      title:         fc(r,['title','name','summary','testcase','testtitle','testname'])||'',
+      section:       fc(r,['section','module','area','category','group','suite']),
+      priority:      fc(r,['priority','prio']),
+      type:          fc(r,['type','testtype','test_type','casetype']),
+      preconditions: fc(r,['preconditions','precondition','prereq','prerequisites']),
+      steps:         fc(r,['steps','stepstoproduce','teststeps','step']),
+      expected:      fc(r,['expected','expectedresult','expect']),
+      tags:          fc(r,['tags','tag','labels','label']),
+      notes:         fc(r,['notes','note','comment']),
     };
   }).filter(function(r){return r.title&&r.title.trim();});
 }
@@ -10907,6 +10970,7 @@ async function tcSaveSuite(editId) {
     id:         editId||('suite_'+Date.now()),
     name:       name,
     type:       document.getElementById('tcs-type')&&document.getElementById('tcs-type').value.trim()||'',
+    feature_tag: document.getElementById('tcs-feature')&&document.getElementById('tcs-feature').value.trim()||'',
     pod:        document.getElementById('tcs-pod')&&document.getElementById('tcs-pod').value.trim()||'',
     desc:       document.getElementById('tcs-desc')&&document.getElementById('tcs-desc').value.trim()||'',
     cases:      allCases,
@@ -10943,10 +11007,40 @@ function tcDeleteSuite(suiteId) {
 }
 
 // ── Suites list ───────────────────────────────────────────────────────────────
+function tcBuildFeatureFilterBar(features, active, wrapId) {
+  if(!features||features.length<=1) return null;
+  var div=document.createElement('div');
+  div.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px';
+  var allBtn=document.createElement('button');
+  allBtn.className='btn btn-sm '+(active?'btn-g':'btn-v');
+  allBtn.textContent='All';
+  allBtn.onclick=function(){tcSuiteFilter('',wrapId);};
+  div.appendChild(allBtn);
+  features.forEach(function(f){
+    var btn=document.createElement('button');
+    btn.className='btn btn-sm '+(active===f?'btn-v':'btn-g');
+    btn.textContent=f;
+    btn.onclick=function(){tcSuiteFilter(f,wrapId);};
+    div.appendChild(btn);
+  });
+  return div;
+}
+
+function tcSuiteFilter(f, wrapId) {
+  var wid=wrapId||'tc-suites-wrap';
+  var wrap=document.getElementById(wid);
+  if(wrap) wrap._filterFeature=f;
+  if(wid==='tcb-view-suites') tcRenderSuitesInto(wid); else tcRenderSuites();
+}
+
 function tcRenderSuites() {
   var wrap=document.getElementById('tc-suites-wrap');
   if(!wrap) return;
-  if(!_tcSuites.length){
+  // Feature filter bar (built via DOM to avoid quoting issues)
+  var features=[]; _tcSuites.forEach(function(s){if(s.feature_tag&&features.indexOf(s.feature_tag)<0)features.push(s.feature_tag);});
+  var filterVal=wrap._filterFeature||'';
+  var suites=filterVal?_tcSuites.filter(function(s){return s.feature_tag===filterVal;}):_tcSuites;
+  if(!suites.length){
     wrap.innerHTML='<div class="empty"><div class="empty-icon">&#128218;</div><h3>NO SUITES YET</h3><p>Create a suite &mdash; upload TC sheets or add TCs manually</p></div>';
     return;
   }
@@ -11260,6 +11354,10 @@ function tcRenderExecute() {
     });
   }
   wrap.innerHTML=html;
+  // Delegate note input events — avoids oninput quoting issues
+  wrap.querySelectorAll('.tc-note-input').forEach(function(inp){
+    inp.addEventListener('input',function(){tcSetNote(inp.dataset.run,+inp.dataset.idx,inp.value);});
+  });
 }
 
 function tcNegateTitle(title) {
@@ -11310,8 +11408,17 @@ function tcRenderCaseRow(runId,c) {
     (c.result==='fail'?'<button class="btn btn-r btn-sm" onclick="tcLogBug(\''+runId+'\','+c._idx+')" style="font-size:10px;padding:2px 7px">&#128027; Bug</button>':'') +
     '</div>' +
     (c.linkedBugId?'<div style="margin-top:2px;padding-left:54px;font-family:var(--mono);font-size:9px;color:var(--g5)">&#128027; '+esc(c.linkedBugId)+' linked</div>':'') +
-    '<div style="margin-top:4px;padding-left:54px">' +
-    '<input type="text" value="'+esc(c.note||'')+'" placeholder="Note..." class="fi2" oninput="tcSetNote(\''+runId+'\','+c._idx+',this.value)" style="font-size:11px;padding:3px 7px;height:auto;background:rgba(0,0,0,.2)">' +
+    ((c.preconditions||c.steps||c.expected||c.type||c.tags)?
+      '<details style="margin-top:4px;padding-left:54px"><summary style="font-family:var(--mono);font-size:9px;color:var(--g2);cursor:pointer;list-style:none;display:flex;align-items:center;gap:4px">&#9654; details</summary>'+
+      '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);line-height:1.8;margin-top:4px;padding:6px 8px;background:var(--bg3);border-radius:6px">'+
+      (c.type?'<div><b style="color:var(--g2)">Type:</b> '+esc(c.type)+'</div>':'')+
+      (c.preconditions?'<div><b style="color:var(--g2)">Preconditions:</b> '+esc(c.preconditions.slice(0,200))+'</div>':'')+
+      (c.steps?'<div><b style="color:var(--g2)">Steps:</b> '+esc(c.steps.slice(0,300))+'</div>':'')+
+      (c.expected?'<div><b style="color:var(--g2)">Expected:</b> '+esc(c.expected.slice(0,200))+'</div>':'')+
+      (c.tags?'<div><b style="color:var(--g2)">Tags:</b> '+esc(c.tags)+'</div>':'')+
+      '</div></details>' : '') +
+    '<div style="margin-top:4px;padding-left:54px">'+
+    '<input type="text" value="'+esc(c.note||'')+'" placeholder="Note..." class="fi2 tc-note-input" data-run="'+esc(runId)+'" data-idx="'+c._idx+'" style="font-size:11px;padding:3px 7px;height:auto;background:rgba(0,0,0,.2)">'+
     '</div></div>';
 }
 
