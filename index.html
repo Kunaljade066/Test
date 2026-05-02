@@ -10239,202 +10239,218 @@ async function saveEditComment(bugId, idx) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// TEST CASES ENGINE — localStorage-first, D1 sync in background
+// TEST CASES ENGINE — KV-backed (sprints store), localStorage cache, multi-file
 // ══════════════════════════════════════════════════════════════════════════════
 
-// ── localStorage (source of truth until D1 routes deployed) ─────────────────
-const TC_SUITES_KEY = 'hwt_tc_suites_v1';
-const TC_RUNS_KEY2  = 'hwt_tc_runs_v2';
-function tcLsGetSuites() { try{return JSON.parse(localStorage.getItem(TC_SUITES_KEY)||'[]');}catch{return[];} }
-function tcLsSaveSuites(v){ try{localStorage.setItem(TC_SUITES_KEY,JSON.stringify(v));}catch(e){} }
-function tcLsGetRuns()   { try{return JSON.parse(localStorage.getItem(TC_RUNS_KEY2)||'[]'); }catch{return[];} }
-function tcLsSaveRuns(v) { try{localStorage.setItem(TC_RUNS_KEY2,  JSON.stringify(v)); }catch(e){} }
+const TC_SUITE_KV_KEY = '__tc_suites_v1__';
+const TC_RUNS_KV_KEY  = '__tc_runs_v1__';
+const TC_SUITES_LS    = 'hwt_tc_suites_v2';
+const TC_RUNS_LS      = 'hwt_tc_runs_v2';
 
-// ── D1 fire-and-forget (won't block if 404) ───────────────────────────────────
-function tcD1Post(path,body){ api('/tc'+path,'POST',body).catch(()=>{}); }
-function tcD1Put(path,body) { api('/tc'+path,'PUT', body).catch(()=>{}); }
-function tcD1Del(path)      { api('/tc'+path,'DELETE').catch(()=>{});    }
+// ── KV helpers (same pattern as builds registry) ─────────────────────────────
+async function tcKvLoad(key) {
+  try {
+    const all = (await api('/sprints')).sprints || [];
+    const rec = all.filter(s => s.name === key).sort((a,b)=>(b.id||0)-(a.id||0))[0];
+    if (!rec) return [];
+    return JSON.parse(rec.goal || '[]');
+  } catch(e) { return []; }
+}
 
-// ── In-memory state (loaded from localStorage) ───────────────────────────────
+async function tcKvSave(key, data) {
+  try {
+    const all = (await api('/sprints')).sprints || [];
+    const old = all.filter(s => s.name === key);
+    for (const s of old) { try { await api('/sprints/'+s.id,'DELETE'); } catch(e){} }
+    await api('/sprints','POST',{ name: key, start:'', end:'', goal: JSON.stringify(data) });
+  } catch(e) { console.warn('[tc kv save]', e.message); }
+}
+
+// ── localStorage cache ────────────────────────────────────────────────────────
+function tcLsGetSuites() { try{return JSON.parse(localStorage.getItem(TC_SUITES_LS)||'[]');}catch{return[];} }
+function tcLsSaveSuites(v){ try{localStorage.setItem(TC_SUITES_LS,JSON.stringify(v));}catch(e){} }
+function tcLsGetRuns()    { try{return JSON.parse(localStorage.getItem(TC_RUNS_LS)||'[]'); }catch{return[];} }
+function tcLsSaveRuns(v)  { try{localStorage.setItem(TC_RUNS_LS, JSON.stringify(v)); }catch(e){} }
+
+// ── In-memory state ───────────────────────────────────────────────────────────
 let _tcSuites  = [];
 let _tcRuns    = [];
 let _tcRunOpen = null;
+let _tcLoading = false;
 
-// ── Init ─────────────────────────────────────────────────────────────────────
-function tcInit() {
+// ── Init — load from KV, fall back to localStorage ───────────────────────────
+async function tcInit() {
+  if (_tcLoading) return;
+  _tcLoading = true;
+  // Show cached data immediately
   _tcSuites = tcLsGetSuites();
   _tcRuns   = tcLsGetRuns();
   tcShowView('suites');
   tcRenderSuites();
   tcRenderRuns();
+  // Then fetch fresh from KV (cross-device)
+  try {
+    const [suites, runs] = await Promise.all([
+      tcKvLoad(TC_SUITE_KV_KEY),
+      tcKvLoad(TC_RUNS_KV_KEY),
+    ]);
+    if (suites.length || !_tcSuites.length) {
+      _tcSuites = suites;
+      tcLsSaveSuites(suites);
+    }
+    if (runs.length || !_tcRuns.length) {
+      _tcRuns = runs;
+      tcLsSaveRuns(runs);
+    }
+    tcRenderSuites();
+    tcRenderRuns();
+  } catch(e) { /* keep localStorage data */ }
+  _tcLoading = false;
+}
+
+async function tcSyncSuites() {
+  tcLsSaveSuites(_tcSuites);
+  tcKvSave(TC_SUITE_KV_KEY, _tcSuites); // fire-and-forget
+}
+
+async function tcSyncRuns() {
+  tcLsSaveRuns(_tcRuns);
+  tcKvSave(TC_RUNS_KV_KEY, _tcRuns); // fire-and-forget
 }
 
 // ── View switcher ─────────────────────────────────────────────────────────────
 function tcShowView(which) {
-  ['suites','runs','execute'].forEach(v => {
-    const el = document.getElementById('tc-view-'+v);
+  ['suites','runs','execute'].forEach(function(v) {
+    var el=document.getElementById('tc-view-'+v);
     if(el) el.style.display = v===which ? '' : 'none';
   });
-  document.getElementById('tc-btn-suites')?.classList.toggle('btn-v', which==='suites');
-  document.getElementById('tc-btn-suites')?.classList.toggle('btn-g', which!=='suites');
-  document.getElementById('tc-btn-runs')?.classList.toggle('btn-v',   which==='runs');
-  document.getElementById('tc-btn-runs')?.classList.toggle('btn-g',   which!=='runs');
+  var bs=document.getElementById('tc-btn-suites'), br=document.getElementById('tc-btn-runs');
+  if(bs){bs.className='btn btn-sm '+(which==='suites'?'btn-v':'btn-g');}
+  if(br){br.className='btn btn-sm '+(which==='runs'?'btn-v':'btn-g');}
 }
 
-// ── Suite panel: upload + manual entry ────────────────────────────────────────
-let _tcUploadRows = [];
-let _tcManualRows = [];
+// ── Suite panel ───────────────────────────────────────────────────────────────
+var _tcUploadRows = [];
+var _tcManualRows = [];
 
 function tcOpenUploadSuite(editId) {
   _tcUploadRows = [];
-  _tcManualRows = editId ? ((_tcSuites.find(s=>s.id===editId)||{}).cases||[]).map(c=>({...c})) : [];
-  const existing = editId ? _tcSuites.find(s=>s.id===editId) : null;
+  var existing = editId ? _tcSuites.filter(function(s){return s.id===editId;})[0] : null;
+  _tcManualRows = existing ? existing.cases.map(function(c){return Object.assign({},c);}) : [];
 
   document.getElementById('panelTitle').textContent = editId ? 'EDIT SUITE' : 'NEW TEST SUITE';
-  document.getElementById('panelId').textContent    = editId ? (existing?existing.name:'SUITE') : 'SUITE';
+  document.getElementById('panelId').textContent    = editId ? (existing?existing.name:'') : 'SUITE';
   document.getElementById('panelFooter').innerHTML  =
-    '<button class="btn btn-g" onclick="closePanel()">Cancel</button>' +
-    '<button class="btn btn-v" onclick="tcSaveSuite(\'' + (editId||'') + '\')">Save Suite</button>';
+    '<button class="btn btn-g" onclick="closePanel()">Cancel</button> ' +
+    '<button class="btn btn-v" onclick="tcSaveSuite(\''+(editId||'')+'\')">&#128190; Save Suite</button>';
 
   document.getElementById('panelBody').innerHTML =
     '<div class="fg"><label class="fl">Suite Name <span style="color:var(--g5)">*</span></label>' +
-    '<input class="fi2" id="tcs-name" placeholder="e.g. Old User, New User, Full Regression" value="' + esc(existing?existing.name:'') + '"></div>' +
-    '<div class="fg"><label class="fl">Type</label>' +
-    '<input class="fi2" id="tcs-type" list="tcs-type-list" placeholder="Smoke / Regression / Feature / FTUE / Sanity" value="' + esc(existing?existing.type||'':'') + '">' +
-    '<datalist id="tcs-type-list"><option value="Smoke"><option value="Regression"><option value="Feature"><option value="FTUE"><option value="Sanity"><option value="Happy Flow"><option value="Full Pass"></datalist></div>' +
-    '<div class="fg"><label class="fl">Description <span style="color:var(--dim);font-weight:400">(optional)</span></label>' +
-    '<input class="fi2" id="tcs-desc" placeholder="Brief note" value="' + esc(existing?existing.desc||'':'') + '"></div>' +
-    '<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:12px">' +
-    '<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g1);margin-bottom:8px">UPLOAD FROM FILE (xlsx / csv)</div>' +
-    '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);line-height:1.8;margin-bottom:8px">Required col: title &nbsp;Optional: id, section, priority, steps, expected</div>' +
-    '<div style="border:2px dashed var(--bd2);border-radius:8px;padding:16px;text-align:center;cursor:pointer;background:rgba(124,58,237,.03)" onclick="document.getElementById(\'tcs-file-input\').click()" id="tcs-drop-zone" ondragover="event.preventDefault();this.style.borderColor=\'var(--g1)\'" ondragleave="this.style.borderColor=\'var(--bd2)\'" ondrop="tcHandleDrop(event)">' +
-    '<div style="font-size:22px;margin-bottom:4px">&#128202;</div>' +
-    '<div style="font-family:var(--mono);font-size:10px;color:var(--dim)">Drop TC sheet or click to browse &mdash; no deduplication</div>' +
-    '<div id="tcs-file-preview" style="margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--g4)"></div></div>' +
-    '<input type="file" id="tcs-file-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="tcHandleFile(this.files[0])"></div>' +
+    '<input class="fi2" id="tcs-name" placeholder="e.g. Old User, New User, Full Regression" value="'+esc(existing?existing.name:'')+'"></div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+    '<div class="fg" style="margin:0"><label class="fl">Type</label>' +
+    '<input class="fi2" id="tcs-type" list="tcs-type-list" placeholder="Smoke / Regression / FTUE" value="'+esc(existing?existing.type||'':'') +'">' +
+    '<datalist id="tcs-type-list"><option value="Smoke"><option value="Regression"><option value="Feature"><option value="FTUE"><option value="Sanity"><option value="Full Pass"></datalist></div>' +
+    '<div class="fg" style="margin:0"><label class="fl">Description</label>' +
+    '<input class="fi2" id="tcs-desc" placeholder="Brief note" value="'+esc(existing?existing.desc||'':'')+'"></div></div>' +
+    // MULTI-FILE UPLOAD
+    '<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:14px;margin:12px 0">' +
+    '<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g1);margin-bottom:6px">&#128202; UPLOAD FILES <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">— select multiple xlsx/csv at once</span></div>' +
+    '<div style="border:2px dashed var(--bd2);border-radius:8px;padding:18px;text-align:center;cursor:pointer;background:rgba(124,58,237,.03)" ' +
+    'id="tcs-drop-zone" onclick="document.getElementById(\'tcs-file-input\').click()" ' +
+    'ondragover="event.preventDefault();this.style.borderColor=\'var(--g1)\'" ' +
+    'ondragleave="this.style.borderColor=\'var(--bd2)\'" ondrop="tcHandleDrop(event)">' +
+    '<div style="font-size:24px;margin-bottom:4px">&#128230;</div>' +
+    '<div style="font-family:var(--mono);font-size:10px;color:var(--mist)">Drop files here or click to browse</div>' +
+    '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:3px">.xlsx &middot; .csv &middot; multiple files supported &middot; no deduplication</div>' +
+    '<div id="tcs-file-preview" style="margin-top:8px"></div></div>' +
+    '<input type="file" id="tcs-file-input" accept=".csv,.xlsx,.xls" multiple style="display:none" onchange="tcHandleFiles(this.files)"></div>' +
+    // MANUAL ENTRY
     '<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:12px">' +
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
-    '<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g2)">MANUAL TEST CASES</div>' +
+    '<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g2)">&#9999; MANUAL TEST CASES</div>' +
     '<button class="btn btn-g btn-sm" onclick="tcAddManualRow()">+ Add TC</button></div>' +
-    '<div id="tcs-manual-list">' + tcRenderManualList() + '</div></div>' +
-    '<div id="tcs-combined-preview">' + tcRenderCombinedPreview() + '</div>';
+    '<div id="tcs-manual-list">'+tcRenderManualList()+'</div></div>' +
+    '<div id="tcs-combined-preview">'+tcRenderCombinedPreview()+'</div>';
 
   openPanel();
-}
-
-function tcRenderManualList() {
-  if(!_tcManualRows.length) return '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);padding:4px 0">No manual TCs yet &mdash; click + Add TC above</div>';
-  return _tcManualRows.map(function(r, i) {
-    return '<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:7px;padding:8px;margin-bottom:8px">' +
-      '<div style="display:grid;grid-template-columns:80px 1fr 90px 90px 30px;gap:5px;align-items:center;margin-bottom:5px">' +
-      '<input class="fi2" placeholder="ID" value="' + esc(r.id||'') + '" oninput="_tcManualRows[' + i + '].id=this.value;tcRefreshCombined()" style="font-size:11px;padding:4px 7px;font-family:var(--mono);color:var(--g1)">' +
-      '<input class="fi2" placeholder="Title *" value="' + esc(r.title||'') + '" oninput="_tcManualRows[' + i + '].title=this.value;tcRefreshCombined()" style="font-size:11px;padding:4px 7px">' +
-      '<input class="fi2" placeholder="Section" value="' + esc(r.section||'') + '" oninput="_tcManualRows[' + i + '].section=this.value;tcRefreshCombined()" style="font-size:11px;padding:4px 7px">' +
-      '<select class="fi2" onchange="_tcManualRows[' + i + '].priority=this.value" style="font-size:11px;padding:4px 7px">' +
-      '<option value="">Prio</option>' +
-      ['Critical','High','Medium','Low'].map(function(p){return '<option' + (r.priority===p?' selected':'') + '>' + p + '</option>';}).join('') +
-      '</select>' +
-      '<button class="btn btn-r btn-sm" onclick="_tcManualRows.splice(' + i + ',1);tcRefreshManualList()" style="padding:3px 7px">x</button></div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">' +
-      '<input class="fi2" placeholder="Steps (optional)" value="' + esc(r.steps||'') + '" oninput="_tcManualRows[' + i + '].steps=this.value" style="font-size:10px;padding:4px 7px;color:var(--dim)">' +
-      '<input class="fi2" placeholder="Expected (optional)" value="' + esc(r.expected||'') + '" oninput="_tcManualRows[' + i + '].expected=this.value" style="font-size:10px;padding:4px 7px;color:var(--dim)">' +
-      '</div></div>';
-  }).join('');
-}
-
-function tcAddManualRow() {
-  var num = _tcManualRows.length + _tcUploadRows.length + 1;
-  _tcManualRows.push({ id:'TC-'+String(num).padStart(3,'0'), title:'', section:'', priority:'', steps:'', expected:'' });
-  tcRefreshManualList();
-  setTimeout(function(){
-    var inputs = document.querySelectorAll('#tcs-manual-list input[placeholder="Title *"]');
-    if(inputs.length) inputs[inputs.length-1].focus();
-  }, 60);
-}
-
-function tcRefreshManualList() {
-  var el = document.getElementById('tcs-manual-list');
-  if(el) el.innerHTML = tcRenderManualList();
-  tcRefreshCombined();
-}
-
-function tcRenderCombinedPreview() {
-  var all = _tcUploadRows.concat(_tcManualRows.filter(function(r){return r.title&&r.title.trim();}));
-  if(!all.length) return '';
-  var sections = {};
-  all.forEach(function(c){ var s=c.section||'(No Section)'; if(!sections[s])sections[s]=[]; sections[s].push(c); });
-  var html = '<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin-top:4px">' +
-    '<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mute);margin-bottom:8px">PREVIEW &mdash; ' + all.length + ' TEST CASES TOTAL</div>';
-  Object.keys(sections).forEach(function(sec){
-    var cs = sections[sec];
-    html += '<div style="margin-bottom:10px"><div style="font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g2);padding:3px 0;border-bottom:1px solid var(--bd);margin-bottom:4px">' + esc(sec) + ' <span style="color:var(--dim)">(' + cs.length + ')</span></div>';
-    cs.forEach(function(c){
-      html += '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03)">' +
-        '<span style="font-family:var(--mono);font-size:9px;color:var(--g1);flex-shrink:0;min-width:56px">' + esc(c.id||'') + '</span>' +
-        '<span style="font-size:12px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(c.title||'') + '</span>' +
-        (c.priority?'<span style="font-family:var(--mono);font-size:8px;padding:1px 6px;border-radius:8px;background:rgba(124,58,237,.12);color:var(--ghost)">' + esc(c.priority) + '</span>':'') +
-        '</div>';
-    });
-    html += '</div>';
-  });
-  html += '</div>';
-  return html;
-}
-
-function tcRefreshCombined() {
-  var el = document.getElementById('tcs-combined-preview');
-  if(el) el.innerHTML = tcRenderCombinedPreview();
 }
 
 function tcHandleDrop(e) {
   e.preventDefault();
   document.getElementById('tcs-drop-zone').style.borderColor='var(--bd2)';
-  tcHandleFile(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]);
+  tcHandleFiles(e.dataTransfer && e.dataTransfer.files);
 }
 
-function tcHandleFile(file) {
-  if(!file) return;
-  var name = file.name.toLowerCase();
-  var handleRows = function(rows) {
-    _tcUploadRows = tcParseRows(rows);
-    var preview = document.getElementById('tcs-file-preview');
-    var sections = [];
-    _tcUploadRows.forEach(function(c){ if(c.section && sections.indexOf(c.section)<0) sections.push(c.section); });
-    if(preview) preview.innerHTML = '<span style="color:var(--g4)">OK ' + _tcUploadRows.length + ' TCs loaded</span>' + (sections.length?' &middot; '+sections.length+' sections':'');
-    tcRefreshCombined();
-  };
-  if(name.endsWith('.xlsx')||name.endsWith('.xls')) {
-    var r=new FileReader();
-    r.onload=function(ev){
-      try{var wb=XLSX.read(ev.target.result,{type:'array'});handleRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''}));}
-      catch(e){toast('Excel error: '+e.message,'err');}
-    };
-    r.readAsArrayBuffer(file);
-  } else {
-    var r2=new FileReader();
-    r2.onload=function(ev){
-      var lines=ev.target.result.split(/\r?\n/).filter(function(l){return l.trim();});
-      if(lines.length<2){toast('CSV needs header + data','err');return;}
-      var hdrs=lines[0].split(',').map(function(h){return h.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');});
-      var rows=[];
-      for(var i=1;i<lines.length;i++){
-        var vals=lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
-        var row={};
-        hdrs.forEach(function(h,idx){row[h]=(vals[idx]||'').replace(/^"|"$/g,'').trim();});
-        rows.push(row);
-      }
-      handleRows(rows);
-    };
-    r2.readAsText(file);
+function tcHandleFiles(fileList) {
+  if(!fileList || !fileList.length) return;
+  var files = Array.from(fileList);
+  var pending = files.length;
+  var allRows = [].concat(_tcUploadRows); // keep existing
+  var fileNames = [];
+
+  function onFile(rows, fname) {
+    allRows = allRows.concat(tcParseRows(rows));
+    fileNames.push(fname + ' (' + tcParseRows(rows).length + ')');
+    pending--;
+    if(pending === 0) {
+      _tcUploadRows = allRows;
+      var preview = document.getElementById('tcs-file-preview');
+      var sections = [];
+      _tcUploadRows.forEach(function(c){ if(c.section && sections.indexOf(c.section)<0) sections.push(c.section); });
+      if(preview) preview.innerHTML =
+        '<div style="font-family:var(--mono);font-size:10px;color:var(--g4);margin-top:4px">&#10003; '+_tcUploadRows.length+' TCs from '+fileNames.length+' file'+(fileNames.length>1?'s':'')+'</div>' +
+        '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">'+fileNames.join(' &middot; ')+'</div>' +
+        (sections.length?'<div style="font-family:var(--mono);font-size:9px;color:var(--fog);margin-top:2px">'+sections.length+' sections: '+sections.slice(0,8).join(', ')+(sections.length>8?'…':'')+'</div>':'');
+      tcRefreshCombined();
+    }
   }
+
+  // Need to parse each file, track counts per file separately
+  files.forEach(function(file) {
+    var fname = file.name;
+    var name = fname.toLowerCase();
+    if(name.endsWith('.xlsx')||name.endsWith('.xls')) {
+      var r=new FileReader();
+      r.onload=function(ev){
+        try{
+          var wb=XLSX.read(ev.target.result,{type:'array'});
+          var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+          onFile(rows, fname);
+        }catch(e){ pending--; toast('Error reading '+fname+': '+e.message,'err'); }
+      };
+      r.readAsArrayBuffer(file);
+    } else {
+      var r2=new FileReader();
+      r2.onload=function(ev){
+        var lines=ev.target.result.split(/\r?\n/).filter(function(l){return l.trim();});
+        if(lines.length<2){ pending--; toast(fname+': needs header + data rows','err'); return; }
+        var hdrs=lines[0].split(',').map(function(h){return h.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');});
+        var rows=[];
+        for(var i=1;i<lines.length;i++){
+          var vals=lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+          var row={};
+          hdrs.forEach(function(h,idx){row[h]=(vals[idx]||'').replace(/^"|"$/g,'').trim();});
+          rows.push(row);
+        }
+        onFile(rows, fname);
+      };
+      r2.readAsText(file);
+    }
+  });
 }
+
+// keep old single-file handler as alias
+function tcHandleFile(file){ if(file) tcHandleFiles([file]); }
 
 function tcParseRows(rows) {
   var fc=function(row,names){
     for(var i=0;i<names.length;i++){
       var n=names[i];
-      var k=Object.keys(row).find(function(k){return k.toLowerCase().replace(/[^a-z0-9]/g,'')=== n.replace(/[^a-z0-9]/g,'');});
-      if(k) return row[k]||'';
+      var keys=Object.keys(row);
+      for(var j=0;j<keys.length;j++){
+        if(keys[j].toLowerCase().replace(/[^a-z0-9]/g,'')=== n.replace(/[^a-z0-9]/g,'')) return row[keys[j]]||'';
+      }
     }
     return '';
   };
@@ -10448,46 +10464,111 @@ function tcParseRows(rows) {
       expected: fc(r,['expected','expectedresult','expect']),
       notes:    fc(r,['notes','note','comment']),
     };
-  }).filter(function(r){return r.title.trim();});
+  }).filter(function(r){return r.title&&r.title.trim();});
 }
 
-function tcSaveSuite(editId) {
-  var name = document.getElementById('tcs-name')&&document.getElementById('tcs-name').value.trim();
-  if(!name){toast('Suite name required','err');return;}
-  var allCases = _tcUploadRows.concat(_tcManualRows.filter(function(r){return r.title&&r.title.trim();}));
-  if(!allCases.length){toast('Add at least one TC — upload a file or add manually','err');return;}
+function tcRenderManualList() {
+  if(!_tcManualRows.length) return '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);padding:4px 0">No manual TCs &mdash; click + Add TC above</div>';
+  return _tcManualRows.map(function(r,i){
+    return '<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:7px;padding:8px;margin-bottom:6px">' +
+      '<div style="display:grid;grid-template-columns:72px 1fr 84px 84px 30px;gap:5px;align-items:center;margin-bottom:5px">' +
+      '<input class="fi2" placeholder="ID" value="'+esc(r.id||'')+'" oninput="_tcManualRows['+i+'].id=this.value;tcRefreshCombined()" style="font-size:11px;padding:4px 6px;font-family:var(--mono);color:var(--g1)">' +
+      '<input class="fi2" placeholder="Title *" value="'+esc(r.title||'')+'" oninput="_tcManualRows['+i+'].title=this.value;tcRefreshCombined()" style="font-size:11px;padding:4px 6px">' +
+      '<input class="fi2" placeholder="Section" value="'+esc(r.section||'')+'" oninput="_tcManualRows['+i+'].section=this.value;tcRefreshCombined()" style="font-size:11px;padding:4px 6px">' +
+      '<select class="fi2" onchange="_tcManualRows['+i+'].priority=this.value" style="font-size:11px;padding:4px 6px">' +
+      '<option value="">Prio</option>'+['Critical','High','Medium','Low'].map(function(p){return '<option'+(r.priority===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select>' +
+      '<button onclick="_tcManualRows.splice('+i+',1);tcRefreshManualList()" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px">&#10005;</button></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">' +
+      '<input class="fi2" placeholder="Steps (optional)" value="'+esc(r.steps||'')+'" oninput="_tcManualRows['+i+'].steps=this.value" style="font-size:10px;padding:4px 6px;color:var(--dim)">' +
+      '<input class="fi2" placeholder="Expected (optional)" value="'+esc(r.expected||'')+'" oninput="_tcManualRows['+i+'].expected=this.value" style="font-size:10px;padding:4px 6px;color:var(--dim)">' +
+      '</div></div>';
+  }).join('');
+}
 
-  var suite = {
+function tcAddManualRow() {
+  var num=_tcManualRows.length+_tcUploadRows.length+1;
+  _tcManualRows.push({id:'TC-'+String(num).padStart(3,'0'),title:'',section:'',priority:'',steps:'',expected:''});
+  tcRefreshManualList();
+  setTimeout(function(){
+    var inputs=document.querySelectorAll('#tcs-manual-list input[placeholder="Title *"]');
+    if(inputs.length) inputs[inputs.length-1].focus();
+  },60);
+}
+
+function tcRefreshManualList() {
+  var el=document.getElementById('tcs-manual-list');
+  if(el) el.innerHTML=tcRenderManualList();
+  tcRefreshCombined();
+}
+
+function tcRenderCombinedPreview() {
+  var all=_tcUploadRows.concat(_tcManualRows.filter(function(r){return r.title&&r.title.trim();}));
+  if(!all.length) return '';
+  var sections={};
+  all.forEach(function(c){var s=c.section||'(No Section)';if(!sections[s])sections[s]=[];sections[s].push(c);});
+  var html='<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:12px 14px">' +
+    '<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mute);margin-bottom:8px">PREVIEW &mdash; '+all.length+' TCs TOTAL</div>';
+  Object.keys(sections).forEach(function(sec){
+    var cs=sections[sec];
+    html+='<div style="margin-bottom:8px"><div style="font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g2);padding:3px 0;border-bottom:1px solid var(--bd);margin-bottom:3px">'+esc(sec)+' <span style="color:var(--dim)">('+cs.length+')</span></div>';
+    cs.forEach(function(c){
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03)">' +
+        '<span style="font-family:var(--mono);font-size:9px;color:var(--g1);flex-shrink:0;min-width:52px">'+esc(c.id||'')+'</span>' +
+        '<span style="font-size:11px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(c.title||'')+'</span>' +
+        (c.priority?'<span style="font-family:var(--mono);font-size:8px;padding:1px 5px;border-radius:6px;background:rgba(124,58,237,.12);color:var(--ghost)">'+esc(c.priority)+'</span>':'') +
+        '</div>';
+    });
+    html+='</div>';
+  });
+  return html+'</div>';
+}
+
+function tcRefreshCombined() {
+  var el=document.getElementById('tcs-combined-preview');
+  if(el) el.innerHTML=tcRenderCombinedPreview();
+}
+
+async function tcSaveSuite(editId) {
+  var name=document.getElementById('tcs-name')&&document.getElementById('tcs-name').value.trim();
+  if(!name){toast('Suite name required','err');return;}
+  var allCases=_tcUploadRows.concat(_tcManualRows.filter(function(r){return r.title&&r.title.trim();}));
+  if(!allCases.length){toast('Add at least one TC — upload files or add manually','err');return;}
+
+  var btn=document.querySelector('#panelFooter .btn-v');
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spin"></span> Saving…';}
+
+  var suite={
     id:         editId||('suite_'+Date.now()),
     name:       name,
-    type:       (document.getElementById('tcs-type')&&document.getElementById('tcs-type').value.trim())||'',
-    desc:       (document.getElementById('tcs-desc')&&document.getElementById('tcs-desc').value.trim())||'',
+    type:       document.getElementById('tcs-type')&&document.getElementById('tcs-type').value.trim()||'',
+    desc:       document.getElementById('tcs-desc')&&document.getElementById('tcs-desc').value.trim()||'',
     cases:      allCases,
     created_by: S.user&&S.user.name||'',
     created_at: new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'medium'}),
   };
 
-  var suites = tcLsGetSuites();
-  var idx = suites.findIndex(function(s){return s.id===suite.id;});
-  if(idx>=0) suites[idx]=suite; else suites.unshift(suite);
-  tcLsSaveSuites(suites);
-  _tcSuites = suites;
-  tcD1Post('/suites', suite);
+  var idx=_tcSuites.findIndex(function(s){return s.id===suite.id;});
+  if(idx>=0) _tcSuites[idx]=suite; else _tcSuites.unshift(suite);
+
+  // Save to localStorage immediately
+  tcLsSaveSuites(_tcSuites);
+  // Save to KV (cross-device)
+  await tcKvSave(TC_SUITE_KV_KEY, _tcSuites);
 
   _tcUploadRows=[]; _tcManualRows=[];
   closePanel();
   tcRenderSuites();
-  toast('Suite "'+name+'" saved — '+allCases.length+' TCs','ok');
+  toast('Suite "'+name+'" saved — '+allCases.length+' TCs ✓','ok');
 }
 
 function tcDeleteSuite(suiteId) {
   if(S.user&&S.user.role!=='admin'){toast('Admin only','err');return;}
-  var suite=_tcSuites.find(function(s){return s.id===suiteId;});
+  var suite=_tcSuites.filter(function(s){return s.id===suiteId;})[0];
   if(!suite) return;
-  if(!confirm('Delete suite "'+suite.name+'"?\nExisting runs are unaffected.')) return;
+  if(!confirm('Delete suite "'+suite.name+'"?\nExisting runs are not affected.')) return;
   _tcSuites=_tcSuites.filter(function(s){return s.id!==suiteId;});
   tcLsSaveSuites(_tcSuites);
-  tcD1Del('/suites/'+suiteId);
+  tcKvSave(TC_SUITE_KV_KEY, _tcSuites);
   tcRenderSuites();
   toast('Suite deleted','ok');
 }
@@ -10497,18 +10578,19 @@ function tcRenderSuites() {
   var wrap=document.getElementById('tc-suites-wrap');
   if(!wrap) return;
   if(!_tcSuites.length){
-    wrap.innerHTML='<div class="empty"><div class="empty-icon">&#128218;</div><h3>NO SUITES YET</h3><p>Create a suite &mdash; upload a TC sheet or add TCs manually</p></div>';
+    wrap.innerHTML='<div class="empty"><div class="empty-icon">&#128218;</div><h3>NO SUITES YET</h3><p>Create a suite &mdash; upload TC sheets or add TCs manually</p></div>';
     return;
   }
   var isAdmin=S.user&&S.user.role==='admin';
   wrap.innerHTML=_tcSuites.map(function(suite){
     var runCount=_tcRuns.filter(function(r){return r.suiteId===suite.id;}).length;
-    var sections=[]; suite.cases.forEach(function(c){if(c.section&&sections.indexOf(c.section)<0)sections.push(c.section);});
+    var sections=[];
+    suite.cases.forEach(function(c){if(c.section&&sections.indexOf(c.section)<0)sections.push(c.section);});
     return '<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;margin-bottom:10px">' +
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">' +
       '<div style="flex:1;min-width:160px">' +
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">' +
-      '<span style="font-size:14px;font-weight:700;color:var(--text)">' + esc(suite.name) + '</span>' +
+      '<span style="font-size:14px;font-weight:700;color:var(--text)">'+esc(suite.name)+'</span>' +
       (suite.type?'<span style="font-family:var(--mono);font-size:8px;padding:1px 7px;border-radius:10px;background:rgba(124,58,237,.15);color:var(--g1)">'+esc(suite.type)+'</span>':'') +
       '</div>' +
       (suite.desc?'<div style="font-size:11px;color:var(--mist);margin-bottom:4px">'+esc(suite.desc)+'</div>':'') +
@@ -10516,26 +10598,26 @@ function tcRenderSuites() {
       '<b style="color:var(--fog)">'+suite.cases.length+'</b> TCs' +
       (sections.length?' &middot; '+sections.slice(0,5).map(function(s){return '<span style="color:var(--mute)">'+esc(s)+'</span>';}).join(', ')+(sections.length>5?'&hellip;':''):'') +
       ' &middot; <b style="color:var(--fog)">'+runCount+'</b> run'+(runCount!==1?'s':'') +
-      ' &middot; '+esc(suite.created_by||'') +
+      ' &middot; '+esc(suite.created_by||'') + ' &middot; '+esc(suite.created_at||'') +
       '</div></div>' +
       '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap">' +
       '<button class="btn btn-v btn-sm" onclick="tcOpenReplicate(\''+suite.id+'\')">&#10765; Replicate</button>' +
       '<button class="btn btn-g btn-sm" onclick="tcPreviewSuite(\''+suite.id+'\')">&#128065; View</button>' +
       '<button class="btn btn-g btn-sm" onclick="tcOpenUploadSuite(\''+suite.id+'\')">&#9999; Edit</button>' +
       (isAdmin?'<button class="btn btn-r btn-sm" onclick="tcDeleteSuite(\''+suite.id+'\')">&#10005; Delete</button>':
-               '<span style="font-family:var(--mono);font-size:8px;color:var(--dim);padding:3px 6px">admin only</span>') +
+               '<span style="font-family:var(--mono);font-size:8px;color:var(--dim);padding:3px 4px">admin only</span>') +
       '</div></div></div>';
   }).join('');
 }
 
 // ── Suite preview ─────────────────────────────────────────────────────────────
 function tcPreviewSuite(suiteId) {
-  var suite=_tcSuites.find(function(s){return s.id===suiteId;});
+  var suite=_tcSuites.filter(function(s){return s.id===suiteId;})[0];
   if(!suite) return;
   var sections={};
   suite.cases.forEach(function(c){var sec=c.section||'(No Section)';if(!sections[sec])sections[sec]=[];sections[sec].push(c);});
   document.getElementById('panelTitle').textContent='Suite: '+suite.name;
-  document.getElementById('panelId').textContent=suite.cases.length+' TCs';
+  document.getElementById('panelId').textContent=suite.cases.length+' TCs · '+suite.created_at;
   document.getElementById('panelFooter').innerHTML=
     '<button class="btn btn-g" onclick="closePanel()">Close</button>' +
     '<button class="btn btn-v" onclick="closePanel();tcOpenReplicate(\''+suiteId+'\')">&#10765; Replicate</button>';
@@ -10558,7 +10640,7 @@ function tcPreviewSuite(suiteId) {
 
 // ── Replicate ─────────────────────────────────────────────────────────────────
 function tcOpenReplicate(suiteId) {
-  var suite=_tcSuites.find(function(s){return s.id===suiteId;});
+  var suite=_tcSuites.filter(function(s){return s.id===suiteId;})[0];
   if(!suite) return;
   var builds=[]; var bset={};
   S.bugs.forEach(function(b){if(b.build&&!bset[b.build]){builds.push(b.build);bset[b.build]=1;}});
@@ -10576,22 +10658,22 @@ function tcOpenReplicate(suiteId) {
     '<div><div style="font-size:13px;font-weight:700;color:var(--text)">'+esc(suite.name)+'</div>' +
     '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">'+suite.cases.length+' TCs &middot; '+sections.length+' sections &mdash; all results reset to pending</div></div></div>' +
     '<div class="fg"><label class="fl">Run Label <span style="color:var(--g5)">*</span></label>' +
-    '<input class="fi2" id="tcr-label" placeholder="e.g. v3.2.1 Regression, Sprint 14 Smoke, RC1 Full Pass"></div>' +
+    '<input class="fi2" id="tcr-label" placeholder="e.g. v3.2.1 Regression, Sprint 14 Smoke"></div>' +
     '<div class="fg"><label class="fl">Build Version</label>' +
     '<input class="fi2" id="tcr-build" list="tcr-build-list" placeholder="e.g. v3.2.1">' +
     '<datalist id="tcr-build-list">'+builds.map(function(v){return '<option value="'+esc(v)+'">';}).join('')+'</datalist></div>' +
-    '<div class="fg"><label class="fl">Default Tester</label>' +
+    '<div class="fg"><label class="fl">Default Tester <span style="color:var(--dim);font-weight:400">(all TCs)</span></label>' +
     '<select class="fi2" id="tcr-tester"><option value="">— Unassigned —</option>' +
     (S.teamMembers||[]).map(function(m){return '<option value="'+esc(m.name)+'">'+esc(m.name)+'</option>';}).join('') +
     '</select></div>';
 
   if(sections.length) {
-    html+='<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;margin-top:0">' +
-      '<div style="font-family:var(--mono);font-size:9px;color:var(--g2);margin-bottom:8px">PER-SECTION TESTER OVERRIDE</div>';
+    html+='<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:10px 12px">' +
+      '<div style="font-family:var(--mono);font-size:9px;color:var(--g2);margin-bottom:8px">PER-SECTION TESTER OVERRIDE <span style="color:var(--dim)">(optional)</span></div>';
     sections.forEach(function(sec){
       var key='tcr-sec-'+sec.replace(/[^a-zA-Z0-9]/g,'_');
       html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
-        '<span style="font-family:var(--mono);font-size:9px;color:var(--fog);min-width:110px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(sec)+'</span>' +
+        '<span style="font-family:var(--mono);font-size:9px;color:var(--fog);min-width:110px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(sec)+'">'+esc(sec)+'</span>' +
         '<select class="fi2" id="'+key+'" style="flex:1;padding:4px 8px;font-size:11px">' +
         '<option value="">— Use default —</option>' +
         (S.teamMembers||[]).map(function(m){return '<option value="'+esc(m.name)+'">'+esc(m.name)+'</option>';}).join('') +
@@ -10599,13 +10681,12 @@ function tcOpenReplicate(suiteId) {
     });
     html+='</div>';
   }
-
   document.getElementById('panelBody').innerHTML=html;
   openPanel();
 }
 
-function tcCreateRun(suiteId) {
-  var suite=_tcSuites.find(function(s){return s.id===suiteId;});
+async function tcCreateRun(suiteId) {
+  var suite=_tcSuites.filter(function(s){return s.id===suiteId;})[0];
   var label=document.getElementById('tcr-label')&&document.getElementById('tcr-label').value.trim();
   var build=document.getElementById('tcr-build')&&document.getElementById('tcr-build').value.trim()||'';
   var tester=document.getElementById('tcr-tester')&&document.getElementById('tcr-tester').value.trim()||'';
@@ -10619,6 +10700,9 @@ function tcCreateRun(suiteId) {
     if(el&&el.value.trim()) secTesters[sec]=el.value.trim();
   });
 
+  var btn=document.querySelector('#panelFooter .btn-v');
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spin"></span>';}
+
   var run={
     id:         'run_'+Date.now(),
     suiteId:    suiteId,
@@ -10629,25 +10713,18 @@ function tcCreateRun(suiteId) {
     created_by: S.user&&S.user.name||'',
     date:       new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'medium'}),
     cases: suite.cases.map(function(c){
-      return Object.assign({},c,{
-        tester:      secTesters[c.section]||tester||'',
-        result:      'pending',
-        note:        '',
-        linkedBugId: '',
-      });
+      return Object.assign({},c,{tester:secTesters[c.section]||tester||'',result:'pending',note:'',linkedBugId:''});
     }),
   };
 
-  var runs=tcLsGetRuns();
-  runs.unshift(run);
-  tcLsSaveRuns(runs);
-  _tcRuns=runs;
-  tcD1Post('/runs', run);
+  _tcRuns.unshift(run);
+  tcLsSaveRuns(_tcRuns);
+  await tcKvSave(TC_RUNS_KV_KEY, _tcRuns);
 
   closePanel();
   tcShowView('runs');
   tcRenderRuns();
-  toast('Run "'+label+'" started — '+run.cases.length+' TCs','ok');
+  toast('Run "'+label+'" started — '+run.cases.length+' TCs ✓','ok');
 }
 
 // ── Runs list ─────────────────────────────────────────────────────────────────
@@ -10655,19 +10732,18 @@ function tcRenderRuns() {
   var wrap=document.getElementById('tc-runs-wrap');
   if(!wrap) return;
   if(!_tcRuns.length){
-    wrap.innerHTML='<div class="empty"><div class="empty-icon">&#129514;</div><h3>NO RUNS YET</h3><p>Replicate a suite from the Suites tab to start a test run</p></div>';
+    wrap.innerHTML='<div class="empty"><div class="empty-icon">&#129514;</div><h3>NO RUNS YET</h3><p>Replicate a suite from the Suites tab to start a run</p></div>';
     return;
   }
   var isAdmin=S.user&&S.user.role==='admin';
   wrap.innerHTML=_tcRuns.map(function(run){
-    var t=run.cases&&run.cases.length||0;
-    var p=run.cases&&run.cases.filter(function(c){return c.result==='pass';}).length||0;
-    var f=run.cases&&run.cases.filter(function(c){return c.result==='fail';}).length||0;
-    var b=run.cases&&run.cases.filter(function(c){return c.result==='blocked';}).length||0;
-    var s=run.cases&&run.cases.filter(function(c){return c.result==='skipped';}).length||0;
-    var nd=run.cases&&run.cases.filter(function(c){return c.result==='pending';}).length||0;
-    var pct=t?Math.round(p/t*100):0;
-    var pc=pct>=80?'var(--g4)':pct>=50?'var(--g3)':'var(--g5)';
+    var t=run.cases&&run.cases.length||0,
+        p=run.cases&&run.cases.filter(function(c){return c.result==='pass';}).length||0,
+        f=run.cases&&run.cases.filter(function(c){return c.result==='fail';}).length||0,
+        b=run.cases&&run.cases.filter(function(c){return c.result==='blocked';}).length||0,
+        s=run.cases&&run.cases.filter(function(c){return c.result==='skipped';}).length||0,
+        nd=run.cases&&run.cases.filter(function(c){return c.result==='pending';}).length||0;
+    var pct=t?Math.round(p/t*100):0, pc=pct>=80?'var(--g4)':pct>=50?'var(--g3)':'var(--g5)';
     return '<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer" onclick="tcOpenRun(\''+run.id+'\')">' +
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">' +
       '<div style="flex:1;min-width:0">' +
@@ -10676,36 +10752,32 @@ function tcRenderRuns() {
       (run.tester?'<span style="font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(6,182,212,.12);color:var(--g2)">&#128100; '+esc(run.tester)+'</span>':'') +
       '</div>' +
       '<div style="font-size:14px;font-weight:700;color:var(--text)">'+esc(run.label||'Unnamed Run')+'</div>' +
-      '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">Build: '+esc(run.build||'—')+' &middot; '+esc(run.date||'')+' &middot; '+t+' cases &middot; '+esc(run.created_by||'')+'</div></div>' +
+      '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">Build: '+esc(run.build||'—')+' &middot; '+esc(run.date||'')+' &middot; '+t+' TCs &middot; '+esc(run.created_by||'')+'</div></div>' +
       '<div style="display:flex;gap:5px;align-items:center;flex-shrink:0">' +
-      '<div style="font-family:var(--mono);font-size:18px;font-weight:800;color:'+pc+'">'+pct+'%</div>' +
+      '<span style="font-family:var(--mono);font-size:18px;font-weight:800;color:'+pc+'">'+pct+'%</span>' +
       (isAdmin?'<button class="btn btn-r btn-sm" onclick="event.stopPropagation();tcDeleteRun(\''+run.id+'\')">&#10005;</button>':'') +
       '</div></div>' +
-      '<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">' +
-      '<span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:rgba(16,185,129,.15);color:#34d399">&#10003; '+p+'</span>' +
-      '<span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:rgba(239,68,68,.15);color:#f87171">&#10005; '+f+'</span>' +
-      (b?'<span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:rgba(245,158,11,.15);color:#fbbf24">&#8856; '+b+'</span>':'') +
-      (s?'<span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:rgba(99,102,241,.15);color:#818cf8">&#9197; '+s+'</span>':'') +
-      (nd?'<span style="font-family:var(--mono);font-size:10px;padding:2px 9px;border-radius:20px;background:var(--bg3);color:var(--dim)">&mdash; '+nd+'</span>':'') +
-      '</div>' +
-      '<div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;display:flex">'+tcProgressBar(p,f,b,s,nd,t)+'</div>' +
-      '</div>';
+      '<div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap">' +
+      '<span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(16,185,129,.15);color:#34d399">&#10003; '+p+'</span>' +
+      '<span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(239,68,68,.15);color:#f87171">&#10005; '+f+'</span>' +
+      (b?'<span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(245,158,11,.15);color:#fbbf24">&#8856; '+b+'</span>':'') +
+      (s?'<span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(99,102,241,.15);color:#818cf8">&#9197; '+s+'</span>':'') +
+      (nd?'<span style="font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:20px;background:var(--bg3);color:var(--dim)">&mdash; '+nd+'</span>':'') +
+      '</div><div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;display:flex">'+tcProgressBar(p,f,b,s,nd,t)+'</div></div>';
   }).join('');
 }
 
 function tcProgressBar(p,f,b,s,nd,t) {
   if(!t) return '';
   var w=function(n){return Math.round(n/t*100);};
-  return [[p,'#10b981'],[f,'#ef4444'],[b,'#f59e0b'],[s,'#818cf8'],[nd,'#1e1e3a']].map(function(pair){
-    return pair[0]?'<div style="width:'+w(pair[0])+'%;background:'+pair[1]+';height:100%"></div>':'';
-  }).join('');
+  return [[p,'#10b981'],[f,'#ef4444'],[b,'#f59e0b'],[s,'#818cf8'],[nd,'#1e1e3a']].map(function(x){return x[0]?'<div style="width:'+w(x[0])+'%;background:'+x[1]+';height:100%"></div>':'';}).join('');
 }
 
-function tcDeleteRun(runId) {
+async function tcDeleteRun(runId) {
   if(!confirm('Delete this test run?')) return;
   _tcRuns=_tcRuns.filter(function(r){return r.id!==runId;});
   tcLsSaveRuns(_tcRuns);
-  tcD1Del('/runs/'+runId);
+  await tcKvSave(TC_RUNS_KV_KEY, _tcRuns);
   if(_tcRunOpen===runId){_tcRunOpen=null;tcShowView('runs');}
   tcRenderRuns();
   toast('Run deleted','ok');
@@ -10721,10 +10793,11 @@ function tcOpenRun(runId) {
 function tcRenderExecute() {
   var wrap=document.getElementById('tc-execute-wrap');
   if(!wrap) return;
-  var run=_tcRuns.find(function(r){return r.id===_tcRunOpen;});
+  var run=_tcRuns.filter(function(r){return r.id===_tcRunOpen;})[0];
   if(!run){wrap.innerHTML='<div class="empty"><h3>RUN NOT FOUND</h3></div>';return;}
 
-  var t=run.cases.length,p=run.cases.filter(function(c){return c.result==='pass';}).length,
+  var t=run.cases.length,
+      p=run.cases.filter(function(c){return c.result==='pass';}).length,
       f=run.cases.filter(function(c){return c.result==='fail';}).length,
       b=run.cases.filter(function(c){return c.result==='blocked';}).length,
       s=run.cases.filter(function(c){return c.result==='skipped';}).length,
@@ -10737,83 +10810,81 @@ function tcRenderExecute() {
   var html=
     '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">' +
     '<button class="btn btn-g btn-sm" onclick="tcShowView(\'runs\');tcRenderRuns()">&larr; Runs</button>' +
-    '<div style="flex:1;min-width:0">' +
-    '<div style="font-size:15px;font-weight:800;color:var(--text)">'+esc(run.label||'Unnamed Run')+'</div>' +
+    '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:var(--text)">'+esc(run.label||'Unnamed Run')+'</div>' +
     '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:1px">'+esc(run.suiteName||'')+' &middot; Build: '+esc(run.build||'—')+' &middot; '+esc(run.date||'')+(run.tester?' &middot; &#128100; '+esc(run.tester):'')+'</div></div>' +
-    '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">' +
+    '<div style="display:flex;gap:5px;flex-wrap:wrap">' +
     '<button class="btn btn-g btn-sm" onclick="tcCopyStats(\''+run.id+'\')">&#128203; Stats</button>' +
     '<button class="btn btn-g btn-sm" onclick="tcEmailStats(\''+run.id+'\')">&#128231; Email</button>' +
     '<button class="btn btn-g btn-sm" onclick="tcGChatStats(\''+run.id+'\')">&#128172; GChat</button>' +
     '</div></div>' +
-    '<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:12px 16px;margin-bottom:14px">' +
+    '<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:12px 16px;margin-bottom:12px">' +
     '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap">' +
-    '<div style="font-family:var(--mono);font-size:26px;font-weight:900;color:'+pc+'">'+pct+'%</div>' +
-    '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+    '<span style="font-family:var(--mono);font-size:26px;font-weight:900;color:'+pc+'">'+pct+'%</span>' +
+    '<div style="display:flex;gap:5px;flex-wrap:wrap">' +
     [['&#10003;',p,'#34d399','rgba(16,185,129,.15)'],['&#10005;',f,'#f87171','rgba(239,68,68,.15)'],['&#8856;',b,'#fbbf24','rgba(245,158,11,.15)'],['&#9197;',s,'#818cf8','rgba(99,102,241,.15)'],['&mdash;',nd,'#6868a0','var(--bg3)']].map(function(x){
-      return '<span style="font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;background:'+x[3]+';color:'+x[2]+'">'+x[0]+' '+x[1]+'</span>';
-    }).join('') +
-    '<span style="font-family:var(--mono);font-size:10px;color:var(--dim);padding:3px 0">'+t+' total</span>' +
-    '</div></div>' +
-    '<div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;display:flex">'+tcProgressBar(p,f,b,s,nd,t)+'</div></div>';
+      return '<span style="font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:'+x[3]+';color:'+x[2]+'">'+x[0]+' '+x[1]+'</span>';
+    }).join('') + '<span style="font-family:var(--mono);font-size:10px;color:var(--dim);padding:3px 0">'+t+' total</span>' +
+    '</div></div><div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;display:flex">'+tcProgressBar(p,f,b,s,nd,t)+'</div></div>';
 
   Object.keys(sections).forEach(function(sec){
     var cases=sections[sec];
     var sp=cases.filter(function(c){return c.result==='pass';}).length;
     var sf=cases.filter(function(c){return c.result==='fail';}).length;
     var snd=cases.filter(function(c){return c.result==='pending';}).length;
-    html+='<div style="margin-bottom:18px">' +
-      '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;margin-bottom:3px;border-bottom:1px solid var(--bd)">' +
+    html+='<div style="margin-bottom:16px"><div style="display:flex;align-items:center;gap:8px;padding:5px 0;margin-bottom:3px;border-bottom:1px solid var(--bd)">' +
       '<span style="font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--g2)">'+esc(sec)+'</span>' +
       '<span style="font-family:var(--mono);font-size:9px;color:var(--dim)">'+cases.length+'</span>' +
-      '<span style="font-family:var(--mono);font-size:9px;color:var(--fog);margin-left:auto">&#10003;'+sp+' &#10005;'+sf+' &mdash;'+snd+'</span>' +
-      '</div>';
-    cases.forEach(function(c){ html+=tcRenderCaseRow(run.id, c); });
+      '<span style="font-family:var(--mono);font-size:9px;color:var(--fog);margin-left:auto">&#10003;'+sp+' &#10005;'+sf+' &mdash;'+snd+'</span></div>';
+    cases.forEach(function(c){html+=tcRenderCaseRow(run.id,c);});
     html+='</div>';
   });
-
   wrap.innerHTML=html;
 }
 
-function tcRenderCaseRow(runId, c) {
+function tcRenderCaseRow(runId,c) {
   var btns=[['pass','&#10003;','#34d399','rgba(16,185,129,.15)'],['fail','&#10005;','#f87171','rgba(239,68,68,.15)'],['blocked','&#8856;','#fbbf24','rgba(245,158,11,.15)'],['skipped','&#9197;','#818cf8','rgba(99,102,241,.15)'],['pending','&mdash;','#6868a0','var(--bg3)']].map(function(x){
     var on=c.result===x[0];
-    return '<button onclick="tcSetResult(\''+runId+'\','+c._idx+',\''+x[0]+'\')" style="font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 9px;border-radius:14px;border:none;cursor:pointer;background:'+(on?x[3]:'var(--bg4)')+';color:'+(on?x[2]:'var(--dim)')+';transition:all .1s">'+x[1]+'</button>';
+    return '<button onclick="tcSetResult(\''+runId+'\','+c._idx+',\''+x[0]+'\')" style="font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 8px;border-radius:12px;border:none;cursor:pointer;background:'+(on?x[3]:'var(--bg4)')+';color:'+(on?x[2]:'var(--dim)')+';transition:all .1s">'+x[1]+'</button>';
   }).join('');
   var sbg={pass:'rgba(16,185,129,.07)',fail:'rgba(239,68,68,.07)',blocked:'rgba(245,158,11,.07)',skipped:'rgba(99,102,241,.07)',pending:'transparent'}[c.result]||'transparent';
   var sbd={pass:'rgba(16,185,129,.2)',fail:'rgba(239,68,68,.2)',blocked:'rgba(245,158,11,.2)',skipped:'rgba(99,102,241,.2)',pending:'var(--bd)'}[c.result]||'var(--bd)';
-  return '<div style="background:'+sbg+';border:1px solid '+sbd+';border-radius:8px;padding:7px 10px;margin-bottom:3px;transition:background .15s">' +
-    '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">' +
-    '<span style="font-family:var(--mono);font-size:9px;color:var(--g1);flex-shrink:0;min-width:50px">'+esc(c.id||'')+'</span>' +
-    '<span style="font-size:12px;font-weight:600;color:var(--text);flex:1;min-width:100px">'+esc(c.title)+'</span>' +
-    (c.tester?'<span style="font-family:var(--mono);font-size:9px;color:var(--g2);padding:1px 7px;border-radius:10px;background:rgba(6,182,212,.1);flex-shrink:0">&#128100; '+esc(c.tester)+'</span>':'') +
-    (c.priority?'<span style="font-family:var(--mono);font-size:8px;padding:1px 6px;border-radius:8px;background:rgba(124,58,237,.12);color:var(--ghost);flex-shrink:0">'+esc(c.priority)+'</span>':'') +
+  return '<div style="background:'+sbg+';border:1px solid '+sbd+';border-radius:7px;padding:6px 10px;margin-bottom:3px;transition:background .15s">' +
+    '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
+    '<span style="font-family:var(--mono);font-size:9px;color:var(--g1);flex-shrink:0;min-width:48px">'+esc(c.id||'')+'</span>' +
+    '<span style="font-size:12px;font-weight:600;color:var(--text);flex:1;min-width:80px">'+esc(c.title)+'</span>' +
+    (c.tester?'<span style="font-family:var(--mono);font-size:9px;color:var(--g2);padding:1px 6px;border-radius:10px;background:rgba(6,182,212,.1);flex-shrink:0">&#128100; '+esc(c.tester)+'</span>':'') +
+    (c.priority?'<span style="font-family:var(--mono);font-size:8px;padding:1px 5px;border-radius:6px;background:rgba(124,58,237,.12);color:var(--ghost);flex-shrink:0">'+esc(c.priority)+'</span>':'') +
     '<div style="display:flex;gap:3px;flex-shrink:0">'+btns+'</div>' +
-    (c.result==='fail'?'<button class="btn btn-r btn-sm" onclick="tcLogBug(\''+runId+'\','+c._idx+')" style="font-size:10px;padding:2px 8px">&#128027; Bug</button>':'') +
+    (c.result==='fail'?'<button class="btn btn-r btn-sm" onclick="tcLogBug(\''+runId+'\','+c._idx+')" style="font-size:10px;padding:2px 7px">&#128027; Bug</button>':'') +
     '</div>' +
-    (c.linkedBugId?'<div style="margin-top:3px;padding-left:57px;font-family:var(--mono);font-size:9px;color:var(--g5)">&#128027; '+esc(c.linkedBugId)+' linked</div>':'') +
-    '<div style="margin-top:5px;padding-left:57px">' +
-    '<input type="text" value="'+esc(c.note||'')+'" placeholder="Note..." class="fi2" oninput="tcSetNote(\''+runId+'\','+c._idx+',this.value)" style="font-size:11px;padding:3px 8px;height:auto;background:rgba(0,0,0,.2)">' +
+    (c.linkedBugId?'<div style="margin-top:2px;padding-left:54px;font-family:var(--mono);font-size:9px;color:var(--g5)">&#128027; '+esc(c.linkedBugId)+' linked</div>':'') +
+    '<div style="margin-top:4px;padding-left:54px">' +
+    '<input type="text" value="'+esc(c.note||'')+'" placeholder="Note..." class="fi2" oninput="tcSetNote(\''+runId+'\','+c._idx+',this.value)" style="font-size:11px;padding:3px 7px;height:auto;background:rgba(0,0,0,.2)">' +
     '</div></div>';
 }
 
-function tcSetResult(runId, caseIdx, result) {
-  var run=_tcRuns.find(function(r){return r.id===runId;});
+async function tcSetResult(runId,caseIdx,result) {
+  var run=_tcRuns.filter(function(r){return r.id===runId;})[0];
   if(!run||!run.cases[caseIdx]) return;
   run.cases[caseIdx].result=result;
   tcLsSaveRuns(_tcRuns);
-  tcD1Put('/runs/'+runId+'/cases/'+caseIdx,{result:result});
+  tcKvSave(TC_RUNS_KV_KEY,_tcRuns); // background sync
   tcRenderExecute();
 }
 
-function tcSetNote(runId, caseIdx, note) {
-  var run=_tcRuns.find(function(r){return r.id===runId;});
+function tcSetNote(runId,caseIdx,note) {
+  var run=_tcRuns.filter(function(r){return r.id===runId;})[0];
   if(!run||!run.cases[caseIdx]) return;
   run.cases[caseIdx].note=note;
   tcLsSaveRuns(_tcRuns);
+  // debounce KV save for notes (don't spam on every keystroke)
+  clearTimeout(tcSetNote._t);
+  tcSetNote._t=setTimeout(function(){tcKvSave(TC_RUNS_KV_KEY,_tcRuns);},2000);
 }
+tcSetNote._t=null;
 
-function tcLogBug(runId, caseIdx) {
-  var run=_tcRuns.find(function(r){return r.id===runId;});
+function tcLogBug(runId,caseIdx) {
+  var run=_tcRuns.filter(function(r){return r.id===runId;})[0];
   var tc=run&&run.cases[caseIdx];
   if(!tc) return;
   buildBugForm(null,true); openPanel();
@@ -10826,7 +10897,7 @@ function tcLogBug(runId, caseIdx) {
   },120);
 }
 
-// ── Stats / share ─────────────────────────────────────────────────────────────
+// ── Stats (stats + failed only) ───────────────────────────────────────────────
 function tcBuildStatsText(run) {
   var t=run.cases.length,p=run.cases.filter(function(c){return c.result==='pass';}).length,
       f=run.cases.filter(function(c){return c.result==='fail';}).length,
@@ -10834,82 +10905,54 @@ function tcBuildStatsText(run) {
       s=run.cases.filter(function(c){return c.result==='skipped';}).length,
       nd=run.cases.filter(function(c){return c.result==='pending';}).length,
       pct=t?Math.round(p/t*100):0;
-  var failList=run.cases.filter(function(c){return c.result==='fail';})
-    .map(function(c){return '  - ['+( c.id||'')+'] '+c.title+(c.linkedBugId?' -> Bug: '+c.linkedBugId:'')+(c.note?' ('+c.note+')':'');})
-    .join('\n');
-  return '🧪 TEST RUN: ' + (run.label||run.suiteName) + '\n' +
-    'Suite: ' + (run.suiteName||'—') + ' | Build: ' + (run.build||'—') + ' | Date: ' + (run.date||'') + (run.tester?' | Tester: '+run.tester:'') + '\n' +
-    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-    '✓ Pass:    ' + p + ' (' + pct + '%)\n' +
-    '✕ Fail:    ' + f + ' (' + (t?Math.round(f/t*100):0) + '%)\n' +
-    '⊘ Blocked: ' + b + '\n' +
-    '⏭ Skipped: ' + s + '\n' +
-    '— Pending: ' + nd + '\n' +
-    '📋 Total:  ' + t + '\n' +
-    (failList?'\n❌ FAILED:\n'+failList:'✅ No failures!') + '\n' +
-    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+  var fails=run.cases.filter(function(c){return c.result==='fail';}).map(function(c){return '  - ['+( c.id||'')+'] '+c.title+(c.linkedBugId?' -> Bug: '+c.linkedBugId:'')+(c.note?' ('+c.note+')':'');}).join('\n');
+  return '🧪 TEST RUN: '+(run.label||run.suiteName)+'\nSuite: '+(run.suiteName||'—')+' | Build: '+(run.build||'—')+' | '+(run.date||'')+(run.tester?' | Tester: '+run.tester:'')+'\n'+'━'.repeat(33)+'\n'+'✓ Pass:    '+p+' ('+pct+'%)\n'+'✕ Fail:    '+f+' ('+(t?Math.round(f/t*100):0)+'%)\n'+'⊘ Blocked: '+b+'\n'+'⏭ Skipped: '+s+'\n'+'— Pending: '+nd+'\n'+'📋 Total:  '+t+'\n'+(fails?'\n❌ FAILED:\n'+fails:'✅ No failures!')+'\n'+'━'.repeat(33);
 }
 
 function tcCopyStats(runId) {
-  var run=_tcRuns.find(function(r){return r.id===runId;}); if(!run) return;
-  navigator.clipboard&&navigator.clipboard.writeText(tcBuildStatsText(run)).then(function(){toast('Stats copied','ok');}).catch(function(){toast('Copy failed','err');});
+  var run=_tcRuns.filter(function(r){return r.id===runId;})[0]; if(!run) return;
+  navigator.clipboard&&navigator.clipboard.writeText(tcBuildStatsText(run)).then(function(){toast('Stats copied ✓','ok');}).catch(function(){toast('Copy failed','err');});
 }
 
 async function tcEmailStats(runId) {
-  var run=_tcRuns.find(function(r){return r.id===runId;}); if(!run) return;
+  var run=_tcRuns.filter(function(r){return r.id===runId;})[0]; if(!run) return;
   var cfg=getWebhookConfig();
   var recipients=(cfg.team_emails||'').split(',').map(function(e){return e.trim();}).filter(Boolean);
-  if(!recipients.length){toast('No team_emails configured — copying stats instead','warn');tcCopyStats(runId);return;}
+  if(!recipients.length){toast('No team_emails configured','warn');tcCopyStats(runId);return;}
   var t=run.cases.length,p=run.cases.filter(function(c){return c.result==='pass';}).length,
       f=run.cases.filter(function(c){return c.result==='fail';}).length,
       b=run.cases.filter(function(c){return c.result==='blocked';}).length,
       s=run.cases.filter(function(c){return c.result==='skipped';}).length,
       nd=run.cases.filter(function(c){return c.result==='pending';}).length,
-      pct=t?Math.round(p/t*100):0, pc=pct>=80?'#34d399':pct>=50?'#fbbf24':'#f87171';
+      pct=t?Math.round(p/t*100):0,pc=pct>=80?'#34d399':pct>=50?'#fbbf24':'#f87171';
   var failRows=run.cases.filter(function(c){return c.result==='fail';}).map(function(c){
-    return '<tr><td style="font-family:monospace;font-size:12px;padding:5px 8px;border-bottom:1px solid #222;color:#c0c0e0">'+esc(c.id||'')+'</td>' +
-      '<td style="font-family:sans-serif;font-size:12px;padding:5px 8px;border-bottom:1px solid #222;color:#eeeef8">'+esc(c.title)+'</td>' +
+    return '<tr><td style="font-family:monospace;font-size:11px;padding:5px 8px;border-bottom:1px solid #222;color:#c0c0e0">'+esc(c.id||'')+'</td>' +
+      '<td style="font-size:12px;padding:5px 8px;border-bottom:1px solid #222;color:#eeeef8">'+esc(c.title)+'</td>' +
       '<td style="font-family:monospace;font-size:11px;padding:5px 8px;border-bottom:1px solid #222;color:#f87171">Fail'+(c.linkedBugId?' ('+esc(c.linkedBugId)+')':'')+'</td>' +
       '<td style="font-family:monospace;font-size:11px;padding:5px 8px;border-bottom:1px solid #222;color:#9090c0">'+esc(c.note||'')+'</td></tr>';
   }).join('');
-  var statCells=[['Pass',p,'#34d399','rgba(16,185,129,.1)'],['Fail',f,'#f87171','rgba(239,68,68,.1)'],['Blocked',b,'#fbbf24','rgba(245,158,11,.1)'],['Skipped',s,'#818cf8','rgba(99,102,241,.1)'],['Pending',nd,'#484880','#111128'],['Total',t,'#c0c0e0','#0d0d20']].map(function(x){
-    return '<td style="background:'+x[3]+';border-radius:8px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:900;font-family:monospace;color:'+x[2]+'">'+x[1]+'</div><div style="font-size:9px;font-family:monospace;color:'+x[2]+';opacity:.8">'+x[0]+'</div></td>';
-  }).join('');
-  var html='<!DOCTYPE html><html><body style="background:#06060f;color:#eeeef8;font-family:sans-serif;margin:0;padding:24px"><div style="max-width:600px;margin:0 auto">' +
-    '<div style="background:linear-gradient(135deg,#7c3aed,#06b6d4);padding:20px 24px;border-radius:12px 12px 0 0">' +
-    '<div style="font-size:10px;letter-spacing:3px;font-family:monospace;color:rgba(255,255,255,.7);margin-bottom:4px">BUGPULSE - TEST RUN</div>' +
-    '<div style="font-size:20px;font-weight:800;color:#fff">'+esc(run.label||run.suiteName)+'</div>' +
-    '<div style="font-size:11px;font-family:monospace;color:rgba(255,255,255,.65);margin-top:3px">Suite: '+esc(run.suiteName||'—')+' | Build: '+esc(run.build||'—')+' | '+esc(run.date||'')+(run.tester?' | Tester: '+esc(run.tester):'')+'</div></div>' +
-    '<div style="background:#0d0d20;padding:20px 24px;border:1px solid #1e1e3a;border-top:none;border-radius:0 0 12px 12px">' +
-    '<div style="text-align:center;padding:14px 0"><div style="font-size:52px;font-weight:900;font-family:monospace;color:'+pc+';line-height:1">'+pct+'%</div><div style="font-size:10px;font-family:monospace;color:#6868a0;letter-spacing:2px;margin-top:3px">PASSED</div></div>' +
-    '<table width="100%" cellpadding="0" cellspacing="5" style="margin-bottom:20px"><tr>'+statCells+'</tr></table>' +
-    (failRows?'<div style="font-size:10px;letter-spacing:2px;font-family:monospace;color:#f87171;margin-bottom:8px">FAILED ('+f+')</div>' +
-      '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #1e1e3a;border-radius:8px;overflow:hidden;margin-bottom:16px">' +
-      '<tr style="background:#1a0a0a"><th style="padding:6px 8px;text-align:left;font-family:monospace;font-size:10px;color:#f87171">TC ID</th><th style="padding:6px 8px;text-align:left;font-family:monospace;font-size:10px;color:#f87171">Title</th><th style="padding:6px 8px;text-align:left;font-family:monospace;font-size:10px;color:#f87171">Result</th><th style="padding:6px 8px;text-align:left;font-family:monospace;font-size:10px;color:#f87171">Note</th></tr>' +
-      failRows+'</table>':'<div style="color:#34d399;font-family:monospace;font-size:12px;text-align:center;padding:10px">No failures!</div>') +
-    '<div style="font-size:9px;font-family:monospace;color:#303060;text-align:center;margin-top:8px">BugPulse - '+new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})+'</div>' +
-    '</div></div></body></html>';
+  var cells=[['Pass',p,'#34d399','rgba(16,185,129,.1)'],['Fail',f,'#f87171','rgba(239,68,68,.1)'],['Blocked',b,'#fbbf24','rgba(245,158,11,.1)'],['Skipped',s,'#818cf8','rgba(99,102,241,.1)'],['Pending',nd,'#484880','#111128'],['Total',t,'#c0c0e0','#0d0d20']].map(function(x){return '<td style="background:'+x[3]+';border-radius:8px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:900;font-family:monospace;color:'+x[2]+'">'+x[1]+'</div><div style="font-size:9px;font-family:monospace;color:'+x[2]+';opacity:.8">'+x[0]+'</div></td>';}).join('');
+  var html='<!DOCTYPE html><html><body style="background:#06060f;color:#eeeef8;font-family:sans-serif;margin:0;padding:20px"><div style="max-width:580px;margin:0 auto"><div style="background:linear-gradient(135deg,#7c3aed,#06b6d4);padding:18px 22px;border-radius:12px 12px 0 0"><div style="font-size:10px;letter-spacing:3px;font-family:monospace;color:rgba(255,255,255,.7)">BUGPULSE TEST RUN</div><div style="font-size:20px;font-weight:800;color:#fff;margin-top:2px">'+esc(run.label||run.suiteName)+'</div><div style="font-size:11px;font-family:monospace;color:rgba(255,255,255,.65);margin-top:3px">Suite: '+esc(run.suiteName||'—')+' | Build: '+esc(run.build||'—')+' | '+esc(run.date||'')+(run.tester?' | Tester: '+esc(run.tester):'')+'</div></div><div style="background:#0d0d20;padding:18px 22px;border:1px solid #1e1e3a;border-top:none;border-radius:0 0 12px 12px"><div style="text-align:center;padding:12px 0"><div style="font-size:50px;font-weight:900;font-family:monospace;color:'+pc+';line-height:1">'+pct+'%</div><div style="font-size:10px;font-family:monospace;color:#6868a0;letter-spacing:2px;margin-top:2px">PASSED</div></div><table width="100%" cellpadding="0" cellspacing="5" style="margin-bottom:18px"><tr>'+cells+'</tr></table>'+(failRows?'<div style="font-size:10px;letter-spacing:2px;font-family:monospace;color:#f87171;margin-bottom:6px">FAILED ('+f+')</div><table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #1e1e3a;border-radius:8px;overflow:hidden;margin-bottom:12px"><tr style="background:#1a0a0a"><th style="padding:5px 8px;text-align:left;font-family:monospace;font-size:9px;color:#f87171">TC</th><th style="padding:5px 8px;text-align:left;font-family:monospace;font-size:9px;color:#f87171">Title</th><th style="padding:5px 8px;text-align:left;font-family:monospace;font-size:9px;color:#f87171">Bug</th><th style="padding:5px 8px;text-align:left;font-family:monospace;font-size:9px;color:#f87171">Note</th></tr>'+failRows+'</table>':'<div style="color:#34d399;font-family:monospace;font-size:12px;text-align:center;padding:8px">No failures!</div>')+'<div style="font-size:9px;font-family:monospace;color:#303060;text-align:center;margin-top:6px">BugPulse &middot; '+new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})+'</div></div></div></body></html>';
   try {
-    await api('/send-email','POST',{to:recipients,subject:'[BugPulse] Test Run: '+(run.label||run.suiteName)+' — '+pct+'% passed ('+(run.build||'—')+')',html:html,text:tcBuildStatsText(run)});
-    toast('Stats emailed to '+recipients.length+' recipient'+(recipients.length>1?'s':'')+' ✓','ok');
+    await api('/send-email','POST',{to:recipients,subject:'[BugPulse] '+( run.label||run.suiteName)+' — '+pct+'% passed ('+(run.build||'—')+')',html:html,text:tcBuildStatsText(run)});
+    toast('Emailed to '+recipients.length+' recipient'+(recipients.length>1?'s':'')+' ✓','ok');
   } catch(e){toast('Email failed: '+e.message,'err');}
 }
 
 async function tcGChatStats(runId) {
-  var run=_tcRuns.find(function(r){return r.id===runId;}); if(!run) return;
+  var run=_tcRuns.filter(function(r){return r.id===runId;})[0]; if(!run) return;
   var ok=await sendGChatWebhook(tcBuildStatsText(run),'');
-  if(ok) toast('Stats sent to GChat ✓','ok');
-  else{toast('No GChat webhook — copying instead','warn');tcCopyStats(runId);}
+  if(ok) toast('Sent to GChat ✓','ok'); else{toast('No GChat webhook','warn');tcCopyStats(runId);}
 }
 
 TAB_TIPS['testcases'] = {
   title: 'Test Cases',
-  speech: 'Upload suites or add TCs manually. Replicate for each release with tester assignment per section. Email and GChat send stats and failures only.',
+  speech: 'Upload multiple TC files at once or add TCs manually. Replicate suites for each release. Data syncs across all devices via KV.',
   features: [
-    {icon:'📚', text:'Suites — upload .xlsx/.csv or add TCs manually'},
-    {icon:'⧉',  text:'Replicate — assign tester per section, clean copy each run'},
-    {icon:'🧪', text:'Execute — compact rows, section-divided, inline status buttons'},
-    {icon:'📧', text:'Email/GChat — stats + failed TCs only, no full dump'},
+    {icon:'📚', text:'Suites — upload multiple xlsx/csv files at once'},
+    {icon:'⧉',  text:'Replicate — tester per section, clean copy each run'},
+    {icon:'🧪', text:'Execute — compact rows, section view, inline status'},
+    {icon:'☁',  text:'Cross-device sync — data shared across all team members'},
   ]
 };
 
