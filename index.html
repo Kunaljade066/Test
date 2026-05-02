@@ -1097,7 +1097,7 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
       <div class="tb-tab"    id="tt-sprints"   onclick="goTab('sprints')">&#127939; Sprints</div>
       <div class="tb-tab"    id="tt-features"  onclick="goTab('features')">&#127918; Features</div>
       <div class="tb-tab"    id="tt-builds"    onclick="goTab('builds')">&#128230; Builds</div>
-      <div class="tb-tab"    id="tt-testcases" onclick="goTab('testcases')">&#129514; Test Cases</div>
+      <div class="tb-tab"    id="tt-testcases" onclick="goTab('testcases')" style="display:none">&#129514; Test Cases</div>
       <div class="tb-tab"    id="tt-dashboard" onclick="goTab('dashboard')">&#128202; Dashboard</div>
       <div class="tb-tab"    id="tt-notifs"    onclick="goTab('notifs')">&#128276;<span class="tb-badge" id="notifBadge" style="display:none">0</span></div>
       <div class="tb-tab"    id="tt-clickup"   onclick="goTab('clickup')">&#128995; ClickUp</div>
@@ -2864,8 +2864,8 @@ function updateFilterStats() {
       ${crash  ? `<span style="font-family:var(--mono);font-size:9px;background:rgba(239,68,68,.15);color:#f87171;padding:2px 8px;border-radius:10px">Crash: ${crash}</span>` : ''}
       ${crit   ? `<span style="font-family:var(--mono);font-size:9px;background:rgba(239,68,68,.1);color:var(--g5);padding:2px 8px;border-radius:10px">Critical: ${crit}</span>` : ''}
       ${qaPass ? `<span style="font-family:var(--mono);font-size:9px;background:rgba(16,185,129,.1);color:var(--g4);padding:2px 8px;border-radius:10px">QA Pass: ${qaPass}</span>` : ''}
-      ${topReporters.length ? `<span style="font-family:var(--mono);font-size:9px;color:var(--dim)">by: ${topReporters.map(([n,c])=>n+' ('+c+')').join(', ')}</span>` : ''}
-      ${topDevs.length ? `<span style="font-family:var(--mono);font-size:9px;color:var(--dim)">assigned: ${topDevs.map(([n,c])=>n+' ('+c+')').join(', ')}</span>` : ''}
+      ${topReporters.length ? `<span style="font-family:var(--mono);font-size:9px;color:var(--mist)">by: <span style="color:var(--ghost)">${topReporters.map(([n,c])=>n+' <span style="color:var(--fog)">('+c+')</span>').join(', ')}</span></span>` : ''}
+      ${topDevs.length ? `<span style="font-family:var(--mono);font-size:9px;color:var(--mist)">assigned: <span style="color:var(--ghost)">${topDevs.map(([n,c])=>n+' <span style="color:var(--fog)">('+c+')</span>').join(', ')}</span></span>` : ''}
     </div>
     <button class="btn btn-g btn-sm" onclick="copyFilteredStats()" style="flex-shrink:0">Copy Stats + Issues</button>`;
 }
@@ -3069,7 +3069,7 @@ function goTab(v){
   if(v==='backlog')renderTable();
   if(v==='clickup')loadClickUp();
   if(v==='builds'){renderBuildsPage();document.getElementById('testRunsWrap').style.display='none';document.getElementById('buildsWrap').style.display='';document.getElementById('buildsCurrentBanner').style.display='';}
-  if(v==='testcases'){tcInit();}
+  if(v==='testcases'){goTab('builds');setTimeout(goTestRuns,300);return;}
   // Restore scroll position
   requestAnimationFrame(() => {
     const main = document.querySelector('.main');
@@ -8114,14 +8114,17 @@ function logBugFromTC(runIdx, caseIdx) {
   // Pre-fill bug form with TC data then open panel
   buildBugForm(null, true);
   openPanel();
-  // After panel opens, fill in title and steps from TC
+  // After panel opens, fill in title and steps from TC (using negative form for fail)
   setTimeout(() => {
+    const negTitle = (typeof tcNegateTitle === 'function') ? tcNegateTitle(tc.title) : tc.title;
     const titleEl = document.getElementById('f-title');
-    if(titleEl) titleEl.value = tc.title;
+    if(titleEl) titleEl.value = negTitle;
     const stepsEl = document.getElementById('f-steps');
     if(stepsEl && tc.steps) stepsEl.value = tc.steps;
     const expectedEl = document.getElementById('f-expected');
     if(expectedEl && tc.expected) expectedEl.value = tc.expected;
+    const actEl = document.getElementById('f-actual');
+    if(actEl) actEl.value = negTitle;
     const featEl = document.getElementById('f-feat');
     if(featEl && tc.section) {
       // try to match feature
@@ -8131,7 +8134,7 @@ function logBugFromTC(runIdx, caseIdx) {
     }
     // Store TC reference so we can link after save
     window._pendingTcLink = { runIdx, caseIdx };
-    toast('TC pre-filled — fill in details and save 🐛', 'ok');
+    toast('Bug pre-filled with failure description ✓', 'ok');
   }, 120);
 }
 
@@ -10400,12 +10403,16 @@ function tcOpenUploadSuite(editId) {
   }
 
   document.getElementById('panelTitle').textContent = editId ? 'EDIT SUITE' : 'NEW TEST SUITE';
-  document.getElementById('panelId').textContent    = editId ? (existing?existing.name:'') : 'SUITE';
+  document.getElementById('panelId').textContent    = editId ? (existing?existing.name:'') : '1 SUITE → MANY TCs';
   document.getElementById('panelFooter').innerHTML  =
     '<button class="btn btn-g" onclick="closePanel()">Cancel</button> ' +
     '<button class="btn btn-v" onclick="tcSaveSuite(\''+(editId||'')+'\')">&#128190; Save Suite</button>';
 
   document.getElementById('panelBody').innerHTML =
+    // SUITE INFO
+    '<div style="background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.25);border-radius:10px;padding:10px 13px;margin-bottom:14px;display:flex;align-items:center;gap:10px">' +
+    '<span style="font-size:18px">&#128218;</span>' +
+    '<div style="font-family:var(--mono);font-size:9px;color:var(--mist);line-height:1.8">A <b style="color:var(--g1)">Suite</b> is a named collection of test cases. Add TCs one by one below, or bulk-import from a file. All TCs in a suite are executed together as a run.</div></div>' +
     '<div class="fg"><label class="fl">Suite Name <span style="color:var(--g5)">*</span></label>' +
     '<input class="fi2" id="tcs-name" placeholder="e.g. Old User, New User, Full Regression" value="'+esc(existing?existing.name:'')+'"></div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
@@ -10418,24 +10425,26 @@ function tcOpenUploadSuite(editId) {
     '<datalist id="tcs-type-list"><option value="Smoke"><option value="Regression"><option value="Feature"><option value="FTUE"><option value="Sanity"><option value="Full Pass"></datalist></div>' +
     '<div class="fg" style="margin:0"><label class="fl">Description</label>' +
     '<input class="fi2" id="tcs-desc" placeholder="Brief note" value="'+esc(existing?existing.desc||'':'')+'"></div></div>' +
-    // MULTI-FILE UPLOAD
-    '<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:14px;margin:12px 0">' +
-    '<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g1);margin-bottom:6px">&#128202; UPLOAD FILES <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">— select multiple xlsx/csv at once</span></div>' +
-    '<div style="border:2px dashed var(--bd2);border-radius:8px;padding:18px;text-align:center;cursor:pointer;background:rgba(124,58,237,.03)" ' +
+    // MANUAL TC ENTRY — primary section
+    '<div style="background:var(--bg3);border:1px solid rgba(6,182,212,.3);border-radius:10px;padding:14px;margin:14px 0 0">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
+    '<div><div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g2)">&#9999; TEST CASES IN THIS SUITE</div>' +
+    '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">Add test cases one by one — each TC belongs to this suite</div></div>' +
+    '<button class="btn btn-v btn-sm" onclick="tcAddManualRow()" style="flex-shrink:0">&#65291; Add TC</button></div>' +
+    '<div id="tcs-manual-list" style="margin-top:10px">'+tcRenderManualList()+'</div></div>' +
+    // BULK UPLOAD — secondary/optional
+    '<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin:10px 0">' +
+    '<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g1);margin-bottom:6px">&#128202; BULK IMPORT <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">— optional: upload xlsx/csv to add many TCs at once</span></div>' +
+    '<div style="border:2px dashed var(--bd2);border-radius:8px;padding:14px;text-align:center;cursor:pointer;background:rgba(124,58,237,.03)" ' +
     'id="tcs-drop-zone" onclick="document.getElementById(\'tcs-file-input\').click()" ' +
     'ondragover="event.preventDefault();this.style.borderColor=\'var(--g1)\'" ' +
     'ondragleave="this.style.borderColor=\'var(--bd2)\'" ondrop="tcHandleDrop(event)">' +
-    '<div style="font-size:24px;margin-bottom:4px">&#128230;</div>' +
+    '<div style="font-size:20px;margin-bottom:3px">&#128230;</div>' +
     '<div style="font-family:var(--mono);font-size:10px;color:var(--mist)">Drop files here or click to browse</div>' +
-    '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:3px">.xlsx &middot; .csv &middot; multiple files supported &middot; no deduplication</div>' +
+    '<div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">.xlsx &middot; .csv &middot; multiple files supported</div>' +
     '<div id="tcs-file-preview" style="margin-top:8px"></div></div>' +
     '<input type="file" id="tcs-file-input" accept=".csv,.xlsx,.xls" multiple style="display:none" onchange="tcHandleFiles(this.files)"></div>' +
-    // MANUAL ENTRY
-    '<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:12px">' +
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
-    '<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g2)">&#9999; MANUAL TEST CASES</div>' +
-    '<button class="btn btn-g btn-sm" onclick="tcAddManualRow()">+ Add TC</button></div>' +
-    '<div id="tcs-manual-list">'+tcRenderManualList()+'</div></div>' +
+    // ALL TCs combined preview — "outside suite" view
     '<div id="tcs-combined-preview">'+tcRenderCombinedPreview()+'</div>';
 
   openPanel();
@@ -10573,11 +10582,13 @@ function tcRenderCombinedPreview() {
   var totalUpload = _tcUploadFiles.reduce(function(n,f){return n+f.cases.length;},0);
   var total = totalUpload + manualCases.length;
   if(!total) return '';
-  var html='<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:12px 14px">' +
-    '<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mute);margin-bottom:10px">SUITE PREVIEW &mdash; '+total+' TCs TOTAL</div>';
-  // Show each file as a collapsible group
+  var html='<div style="background:var(--bg3);border:1px solid rgba(16,185,129,.25);border-radius:8px;padding:12px 14px;margin-top:10px">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
+    '<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g4)">&#128203; ALL TEST CASES IN THIS SUITE &mdash; <b style="color:var(--ghost)">'+total+' TCs</b></div>' +
+    '<span style="font-family:var(--mono);font-size:9px;color:var(--dim)">outside-suite view</span></div>';
+  // Show each uploaded file as a group
   _tcUploadFiles.forEach(function(f){
-    html+='<div style="margin-bottom:10px;background:rgba(6,182,212,.06);border:1px solid rgba(6,182,212,.15);border-radius:7px;padding:8px 10px">' +
+    html+='<div style="margin-bottom:8px;background:rgba(6,182,212,.06);border:1px solid rgba(6,182,212,.15);border-radius:7px;padding:8px 10px">' +
       '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">' +
       '<span style="font-size:11px">&#128202;</span>' +
       '<span style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--g2)">'+esc(f.name)+'</span>' +
@@ -10592,12 +10603,14 @@ function tcRenderCombinedPreview() {
     html+='</div>';
   });
   if(manualCases.length){
-    html+='<div style="margin-bottom:4px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.15);border-radius:7px;padding:8px 10px">' +
-      '<div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--g1);margin-bottom:5px">&#9999; Manual ('+manualCases.length+')</div>';
-    manualCases.forEach(function(tc){
-      html+='<div style="display:flex;align-items:center;gap:7px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03)">' +
-        '<span style="font-family:var(--mono);font-size:9px;color:var(--g1);flex-shrink:0;min-width:50px">'+esc(tc.id||'')+'</span>' +
-        '<span style="font-size:11px;color:var(--text);flex:1">'+esc(tc.title||'')+'</span></div>';
+    html+='<div style="margin-bottom:4px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:7px;padding:8px 10px">' +
+      '<div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--g1);margin-bottom:5px">&#9999; Manually Added TCs ('+manualCases.length+')</div>';
+    manualCases.forEach(function(tc,i){
+      html+='<div style="display:flex;align-items:center;gap:7px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03)">' +
+        '<span style="font-family:var(--mono);font-size:9px;color:var(--g1);flex-shrink:0;min-width:50px">'+esc(tc.id||('#'+(i+1)))+'</span>' +
+        '<span style="font-size:11px;color:var(--text);flex:1">'+esc(tc.title||'')+'</span>' +
+        (tc.section?'<span style="font-family:var(--mono);font-size:8px;color:var(--fog)">'+esc(tc.section)+'</span>':'') +
+        '</div>';
     });
     html+='</div>';
   }
