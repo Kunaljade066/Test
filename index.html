@@ -10444,12 +10444,17 @@ function tcBuildShowView(which) {
 function tcRenderSuitesInto(containerId) {
   var wrap=document.getElementById(containerId);
   if(!wrap) return;
-  if(!_tcSuites.length){
+  var features=[]; _tcSuites.forEach(function(s){if(s.feature_tag&&features.indexOf(s.feature_tag)<0)features.push(s.feature_tag);});
+  var filterVal=wrap._filterFeature||'';
+  var suites=filterVal?_tcSuites.filter(function(s){return s.feature_tag===filterVal;}):_tcSuites;
+  if(!suites.length){
     wrap.innerHTML='<div class="empty"><div class="empty-icon">&#128218;</div><h3>NO SUITES YET</h3><p>Create a suite with &#65291; New Suite button above</p></div>';
+    var fbarEmpty=tcBuildFeatureFilterBar(features,filterVal,containerId);
+    if(fbarEmpty) wrap.insertAdjacentElement('afterbegin',fbarEmpty);
     return;
   }
   var isAdmin=S.user&&S.user.role==='admin';
-  wrap.innerHTML=_tcSuites.map(function(suite,si){
+  wrap.innerHTML=suites.map(function(suite,si){
     var runCount=_tcRuns.filter(function(r){return r.suiteId===suite.id;}).length;
     var fileCount=suite.files&&suite.files.length||0;
     var tcCount=suite.cases&&suite.cases.length||0;
@@ -10477,6 +10482,7 @@ function tcRenderSuitesInto(containerId) {
       (isAdmin?'<button class="btn btn-r btn-sm tcb-delete">&#10005;</button>':'')+
       '</div></div></div>';
   }).join('');
+  var fbar=tcBuildFeatureFilterBar(features,filterVal,containerId);
   if(fbar) wrap.insertAdjacentElement('afterbegin',fbar);
   // Bind click events using data attributes (avoids onclick quoting hell)
   wrap.querySelectorAll('[data-suite-id]').forEach(function(row){
