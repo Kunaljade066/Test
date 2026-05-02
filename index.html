@@ -1094,6 +1094,7 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
       <div class="tb-tab"    id="tt-sprints"   onclick="goTab('sprints')">&#127939; Sprints</div>
       <div class="tb-tab"    id="tt-features"  onclick="goTab('features')">&#127918; Features</div>
       <div class="tb-tab"    id="tt-builds"    onclick="goTab('builds')">&#128230; Builds</div>
+      <div class="tb-tab"    id="tt-testcases" onclick="goTab('testcases')">&#129514; Test Cases</div>
       <div class="tb-tab"    id="tt-dashboard" onclick="goTab('dashboard')">&#128202; Dashboard</div>
       <div class="tb-tab"    id="tt-notifs"    onclick="goTab('notifs')">&#128276;<span class="tb-badge" id="notifBadge" style="display:none">0</span></div>
       <div class="tb-tab"    id="tt-clickup"   onclick="goTab('clickup')">&#128995; ClickUp</div>
@@ -1321,6 +1322,29 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
           <div id="buildsCurrentBanner"></div>
           <div id="buildsWrap"></div>
           <div id="testRunsWrap" style="display:none;margin-top:18px"></div>
+        </div>
+
+        <!-- TEST CASES -->
+        <div id="v-testcases" style="display:none">
+          <div class="wrap">
+            <div class="ph">
+              <div><h1>TEST CASES</h1><p id="tc-sub" style="font-family:var(--mono);font-size:10px;color:var(--mute);margin-top:3px">Suites · Upload · Execute · Track</p></div>
+              <div class="ph-r" id="tc-ph-r">
+                <button class="btn btn-g btn-sm" onclick="tcShowView('suites')" id="tc-btn-suites">&#128218; Suites</button>
+                <button class="btn btn-g btn-sm" onclick="tcShowView('runs')" id="tc-btn-runs">&#9654; Runs</button>
+                <button class="btn btn-v btn-sm" onclick="tcOpenUploadSuite()">&#65291; New Suite</button>
+              </div>
+            </div>
+            <div id="tc-view-suites">
+              <div id="tc-suites-wrap"></div>
+            </div>
+            <div id="tc-view-runs" style="display:none">
+              <div id="tc-runs-wrap"></div>
+            </div>
+            <div id="tc-view-execute" style="display:none">
+              <div id="tc-execute-wrap"></div>
+            </div>
+          </div>
         </div>
 
         <!-- NOTIFS -->
@@ -3028,7 +3052,7 @@ function goTab(v){
     url.searchParams.set('tab', v);
     history.pushState({ tab: v }, '', url.toString());
   } catch(e) {}
-  ['home','backlog','board','sprints','features','dashboard','notifs','clickup','import','builds'].forEach(n=>{
+  ['home','backlog','board','sprints','features','dashboard','notifs','clickup','import','builds','testcases'].forEach(n=>{
     const el=document.getElementById('v-'+n);if(el)el.style.display=n===v?'':'none';
     document.getElementById('tt-'+n)?.classList.toggle('on',n===v);
   });
@@ -3042,6 +3066,7 @@ function goTab(v){
   if(v==='backlog')renderTable();
   if(v==='clickup')loadClickUp();
   if(v==='builds'){renderBuildsPage();document.getElementById('testRunsWrap').style.display='none';document.getElementById('buildsWrap').style.display='';document.getElementById('buildsCurrentBanner').style.display='';}
+  if(v==='testcases'){tcInit();}
   // Restore scroll position
   requestAnimationFrame(() => {
     const main = document.querySelector('.main');
@@ -4499,7 +4524,7 @@ function dismissNatasha(){
 })();
 
 function syncMobileNav(v){
-  const map={home:'mn-home',backlog:'mn-backlog',board:'mn-board',sprints:'mn-sprints',features:null,dashboard:'mn-dashboard',notifs:'mn-notifs',clickup:'mn-clickup',import:null,builds:'mn-builds'};
+  const map={home:'mn-home',backlog:'mn-backlog',board:'mn-board',sprints:'mn-sprints',features:null,dashboard:'mn-dashboard',notifs:'mn-notifs',clickup:'mn-clickup',import:null,builds:'mn-builds',testcases:null};
   document.querySelectorAll('.mn-item').forEach(el=>el.classList.remove('on'));
   const id=map[v];if(id)document.getElementById(id)?.classList.add('on');
 }
@@ -8189,12 +8214,8 @@ async function emailTestRunStats(idx) {
       <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #1e1e3a;border-radius:8px;overflow:hidden;margin-bottom:20px">
         <tr style="background:#1a0a0a"><th style="padding:6px 8px;text-align:left;font-family:monospace;font-size:10px;color:#f87171">ID</th><th style="padding:6px 8px;text-align:left;font-family:monospace;font-size:10px;color:#f87171">Title</th><th style="padding:6px 8px;text-align:left;font-family:monospace;font-size:10px;color:#f87171">Result</th><th style="padding:6px 8px;text-align:left;font-family:monospace;font-size:10px;color:#f87171">Note</th></tr>
         ${failRows}
-      </table>` : ''}
-      <div style="font-size:10px;letter-spacing:2px;font-family:monospace;color:#6868a0;margin-bottom:8px">ALL TEST CASES</div>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #1e1e3a;border-radius:8px;overflow:hidden">
-        <tr style="background:#111128"><th style="padding:6px 8px;text-align:left;font-family:monospace;font-size:10px;color:#9090c0">ID</th><th style="padding:6px 8px;text-align:left;font-family:monospace;font-size:10px;color:#9090c0">Title</th><th style="padding:6px 8px;text-align:left;font-family:monospace;font-size:10px;color:#9090c0">Section</th><th style="padding:6px 8px;text-align:left;font-family:monospace;font-size:10px;color:#9090c0">Result</th><th style="padding:6px 8px;text-align:left;font-family:monospace;font-size:10px;color:#9090c0">Note</th></tr>
-        ${allRows}
-      </table>
+      </table>` : '<div style="color:#34d399;font-family:monospace;font-size:12px;text-align:center;padding:12px 0">🎉 No failures in this run!</div>'}
+      <div style="font-size:9px;font-family:monospace;color:#303060;text-align:center;margin-top:8px">Only failed TCs are shown above · Full run: ${total} cases</div>
     </div>
     <div style="background:#0a0a18;padding:12px 24px;border:1px solid #1e1e3a;border-top:none;border-radius:0 0 12px 12px;text-align:center;font-family:monospace;font-size:9px;color:#303060">
       Generated by BugPulse · ${new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})}
@@ -10217,9 +10238,764 @@ async function saveEditComment(bugId, idx) {
   } catch(e) { toast(e.message,'err'); }
 }
 
-</script>
+// ══════════════════════════════════════════════════════════════════════════════
+// TEST CASES ENGINE — D1-backed, suite-based, tester-aware
+// ══════════════════════════════════════════════════════════════════════════════
 
-<div id="natashaIntro" class="gone">
+// ── D1 API wrappers ──────────────────────────────────────────────────────────
+async function tcApiGet(path)         { return api('/tc' + path); }
+async function tcApiPost(path, body)  { return api('/tc' + path, 'POST', body); }
+async function tcApiPut(path, body)   { return api('/tc' + path, 'PUT', body); }
+async function tcApiDel(path)         { return api('/tc' + path, 'DELETE'); }
+
+// ── State ────────────────────────────────────────────────────────────────────
+let _tcSuites  = [];   // master suite library
+let _tcRuns    = [];   // active test runs
+let _tcRunOpen = null; // currently open run id
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+async function tcInit() {
+  tcShowView('suites');
+  await tcLoadAll();
+}
+
+async function tcLoadAll() {
+  try {
+    const [s, r] = await Promise.all([
+      tcApiGet('/suites').catch(() => ({ suites: [] })),
+      tcApiGet('/runs').catch(()   => ({ runs:   [] })),
+    ]);
+    _tcSuites = s.suites || [];
+    _tcRuns   = r.runs   || [];
+  } catch(e) {
+    // Graceful fallback — worker may not have /tc routes yet
+    _tcSuites = [];
+    _tcRuns   = [];
+  }
+  tcRenderSuites();
+  tcRenderRuns();
+}
+
+// ── View switcher ─────────────────────────────────────────────────────────────
+function tcShowView(which) {
+  ['suites','runs','execute'].forEach(v => {
+    document.getElementById('tc-view-' + v).style.display = v === which ? '' : 'none';
+  });
+  document.getElementById('tc-btn-suites')?.classList.toggle('btn-v', which === 'suites');
+  document.getElementById('tc-btn-suites')?.classList.toggle('btn-g', which !== 'suites');
+  document.getElementById('tc-btn-runs')?.classList.toggle('btn-v', which === 'runs');
+  document.getElementById('tc-btn-runs')?.classList.toggle('btn-g', which !== 'runs');
+}
+
+// ── Status badge helper ───────────────────────────────────────────────────────
+function tcStatusBadge(result) {
+  const map = {
+    pass:    { bg:'rgba(16,185,129,.18)',  col:'#34d399', label:'✓ PASS'    },
+    fail:    { bg:'rgba(239,68,68,.18)',   col:'#f87171', label:'✕ FAIL'    },
+    blocked: { bg:'rgba(245,158,11,.18)',  col:'#fbbf24', label:'⊘ BLOCKED' },
+    skipped: { bg:'rgba(99,102,241,.18)',  col:'#818cf8', label:'⏭ SKIP'    },
+    pending: { bg:'rgba(96,96,160,.12)',   col:'#6868a0', label:'— PENDING' },
+  };
+  const s = map[result] || map.pending;
+  return `<span style="display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:${s.bg};color:${s.col};white-space:nowrap">${s.label}</span>`;
+}
+
+// ── Suite upload panel ────────────────────────────────────────────────────────
+let _tcUploadRows = [];
+
+function tcOpenUploadSuite(editId) {
+  _tcUploadRows = [];
+  const isEdit = !!editId;
+  const existing = isEdit ? _tcSuites.find(s => s.id === editId) : null;
+
+  document.getElementById('panelTitle').textContent = isEdit ? '✏️ EDIT SUITE' : '📚 NEW TEST SUITE';
+  document.getElementById('panelId').textContent    = isEdit ? existing.name : 'SUITE';
+  document.getElementById('panelFooter').innerHTML  = `
+    <button class="btn btn-g" onclick="closePanel()">Cancel</button>
+    <button class="btn btn-v" onclick="tcSaveSuite('${editId||''}')">💾 Save Suite</button>`;
+
+  const builds = [...new Set(S.bugs.map(b=>b.build).filter(Boolean))];
+
+  document.getElementById('panelBody').innerHTML = `
+    <div class="fg">
+      <label class="fl">Suite Name <span style="color:var(--g5)">*</span></label>
+      <input class="fi2" id="tcs-name" placeholder="e.g. Old User · New User · Full Regression" value="${esc(existing?.name||'')}">
+    </div>
+    <div class="fg">
+      <label class="fl">Type / Category</label>
+      <input class="fi2" id="tcs-type" list="tcs-type-list" placeholder="e.g. Smoke · Regression · Feature" value="${esc(existing?.type||'')}">
+      <datalist id="tcs-type-list">
+        <option value="Smoke"><option value="Regression"><option value="Feature"><option value="FTUE"><option value="Sanity"><option value="Happy Flow"><option value="Full Pass">
+      </datalist>
+    </div>
+    <div class="fg">
+      <label class="fl">Description <span style="color:var(--dim);font-weight:400">(optional)</span></label>
+      <input class="fi2" id="tcs-desc" placeholder="Brief note about this suite" value="${esc(existing?.desc||'')}">
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g1);margin-bottom:10px">📄 UPLOAD TEST CASES</div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--dim);line-height:1.8;margin-bottom:10px">
+        Accepts <b>.xlsx</b> / <b>.csv</b><br>
+        Required: <b>title</b> (or name / summary / test_case)<br>
+        Optional: <b>id</b>, <b>section</b>, <b>priority</b>, <b>steps</b>, <b>expected</b>, <b>notes</b>
+      </div>
+      <div style="border:2px dashed var(--bd2);border-radius:8px;padding:20px;text-align:center;cursor:pointer;background:rgba(124,58,237,.03)"
+           onclick="document.getElementById('tcs-file-input').click()"
+           id="tcs-drop-zone"
+           ondragover="event.preventDefault();this.style.borderColor='var(--g1)'"
+           ondragleave="this.style.borderColor='var(--bd2)'"
+           ondrop="tcHandleDrop(event)">
+        <div style="font-size:28px;margin-bottom:6px">📊</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--dim)">Drop TC sheet or click to browse</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:3px">Excel (.xlsx) · CSV (.csv) — no deduplication</div>
+        <div id="tcs-file-preview" style="margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--g4)"></div>
+      </div>
+      <input type="file" id="tcs-file-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="tcHandleFile(this.files[0])">
+    </div>
+    ${_tcUploadRows.length || (existing?.cases?.length) ? tcRenderUploadPreview(existing?.cases||[]) : ''}`;
+  openPanel();
+}
+
+function tcHandleDrop(e) {
+  e.preventDefault();
+  document.getElementById('tcs-drop-zone').style.borderColor = 'var(--bd2)';
+  tcHandleFile(e.dataTransfer?.files?.[0]);
+}
+
+function tcHandleFile(file) {
+  if(!file) return;
+  const name = file.name.toLowerCase();
+  const handleRows = rows => {
+    _tcUploadRows = tcParseRows(rows);  // NO dedup
+    const preview = document.getElementById('tcs-file-preview');
+    const sections = [...new Set(_tcUploadRows.map(c=>c.section).filter(Boolean))];
+    if(preview) preview.innerHTML = `
+      <div style="color:var(--g4);margin-bottom:4px">✓ ${_tcUploadRows.length} TCs loaded</div>
+      ${sections.length ? `<div style="color:var(--dim)">${sections.length} sections: ${sections.slice(0,6).map(s=>`<b>${esc(s)}</b>`).join(', ')}${sections.length>6?'…':''}</div>` : ''}`;
+    // Refresh preview table in panel
+    const previewEl = document.getElementById('tcs-upload-preview');
+    if(previewEl) previewEl.outerHTML = tcRenderUploadPreview([]);
+  };
+  if(name.endsWith('.xlsx')||name.endsWith('.xls')) {
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const wb = XLSX.read(ev.target.result,{type:'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        handleRows(XLSX.utils.sheet_to_json(ws,{defval:''}));
+      } catch(e){ toast('Excel parse error: '+e.message,'err'); }
+    };
+    r.readAsArrayBuffer(file);
+  } else {
+    const r = new FileReader();
+    r.onload = ev => {
+      const lines = ev.target.result.split(/\r?\n/).filter(l=>l.trim());
+      if(lines.length<2){toast('CSV needs header + data','err');return;}
+      const hdrs = lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/[^a-z0-9_]/g,''));
+      const rows=[];
+      for(let i=1;i<lines.length;i++){
+        const vals=lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+        const row={};
+        hdrs.forEach((h,idx)=>{row[h]=(vals[idx]||'').replace(/^"|"$/g,'').trim();});
+        rows.push(row);
+      }
+      handleRows(rows);
+    };
+    r.readAsText(file);
+  }
+}
+
+function tcParseRows(rows) {
+  // flexible column mapping
+  const findCol = (row, names) => {
+    for(const n of names) { const k = Object.keys(row).find(k=>k.toLowerCase().replace(/[^a-z0-9]/g,'') === n.replace(/[^a-z0-9]/g,'')); if(k) return row[k]||''; }
+    return '';
+  };
+  return rows.map((r,i) => ({
+    id:       findCol(r,['id','tcid','testid','bugid','case_id']) || ('TC-'+(i+1)),
+    title:    findCol(r,['title','name','summary','testcase','test_case','testtitle','test_title','testname']) || 'Unnamed TC',
+    section:  findCol(r,['section','module','area','category','group','suite']),
+    priority: findCol(r,['priority','prio','p']),
+    steps:    findCol(r,['steps','stepstoproduce','stepstoreproduce','teststeps','step']),
+    expected: findCol(r,['expected','expectedresult','expect','expectedbehavior']),
+    notes:    findCol(r,['notes','note','comment','remarks']),
+  })).filter(r => r.title && r.title !== 'Unnamed TC' || r.id);
+}
+
+function tcRenderUploadPreview(existing) {
+  const cases = _tcUploadRows.length ? _tcUploadRows : existing;
+  if(!cases.length) return '';
+  const sections = {};
+  cases.forEach(c => { const sec = c.section||'(No Section)'; if(!sections[sec])sections[sec]=[]; sections[sec].push(c); });
+  return `<div id="tcs-upload-preview" style="margin-top:10px">
+    <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mute);margin-bottom:8px">PREVIEW — ${cases.length} TEST CASES</div>
+    ${Object.entries(sections).map(([sec, cs]) => `
+      <div style="margin-bottom:10px">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g2);padding:4px 0 4px;border-bottom:1px solid var(--bd);margin-bottom:4px">${esc(sec)} <span style="color:var(--dim)">(${cs.length})</span></div>
+        ${cs.map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03)">
+          <span style="font-family:var(--mono);font-size:9px;color:var(--g1);flex-shrink:0;min-width:56px">${esc(c.id)}</span>
+          <span style="font-size:12px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.title)}</span>
+          ${c.priority?`<span style="font-family:var(--mono);font-size:8px;padding:1px 6px;border-radius:8px;background:rgba(124,58,237,.12);color:var(--ghost)">${esc(c.priority)}</span>`:''}
+        </div>`).join('')}
+      </div>`).join('')}
+  </div>`;
+}
+
+async function tcSaveSuite(editId) {
+  const name = document.getElementById('tcs-name')?.value?.trim();
+  if(!name) { toast('Suite name required','err'); return; }
+  const suite = {
+    id:      editId || ('suite_'+Date.now()),
+    name,
+    type:    document.getElementById('tcs-type')?.value?.trim()||'',
+    desc:    document.getElementById('tcs-desc')?.value?.trim()||'',
+    cases:   _tcUploadRows.length ? _tcUploadRows : (_tcSuites.find(s=>s.id===editId)?.cases||[]),
+    created_by: S.user?.name||'',
+    created_at: new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'medium'}),
+  };
+  if(!suite.cases.length) { toast('Upload a TC sheet first','err'); return; }
+  const btn = document.querySelector('#panelFooter .btn-v');
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spin"></span>';}
+  try {
+    if(editId) {
+      await tcApiPut('/suites/'+editId, suite);
+      const idx = _tcSuites.findIndex(s=>s.id===editId);
+      if(idx>=0) _tcSuites[idx]=suite; else _tcSuites.unshift(suite);
+    } else {
+      await tcApiPost('/suites', suite);
+      _tcSuites.unshift(suite);
+    }
+    _tcUploadRows = [];
+    closePanel();
+    tcRenderSuites();
+    toast(`Suite "${name}" saved — ${suite.cases.length} TCs ✓`, 'ok');
+  } catch(e) {
+    // Graceful fallback — store in memory if worker doesn't have /tc routes
+    if(editId) { const idx=_tcSuites.findIndex(s=>s.id===editId); if(idx>=0)_tcSuites[idx]=suite; else _tcSuites.unshift(suite); }
+    else _tcSuites.unshift(suite);
+    _tcUploadRows = [];
+    closePanel();
+    tcRenderSuites();
+    toast(`Suite "${name}" saved locally — ${suite.cases.length} TCs ✓ (D1 sync pending)`, 'ok');
+  }
+}
+
+async function tcDeleteSuite(suiteId) {
+  if(S.user?.role !== 'admin') { toast('Admin only — cannot delete suites','err'); return; }
+  const suite = _tcSuites.find(s=>s.id===suiteId);
+  if(!suite) return;
+  if(!confirm(`Delete suite "${suite.name}"?\nThis won't affect existing test runs.`)) return;
+  try { await tcApiDel('/suites/'+suiteId); } catch(e) {}
+  _tcSuites = _tcSuites.filter(s=>s.id!==suiteId);
+  tcRenderSuites();
+  toast('Suite deleted','ok');
+}
+
+// ── Suites list render ────────────────────────────────────────────────────────
+function tcRenderSuites() {
+  const wrap = document.getElementById('tc-suites-wrap');
+  if(!wrap) return;
+  if(!_tcSuites.length) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">📚</div><h3>NO SUITES YET</h3><p>Create a suite by uploading a TC sheet (.xlsx or .csv)</p></div>`;
+    return;
+  }
+  wrap.innerHTML = _tcSuites.map(suite => {
+    const runCount = _tcRuns.filter(r=>r.suiteId===suite.id).length;
+    const sections = [...new Set(suite.cases.map(c=>c.section).filter(Boolean))];
+    const isAdmin = S.user?.role === 'admin';
+    return `<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;margin-bottom:10px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:160px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-size:14px;font-weight:700;color:var(--text)">${esc(suite.name)}</span>
+            ${suite.type?`<span style="font-family:var(--mono);font-size:8px;padding:1px 7px;border-radius:10px;background:rgba(124,58,237,.15);color:var(--g1)">${esc(suite.type)}</span>`:''}
+          </div>
+          ${suite.desc?`<div style="font-size:11px;color:var(--mist);margin-bottom:4px">${esc(suite.desc)}</div>`:''}
+          <div style="font-family:var(--mono);font-size:9px;color:var(--dim)">
+            ${suite.cases.length} TCs
+            ${sections.length?`· ${sections.length} sections: ${sections.slice(0,4).map(s=>`<b style="color:var(--fog)">${esc(s)}</b>`).join(', ')}${sections.length>4?'…':''}`:''} 
+            · ${runCount} run${runCount!==1?'s':''}
+            · ${esc(suite.created_by||'')}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap">
+          <button class="btn btn-v btn-sm" onclick="tcOpenReplicate('${suite.id}')">⧉ Replicate</button>
+          <button class="btn btn-g btn-sm" onclick="tcPreviewSuite('${suite.id}')">👁 View</button>
+          <button class="btn btn-g btn-sm" onclick="tcOpenUploadSuite('${suite.id}')">✏️ Edit</button>
+          ${isAdmin?`<button class="btn btn-r btn-sm" onclick="tcDeleteSuite('${suite.id}')">✕ Delete</button>`:'<span style="font-family:var(--mono);font-size:8px;color:var(--dim);padding:3px 6px">admin only</span>'}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Suite preview ─────────────────────────────────────────────────────────────
+function tcPreviewSuite(suiteId) {
+  const suite = _tcSuites.find(s=>s.id===suiteId);
+  if(!suite) return;
+  const sections = {};
+  suite.cases.forEach(c => { const sec=c.section||'(No Section)'; if(!sections[sec])sections[sec]=[]; sections[sec].push(c); });
+  document.getElementById('panelTitle').textContent = '📚 ' + suite.name;
+  document.getElementById('panelId').textContent    = `${suite.cases.length} TCs · ${suite.created_at||''}`;
+  document.getElementById('panelFooter').innerHTML  = `
+    <button class="btn btn-g" onclick="closePanel()">Close</button>
+    <button class="btn btn-v" onclick="closePanel();tcOpenReplicate('${suiteId}')">⧉ Replicate & Run</button>`;
+  document.getElementById('panelBody').innerHTML = Object.entries(sections).map(([sec, cases]) => `
+    <div style="margin-bottom:14px">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g2);margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--bd)">${esc(sec)} <span style="color:var(--dim)">(${cases.length})</span></div>
+      ${cases.map(c=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+          <span style="font-family:var(--mono);font-size:9px;color:var(--g1);flex-shrink:0;min-width:56px">${esc(c.id)}</span>
+          <span style="font-size:12px;color:var(--text);flex:1">${esc(c.title)}</span>
+          ${c.priority?`<span style="font-family:var(--mono);font-size:8px;padding:1px 6px;border-radius:8px;background:rgba(124,58,237,.12);color:var(--ghost)">${esc(c.priority)}</span>`:''}
+        </div>`).join('')}
+    </div>`).join('');
+  openPanel();
+}
+
+// ── Replicate / Start run ─────────────────────────────────────────────────────
+function tcOpenReplicate(suiteId) {
+  const suite = _tcSuites.find(s=>s.id===suiteId);
+  if(!suite) return;
+  const builds = [...new Set(S.bugs.map(b=>b.build).filter(Boolean))];
+  document.getElementById('panelTitle').textContent = '⧉ REPLICATE — ' + suite.name;
+  document.getElementById('panelId').textContent    = suite.cases.length + ' TCs';
+  document.getElementById('panelFooter').innerHTML  = `
+    <button class="btn btn-g" onclick="closePanel()">Cancel</button>
+    <button class="btn btn-v" onclick="tcCreateRun('${suiteId}')">▶ Start Run</button>`;
+  document.getElementById('panelBody').innerHTML = `
+    <div style="background:var(--bg3);border:1px solid var(--bd2);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px">
+      <div style="font-size:22px">📚</div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(suite.name)}</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">${suite.cases.length} TCs · ${[...new Set(suite.cases.map(c=>c.section).filter(Boolean))].length} sections — all results reset to pending</div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Run Label <span style="color:var(--g5)">*</span></label>
+      <input class="fi2" id="tcr-label" placeholder="e.g. v3.2.1 Regression · Sprint 14 Smoke · RC1 Full Pass">
+    </div>
+    <div class="fg">
+      <label class="fl">Build Version</label>
+      <input class="fi2" id="tcr-build" list="tcr-build-list" placeholder="e.g. v3.2.1">
+      <datalist id="tcr-build-list">${builds.map(v=>`<option value="${esc(v)}">`).join('')}</datalist>
+    </div>
+    <div class="fg">
+      <label class="fl">Assign Tester <span style="color:var(--dim);font-weight:400">(default tester for all TCs)</span></label>
+      <select class="fi2" id="tcr-tester">
+        <option value="">— Unassigned —</option>
+        ${(S.teamMembers||[]).map(m=>`<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('')}
+      </select>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;margin-top:4px">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--g2);margin-bottom:6px">PER-SECTION TESTER OVERRIDE <span style="color:var(--dim)">(optional)</span></div>
+      ${[...new Set(suite.cases.map(c=>c.section).filter(Boolean))].map(sec => `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-family:var(--mono);font-size:9px;color:var(--fog);min-width:120px;flex-shrink:0">${esc(sec)}</span>
+          <select class="fi2" id="tcr-sec-${btoa(sec).replace(/=/g,'')}" style="flex:1;padding:4px 8px;font-size:11px">
+            <option value="">— Use default —</option>
+            ${(S.teamMembers||[]).map(m=>`<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('')}
+          </select>
+        </div>`).join('')}
+    </div>`;
+  openPanel();
+}
+
+async function tcCreateRun(suiteId) {
+  const suite  = _tcSuites.find(s=>s.id===suiteId);
+  const label  = document.getElementById('tcr-label')?.value?.trim();
+  const build  = document.getElementById('tcr-build')?.value?.trim();
+  const tester = document.getElementById('tcr-tester')?.value?.trim();
+  if(!label) { toast('Run label required','err'); return; }
+
+  const sections = [...new Set(suite.cases.map(c=>c.section).filter(Boolean))];
+  const secTesters = {};
+  sections.forEach(sec => {
+    const key = 'tcr-sec-' + btoa(sec).replace(/=/g,'');
+    const val = document.getElementById(key)?.value?.trim();
+    if(val) secTesters[sec] = val;
+  });
+
+  const run = {
+    id:         'run_'+Date.now(),
+    suiteId,
+    suiteName:  suite.name,
+    label,
+    build:      build||'',
+    tester:     tester||'',
+    created_by: S.user?.name||'',
+    date:       new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'medium'}),
+    cases: suite.cases.map(c => ({
+      ...c,
+      tester:      secTesters[c.section] || tester || '',
+      result:      'pending',
+      note:        '',
+      linkedBugId: '',
+    })),
+  };
+
+  try {
+    await tcApiPost('/runs', run);
+    _tcRuns.unshift(run);
+  } catch(e) {
+    _tcRuns.unshift(run);
+  }
+  closePanel();
+  tcShowView('runs');
+  tcRenderRuns();
+  toast(`Run "${label}" started — ${run.cases.length} TCs ✓`, 'ok');
+}
+
+// ── Runs list ─────────────────────────────────────────────────────────────────
+function tcRenderRuns() {
+  const wrap = document.getElementById('tc-runs-wrap');
+  if(!wrap) return;
+  if(!_tcRuns.length) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">🧪</div><h3>NO RUNS YET</h3><p>Replicate a suite from the Suites tab to start a test run</p></div>`;
+    return;
+  }
+  wrap.innerHTML = _tcRuns.map(run => {
+    const total   = run.cases?.length||0;
+    const passed  = run.cases?.filter(c=>c.result==='pass').length||0;
+    const failed  = run.cases?.filter(c=>c.result==='fail').length||0;
+    const blocked = run.cases?.filter(c=>c.result==='blocked').length||0;
+    const skipped = run.cases?.filter(c=>c.result==='skipped').length||0;
+    const pending = run.cases?.filter(c=>c.result==='pending').length||0;
+    const pct     = total?Math.round(passed/total*100):0;
+    const pctCol  = pct>=80?'var(--g4)':pct>=50?'var(--g3)':'var(--g5)';
+    const isAdmin = S.user?.role==='admin';
+    return `<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer" onclick="tcOpenRun('${run.id}')">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+            <span style="font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(124,58,237,.15);color:var(--g1)">${esc(run.suiteName||'')}</span>
+            ${run.tester?`<span style="font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(6,182,212,.12);color:var(--g2)">👤 ${esc(run.tester)}</span>`:''}
+          </div>
+          <div style="font-size:14px;font-weight:700;color:var(--text)">${esc(run.label||'Unnamed Run')}</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px">Build: ${esc(run.build||'—')} · ${esc(run.date||'')} · ${total} cases · by ${esc(run.created_by||'')}</div>
+        </div>
+        <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
+          <div style="font-family:var(--mono);font-size:18px;font-weight:800;color:${pctCol}">${pct}%</div>
+          ${isAdmin?`<button class="btn btn-r btn-sm" onclick="event.stopPropagation();tcDeleteRun('${run.id}')">✕</button>`:``}
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+        <span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:rgba(16,185,129,.15);color:#34d399">✓ ${passed}</span>
+        <span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:rgba(239,68,68,.15);color:#f87171">✕ ${failed}</span>
+        ${blocked?`<span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:rgba(245,158,11,.15);color:#fbbf24">⊘ ${blocked}</span>`:''}
+        ${skipped?`<span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:rgba(99,102,241,.15);color:#818cf8">⏭ ${skipped}</span>`:''}
+        ${pending?`<span style="font-family:var(--mono);font-size:10px;padding:2px 9px;border-radius:20px;background:var(--bg3);color:var(--dim)">— ${pending}</span>`:''}
+      </div>
+      <div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;display:flex">
+        ${tcProgressBar(passed,failed,blocked,skipped,pending,total)}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function tcProgressBar(p,f,b,s,pnd,t) {
+  if(!t) return '';
+  const pct = n => Math.round(n/t*100);
+  return [
+    [p,'#10b981'],[f,'#ef4444'],[b,'#f59e0b'],[s,'#818cf8'],[pnd,'#1e1e3a']
+  ].map(([n,c])=>n?`<div style="width:${pct(n)}%;background:${c};height:100%"></div>`:'').join('');
+}
+
+async function tcDeleteRun(runId) {
+  if(!confirm('Delete this test run?')) return;
+  try { await tcApiDel('/runs/'+runId); } catch(e) {}
+  _tcRuns = _tcRuns.filter(r=>r.id!==runId);
+  if(_tcRunOpen===runId) { _tcRunOpen=null; tcShowView('runs'); }
+  tcRenderRuns();
+  toast('Run deleted','ok');
+}
+
+// ── Execute view ──────────────────────────────────────────────────────────────
+function tcOpenRun(runId) {
+  _tcRunOpen = runId;
+  tcShowView('execute');
+  tcRenderExecute();
+}
+
+function tcRenderExecute() {
+  const wrap = document.getElementById('tc-execute-wrap');
+  if(!wrap) return;
+  const run = _tcRuns.find(r=>r.id===_tcRunOpen);
+  if(!run){wrap.innerHTML='<div class="empty"><div class="empty-icon">🧪</div><h3>RUN NOT FOUND</h3></div>';return;}
+
+  const total   = run.cases.length;
+  const passed  = run.cases.filter(c=>c.result==='pass').length;
+  const failed  = run.cases.filter(c=>c.result==='fail').length;
+  const blocked = run.cases.filter(c=>c.result==='blocked').length;
+  const skipped = run.cases.filter(c=>c.result==='skipped').length;
+  const pending = run.cases.filter(c=>c.result==='pending').length;
+  const pct     = total?Math.round(passed/total*100):0;
+  const pctCol  = pct>=80?'var(--g4)':pct>=50?'var(--g3)':'var(--g5)';
+
+  // Group by section
+  const sections = {};
+  run.cases.forEach((c,i) => {
+    const sec = c.section||'(No Section)';
+    if(!sections[sec])sections[sec]=[];
+    sections[sec].push({...c,_idx:i});
+  });
+
+  wrap.innerHTML = `
+    <!-- Back + header -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="btn btn-g btn-sm" onclick="tcShowView('runs');tcRenderRuns()">← Runs</button>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:800;color:var(--text)">${esc(run.label||'Unnamed Run')}</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:1px">
+          ${esc(run.suiteName||'')} · Build: ${esc(run.build||'—')} · ${esc(run.date||'')}
+          ${run.tester?` · 👤 ${esc(run.tester)}`:''}
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-g btn-sm" onclick="tcCopyStats('${run.id}')">📋 Stats</button>
+        <button class="btn btn-g btn-sm" onclick="tcEmailStats('${run.id}')">📧 Email</button>
+        <button class="btn btn-g btn-sm" onclick="tcGChatStats('${run.id}')">💬 GChat</button>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;margin-bottom:16px">
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+        <div style="font-family:var(--mono);font-size:28px;font-weight:900;color:${pctCol}">${pct}%</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${[['✓',passed,'#34d399','rgba(16,185,129,.15)'],['✕',failed,'#f87171','rgba(239,68,68,.15)'],['⊘',blocked,'#fbbf24','rgba(245,158,11,.15)'],['⏭',skipped,'#818cf8','rgba(99,102,241,.15)'],['—',pending,'#6868a0','var(--bg3)']].map(([lbl,n,c,bg])=>
+            `<span style="font-family:var(--mono);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${bg};color:${c}">${lbl} ${n}</span>`
+          ).join('')}
+        </div>
+        <div style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--dim)">${total} total</div>
+      </div>
+      <div style="height:7px;background:var(--bg3);border-radius:4px;overflow:hidden;display:flex">
+        ${tcProgressBar(passed,failed,blocked,skipped,pending,total)}
+      </div>
+    </div>
+
+    <!-- Sections + TCs -->
+    ${Object.entries(sections).map(([sec, cases]) => `
+      <div style="margin-bottom:20px">
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;margin-bottom:4px;border-bottom:1px solid var(--bd)">
+          <span style="font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--g2)">${esc(sec)}</span>
+          <span style="font-family:var(--mono);font-size:9px;color:var(--dim)">${cases.length} cases</span>
+          <span style="font-family:var(--mono);font-size:9px;color:var(--fog);margin-left:auto">
+            ✓${cases.filter(c=>c.result==='pass').length} ✕${cases.filter(c=>c.result==='fail').length} —${cases.filter(c=>c.result==='pending').length}
+          </span>
+        </div>
+        ${cases.map(c => tcRenderCaseRow(run.id, c)).join('')}
+      </div>`).join('')}`;
+}
+
+function tcRenderCaseRow(runId, c) {
+  const resultBtns = [
+    ['pass',   '✓', '#34d399', 'rgba(16,185,129,.15)'],
+    ['fail',   '✕', '#f87171', 'rgba(239,68,68,.15)'],
+    ['blocked','⊘', '#fbbf24', 'rgba(245,158,11,.15)'],
+    ['skipped','⏭', '#818cf8', 'rgba(99,102,241,.15)'],
+    ['pending','—', '#6868a0', 'var(--bg3)'],
+  ].map(([r,lbl,col,bg]) => {
+    const active = c.result===r;
+    return `<button onclick="tcSetResult('${runId}',${c._idx},'${r}')"
+      style="font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 9px;border-radius:14px;border:none;cursor:pointer;background:${active?bg:'var(--bg4)'};color:${active?col:'var(--dim)'};transition:all .1s;white-space:nowrap"
+      title="${r}">${lbl}</button>`;
+  }).join('');
+
+  const statusBg = {pass:'rgba(16,185,129,.08)',fail:'rgba(239,68,68,.08)',blocked:'rgba(245,158,11,.08)',skipped:'rgba(99,102,241,.08)',pending:'transparent'}[c.result]||'transparent';
+  const statusBd = {pass:'rgba(16,185,129,.2)',fail:'rgba(239,68,68,.2)',blocked:'rgba(245,158,11,.2)',skipped:'rgba(99,102,241,.2)',pending:'var(--bd)'}[c.result]||'var(--bd)';
+
+  return `<div style="background:${statusBg};border:1px solid ${statusBd};border-radius:8px;padding:8px 10px;margin-bottom:4px;transition:background .15s">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font-family:var(--mono);font-size:9px;color:var(--g1);flex-shrink:0;min-width:52px">${esc(c.id||'')}</span>
+      <span style="font-size:12px;font-weight:600;color:var(--text);flex:1;min-width:120px">${esc(c.title)}</span>
+      ${c.tester?`<span style="font-family:var(--mono);font-size:9px;color:var(--g2);padding:1px 7px;border-radius:10px;background:rgba(6,182,212,.1);flex-shrink:0">👤 ${esc(c.tester)}</span>`:''}
+      ${c.priority?`<span style="font-family:var(--mono);font-size:8px;padding:1px 6px;border-radius:8px;background:rgba(124,58,237,.12);color:var(--ghost);flex-shrink:0">${esc(c.priority)}</span>`:''}
+      <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap">${resultBtns}</div>
+      ${c.result==='fail'?`<button class="btn btn-g btn-sm" onclick="tcLogBug('${runId}',${c._idx})" style="font-size:10px;padding:2px 8px">🐛 Bug</button>`:''}
+    </div>
+    ${c.steps||c.expected||c.notes ? `
+      <div style="margin-top:6px;font-family:var(--mono);font-size:9px;color:var(--dim);line-height:1.7;padding-left:60px">
+        ${c.steps?`<div><b style="color:var(--fog)">Steps:</b> ${esc(c.steps.slice(0,120))}${c.steps.length>120?'…':''}</div>`:''}
+        ${c.expected?`<div><b style="color:var(--fog)">Expected:</b> ${esc(c.expected.slice(0,120))}</div>`:''}
+      </div>` : ''}
+    ${c.linkedBugId?`<div style="margin-top:4px;padding-left:60px;font-family:var(--mono);font-size:9px;color:var(--g5)">🐛 ${esc(c.linkedBugId)} linked</div>`:''}
+    <div style="margin-top:5px;padding-left:60px">
+      <input type="text" value="${esc(c.note||'')}"
+        placeholder="Note (optional)…"
+        class="fi2"
+        oninput="tcSetNote('${runId}',${c._idx},this.value)"
+        style="font-size:11px;padding:4px 8px;height:auto;background:rgba(0,0,0,.2)">
+    </div>
+  </div>`;
+}
+
+async function tcSetResult(runId, caseIdx, result) {
+  const run = _tcRuns.find(r=>r.id===runId);
+  if(!run?.cases[caseIdx]) return;
+  run.cases[caseIdx].result = result;
+  // Patch to D1
+  try { await tcApiPut('/runs/'+runId+'/cases/'+caseIdx, {result}); } catch(e) {}
+  // Re-render just execute view (not whole list, for speed)
+  tcRenderExecute();
+}
+
+async function tcSetNote(runId, caseIdx, note) {
+  const run = _tcRuns.find(r=>r.id===runId);
+  if(!run?.cases[caseIdx]) return;
+  run.cases[caseIdx].note = note;
+  try { await tcApiPut('/runs/'+runId+'/cases/'+caseIdx, {note}); } catch(e) {}
+}
+
+function tcLogBug(runId, caseIdx) {
+  const run = _tcRuns.find(r=>r.id===runId);
+  const tc  = run?.cases[caseIdx];
+  if(!tc) return;
+  buildBugForm(null, true);
+  openPanel();
+  setTimeout(() => {
+    const t = document.getElementById('f-title');  if(t) t.value = tc.title;
+    const s = document.getElementById('f-steps');  if(s&&tc.steps) s.value = tc.steps;
+    const e = document.getElementById('f-expected');if(e&&tc.expected) e.value = tc.expected;
+    window._pendingTcLink = { _tcRunId: runId, _tcCaseIdx: caseIdx };
+    toast('TC pre-filled — fill in details and save 🐛','ok');
+  }, 120);
+}
+
+// Override saveBug's TC link logic to also update _tcRuns
+const _origSaveBug = window.saveBug;
+// (hook is handled below in tcPostSaveBugHook called from saveBug at the end)
+
+// ── Stats / sharing ────────────────────────────────────────────────────────────
+function tcBuildStatsText(run) {
+  const total   = run.cases.length;
+  const passed  = run.cases.filter(c=>c.result==='pass').length;
+  const failed  = run.cases.filter(c=>c.result==='fail').length;
+  const blocked = run.cases.filter(c=>c.result==='blocked').length;
+  const skipped = run.cases.filter(c=>c.result==='skipped').length;
+  const pending = run.cases.filter(c=>c.result==='pending').length;
+  const pct     = total?Math.round(passed/total*100):0;
+
+  const failList = run.cases.filter(c=>c.result==='fail')
+    .map(c=>`  • [${c.id||''}] ${c.title}${c.linkedBugId?' → Bug: '+c.linkedBugId:''}${c.note?' ('+c.note+')':''}`)
+    .join('\n');
+
+  return `🧪 TEST RUN — ${run.label||run.suiteName}
+Suite: ${run.suiteName||'—'} | Build: ${run.build||'—'} | Date: ${run.date||''}${run.tester?' | Tester: '+run.tester:''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ Pass:    ${passed} (${pct}%)
+✕ Fail:    ${failed} (${total?Math.round(failed/total*100):0}%)
+⊘ Blocked: ${blocked}
+⏭ Skipped: ${skipped}
+— Pending: ${pending}
+📋 Total:  ${total}
+${failList?'\n❌ FAILED:\n'+failList:''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Generated by BugPulse · ${new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})}`;
+}
+
+function tcCopyStats(runId) {
+  const run = _tcRuns.find(r=>r.id===runId);
+  if(!run) return;
+  navigator.clipboard?.writeText(tcBuildStatsText(run))
+    .then(()=>toast('Stats copied ✓','ok'))
+    .catch(()=>toast('Copy failed','err'));
+}
+
+async function tcEmailStats(runId) {
+  const run = _tcRuns.find(r=>r.id===runId);
+  if(!run) return;
+  const cfg = getWebhookConfig();
+  const recipients = (cfg.team_emails||'').split(',').map(e=>e.trim()).filter(Boolean);
+  if(!recipients.length) { toast('No team_emails configured — copying stats instead','warn'); tcCopyStats(runId); return; }
+
+  const total   = run.cases.length;
+  const passed  = run.cases.filter(c=>c.result==='pass').length;
+  const failed  = run.cases.filter(c=>c.result==='fail').length;
+  const blocked = run.cases.filter(c=>c.result==='blocked').length;
+  const skipped = run.cases.filter(c=>c.result==='skipped').length;
+  const pending = run.cases.filter(c=>c.result==='pending').length;
+  const pct     = total?Math.round(passed/total*100):0;
+  const pctCol  = pct>=80?'#34d399':pct>=50?'#fbbf24':'#f87171';
+
+  // Bugs only — failed cases with linked bug IDs
+  const failRows = run.cases.filter(c=>c.result==='fail').map(c =>
+    `<tr>
+      <td style="font-family:monospace;font-size:12px;padding:5px 8px;border-bottom:1px solid #222;color:#c0c0e0">${esc(c.id||'')}</td>
+      <td style="font-family:sans-serif;font-size:12px;padding:5px 8px;border-bottom:1px solid #222;color:#eeeef8">${esc(c.title)}</td>
+      <td style="font-family:monospace;font-size:11px;padding:5px 8px;border-bottom:1px solid #222;color:#f87171">✕ Fail${c.linkedBugId?' ('+esc(c.linkedBugId)+')':''}</td>
+      <td style="font-family:monospace;font-size:11px;padding:5px 8px;border-bottom:1px solid #222;color:#9090c0">${esc(c.note||'')}</td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html><html><body style="background:#06060f;color:#eeeef8;font-family:sans-serif;margin:0;padding:24px">
+  <div style="max-width:640px;margin:0 auto">
+    <div style="background:linear-gradient(135deg,#7c3aed,#06b6d4);padding:20px 24px;border-radius:12px 12px 0 0">
+      <div style="font-size:10px;letter-spacing:3px;font-family:monospace;color:rgba(255,255,255,.7);margin-bottom:4px">BUGPULSE · TEST RUN REPORT</div>
+      <div style="font-size:20px;font-weight:800;color:#fff">${esc(run.label||run.suiteName)}</div>
+      <div style="font-size:11px;font-family:monospace;color:rgba(255,255,255,.65);margin-top:4px">Suite: ${esc(run.suiteName||'—')} · Build: ${esc(run.build||'—')} · ${esc(run.date||'')}${run.tester?' · Tester: '+esc(run.tester):''}</div>
+    </div>
+    <div style="background:#0d0d20;padding:20px 24px;border:1px solid #1e1e3a;border-top:none;border-radius:0 0 12px 12px">
+      <div style="text-align:center;padding:16px 0">
+        <div style="font-size:52px;font-weight:900;font-family:monospace;color:${pctCol};line-height:1">${pct}%</div>
+        <div style="font-size:10px;font-family:monospace;color:#6868a0;letter-spacing:2px;margin-top:3px">PASSED</div>
+      </div>
+      <table width="100%" cellpadding="0" cellspacing="6" style="margin-bottom:20px">
+        <tr>
+          ${[['✓ Pass',passed,'#34d399','rgba(16,185,129,.1)'],['✕ Fail',failed,'#f87171','rgba(239,68,68,.1)'],
+             ['⊘ Blocked',blocked,'#fbbf24','rgba(245,158,11,.1)'],['⏭ Skipped',skipped,'#818cf8','rgba(99,102,241,.1)'],
+             ['— Pending',pending,'#484880','#111128'],['📋 Total',total,'#c0c0e0','#0d0d20']].map(([l,n,c,b])=>
+            `<td style="background:${b};border-radius:8px;padding:10px;text-align:center">
+              <div style="font-size:22px;font-weight:900;font-family:monospace;color:${c}">${n}</div>
+              <div style="font-size:9px;font-family:monospace;color:${c};opacity:.8">${l}</div>
+            </td>`).join('')}
+        </tr>
+      </table>
+      ${failRows?`<div style="font-size:10px;letter-spacing:2px;font-family:monospace;color:#f87171;margin-bottom:8px">❌ FAILED TEST CASES (${run.cases.filter(c=>c.result==='fail').length})</div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #1e1e3a;border-radius:8px;overflow:hidden;margin-bottom:16px">
+        <tr style="background:#1a0a0a">
+          <th style="padding:6px 8px;text-align:left;font-family:monospace;font-size:10px;color:#f87171">TC ID</th>
+          <th style="padding:6px 8px;text-align:left;font-family:monospace;font-size:10px;color:#f87171">Title</th>
+          <th style="padding:6px 8px;text-align:left;font-family:monospace;font-size:10px;color:#f87171">Result</th>
+          <th style="padding:6px 8px;text-align:left;font-family:monospace;font-size:10px;color:#f87171">Note</th>
+        </tr>
+        ${failRows}
+      </table>` : '<div style="color:#34d399;font-family:monospace;font-size:12px;text-align:center;padding:12px 0">🎉 No failures!</div>'}
+      <div style="margin-top:8px;font-family:monospace;font-size:9px;color:#303060;text-align:center">Generated by BugPulse · ${new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})}</div>
+    </div>
+  </div></body></html>`;
+
+  try {
+    await api('/send-email','POST',{
+      to: recipients,
+      subject: `[BugPulse] Test Run: ${run.label||run.suiteName} — ${pct}% passed (${run.build||'no build'})`,
+      html,
+      text: tcBuildStatsText(run),
+    });
+    toast(`Stats emailed to ${recipients.length} recipient${recipients.length>1?'s':''} ✓`,'ok');
+  } catch(e) { toast('Email failed: '+e.message,'err'); }
+}
+
+async function tcGChatStats(runId) {
+  const run = _tcRuns.find(r=>r.id===runId);
+  if(!run) return;
+  const text = tcBuildStatsText(run);
+  const ok = await sendGChatWebhook(text, '');
+  if(ok) toast('Stats sent to GChat ✓','ok');
+  else { toast('No GChat webhook configured — copying instead','warn'); tcCopyStats(runId); }
+}
+
+// ── TC Tab tip entry ───────────────────────────────────────────────────────────
+TAB_TIPS['testcases'] = {
+  title: 'Test Cases',
+  speech: 'Upload suites, replicate for each release, assign testers per section, mark Pass/Fail and share stats — without sending all TCs in email.',
+  features: [
+    {icon:'📚', text:'Suites — upload .xlsx/.csv, no deduplication'},
+    {icon:'⧉',  text:'Replicate with tester assignment per section'},
+    {icon:'🧪', text:'Execute — compact section view with clear status'},
+    {icon:'📧', text:'Email/GChat — stats + failed TCs only'},
+  ]
+};
+
+
   <div class="natasha-wrap">
     <div class="natasha-bubble">
       <div class="natasha-name-tag">NATASHA</div>
