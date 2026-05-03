@@ -3111,7 +3111,7 @@ function renderHome(){
     <div class="hq-card" onclick="showInlineDrawer('📋 All Bugs',S.bugs)">
       <div class="hq-icon">📋</div><div class="hq-n" id="hqn-total" style="color:var(--text)">0</div><div class="hq-l">Total</div>
     </div>`;
-  const _dur=650;
+  const _dur=1400;
   countUp(document.getElementById('hqn-open'),  open,   _dur);
   countUp(document.getElementById('hqn-active'), active, _dur);
   countUp(document.getElementById('hqn-crit'),   crit,   _dur);
@@ -3345,7 +3345,7 @@ function renderStats(id){
     <div class="sc"><div class="sc-n" id="${id}-crit" style="color:var(--g5)">0</div><div class="sc-l">Critical</div><div class="sc-bar" style="background:var(--g5);box-shadow:0 0 6px var(--g5)"></div></div>
     <div class="sc"><div class="sc-n" id="${id}-done" style="color:var(--g4)">0</div><div class="sc-l">Resolved</div><div class="sc-bar" style="background:var(--g4);box-shadow:0 0 6px var(--g4)"></div></div>
     <div class="sc"><div class="sc-n" id="${id}-total" style="color:var(--text)">0</div><div class="sc-l">Total</div><div class="sc-bar" style="background:var(--bd3)"></div></div>`;
-  const dur = 650;
+  const dur = 1400;
   countUp(document.getElementById(id+'-open'),  open,         dur);
   countUp(document.getElementById(id+'-prog'),  prog,         dur);
   countUp(document.getElementById(id+'-crit'),  crit,         dur);
