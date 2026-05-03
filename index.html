@@ -3094,23 +3094,30 @@ function renderHome(){
   const total=S.bugs.length;
   document.getElementById('homeQuick').innerHTML=`
     <div class="hq-card" onclick="showInlineDrawer('🟣 Open Bugs',S.bugs.filter(b=>b.status==='Open'))">
-      <div class="hq-icon">🟣</div><div class="hq-n" style="color:#a78bfa">${open}</div><div class="hq-l">Open</div>
+      <div class="hq-icon">🟣</div><div class="hq-n" id="hqn-open" style="color:#a78bfa">0</div><div class="hq-l">Open</div>
     </div>
     <div class="hq-card" onclick="showInlineDrawer('🔵 Active Bugs',S.bugs.filter(b=>['In Progress','Bugged'].includes(b.status)))">
-      <div class="hq-icon">🔵</div><div class="hq-n" style="color:var(--g2)">${active}</div><div class="hq-l">Active</div>
+      <div class="hq-icon">🔵</div><div class="hq-n" id="hqn-active" style="color:var(--g2)">0</div><div class="hq-l">Active</div>
     </div>
     <div class="hq-card" onclick="showInlineDrawer('🚨 Critical & Urgent',S.bugs.filter(b=>['Critical','Urgent'].includes(b.priority)&&!['Dev Fixed','Done','QA Pass','Closed'].includes(b.status)))">
-      <div class="hq-icon">🚨</div><div class="hq-n" style="color:var(--g5)">${crit}</div><div class="hq-l">Critical</div>
+      <div class="hq-icon">🚨</div><div class="hq-n" id="hqn-crit" style="color:var(--g5)">0</div><div class="hq-l">Critical</div>
     </div>
     <div class="hq-card" onclick="showInlineDrawer('👤 Assigned to Me',S.bugs.filter(b=>(b.assignees||[]).some(a=>a.email===S.user?.email)))">
-      <div class="hq-icon">👤</div><div class="hq-n" style="background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${mine}</div><div class="hq-l">Mine</div>
+      <div class="hq-icon">👤</div><div class="hq-n" id="hqn-mine" style="background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">0</div><div class="hq-l">Mine</div>
     </div>
     <div class="hq-card" onclick="showInlineDrawer('🛠 Resolved',S.bugs.filter(b=>['Dev Fixed','Done','QA Pass'].includes(b.status)))">
-      <div class="hq-icon">🛠</div><div class="hq-n" style="color:var(--g4)">${done}</div><div class="hq-l">Resolved</div>
+      <div class="hq-icon">🛠</div><div class="hq-n" id="hqn-done" style="color:var(--g4)">0</div><div class="hq-l">Resolved</div>
     </div>
     <div class="hq-card" onclick="showInlineDrawer('📋 All Bugs',S.bugs)">
-      <div class="hq-icon">📋</div><div class="hq-n" style="color:var(--text)">${total}</div><div class="hq-l">Total</div>
+      <div class="hq-icon">📋</div><div class="hq-n" id="hqn-total" style="color:var(--text)">0</div><div class="hq-l">Total</div>
     </div>`;
+  const _dur=650;
+  countUp(document.getElementById('hqn-open'),  open,   _dur);
+  countUp(document.getElementById('hqn-active'), active, _dur);
+  countUp(document.getElementById('hqn-crit'),   crit,   _dur);
+  countUp(document.getElementById('hqn-mine'),   mine,   _dur);
+  countUp(document.getElementById('hqn-done'),   done,   _dur);
+  countUp(document.getElementById('hqn-total'),  total,  _dur);
   const critBugs=S.bugs.filter(b=>['Critical','Urgent'].includes(b.priority)&&!['Dev Fixed','Done','QA Pass','Closed'].includes(b.status)).slice(0,6);
   document.getElementById('homeCritical').innerHTML=critBugs.length?critBugs.map(homeBugRow).join(''):emptySmall('🎉','All clear!');
   const miBugs=S.bugs.filter(b=>(b.assignees||[]).some(a=>a.email===u?.email)&&!['Dev Fixed','Done','QA Pass','Closed'].includes(b.status)).slice(0,6);
