@@ -3312,6 +3312,20 @@ function renderPersonalStats() {
     </div>`;
 }
 
+function countUp(el, target, duration) {
+  if (!el) return;
+  if (target === 0) { el.textContent = '0'; return; }
+  const start = performance.now();
+  const easeOut = t => 1 - Math.pow(1 - t, 3);
+  function tick(now) {
+    const t = Math.min((now - start) / duration, 1);
+    el.textContent = Math.round(easeOut(t) * target);
+    if (t < 1) requestAnimationFrame(tick);
+    else el.textContent = target;
+  }
+  requestAnimationFrame(tick);
+}
+
 function renderStats(id){
   const open=S.bugs.filter(b=>b.status==='Open').length;
   const prog=S.bugs.filter(b=>['In Progress','Bugged'].includes(b.status)).length;
@@ -3319,11 +3333,17 @@ function renderStats(id){
   const done=S.bugs.filter(b=>['Dev Fixed','Done','QA Pass'].includes(b.status)).length;
   const el=document.getElementById(id);if(!el)return;
   el.innerHTML=`
-    <div class="sc"><div class="sc-n" style="color:#a78bfa">${open}</div><div class="sc-l">Open</div><div class="sc-bar" style="background:#a78bfa;box-shadow:0 0 6px #a78bfa"></div></div>
-    <div class="sc"><div class="sc-n" style="color:var(--g2)">${prog}</div><div class="sc-l">Active</div><div class="sc-bar" style="background:var(--g2);box-shadow:0 0 6px var(--g2)"></div></div>
-    <div class="sc"><div class="sc-n" style="color:var(--g5)">${crit}</div><div class="sc-l">Critical</div><div class="sc-bar" style="background:var(--g5);box-shadow:0 0 6px var(--g5)"></div></div>
-    <div class="sc"><div class="sc-n" style="color:var(--g4)">${done}</div><div class="sc-l">Resolved</div><div class="sc-bar" style="background:var(--g4);box-shadow:0 0 6px var(--g4)"></div></div>
-    <div class="sc"><div class="sc-n" style="color:var(--text)">${S.bugs.length}</div><div class="sc-l">Total</div><div class="sc-bar" style="background:var(--bd3)"></div></div>`;
+    <div class="sc"><div class="sc-n" id="${id}-open" style="color:#a78bfa">0</div><div class="sc-l">Open</div><div class="sc-bar" style="background:#a78bfa;box-shadow:0 0 6px #a78bfa"></div></div>
+    <div class="sc"><div class="sc-n" id="${id}-prog" style="color:var(--g2)">0</div><div class="sc-l">Active</div><div class="sc-bar" style="background:var(--g2);box-shadow:0 0 6px var(--g2)"></div></div>
+    <div class="sc"><div class="sc-n" id="${id}-crit" style="color:var(--g5)">0</div><div class="sc-l">Critical</div><div class="sc-bar" style="background:var(--g5);box-shadow:0 0 6px var(--g5)"></div></div>
+    <div class="sc"><div class="sc-n" id="${id}-done" style="color:var(--g4)">0</div><div class="sc-l">Resolved</div><div class="sc-bar" style="background:var(--g4);box-shadow:0 0 6px var(--g4)"></div></div>
+    <div class="sc"><div class="sc-n" id="${id}-total" style="color:var(--text)">0</div><div class="sc-l">Total</div><div class="sc-bar" style="background:var(--bd3)"></div></div>`;
+  const dur = 650;
+  countUp(document.getElementById(id+'-open'),  open,         dur);
+  countUp(document.getElementById(id+'-prog'),  prog,         dur);
+  countUp(document.getElementById(id+'-crit'),  crit,         dur);
+  countUp(document.getElementById(id+'-done'),  done,         dur);
+  countUp(document.getElementById(id+'-total'), S.bugs.length, dur);
 }
 
 function sortBy(col){if(S.sortCol===col)S.sortDir=-S.sortDir;else{S.sortCol=col;S.sortDir=1;}applyF();}
