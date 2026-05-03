@@ -2619,19 +2619,20 @@ function sbFilterByVal(val, mode) {
 
 function updateSbBadges(){
   const c=(f,v)=>S.bugs.filter(b=>b[f]===v).length;
-  document.getElementById('sn-all').textContent=S.bugs.length;
-  document.getElementById('sn-open').textContent=c('status','Open');
-  document.getElementById('sn-prog').textContent=c('status','In Progress');
-  document.getElementById('sn-review').textContent=c('status','In Review');
-  document.getElementById('sn-bugged').textContent=c('status','Bugged');
-  document.getElementById('sn-qa').textContent=c('status','QA Pass');
-  document.getElementById('sn-devfix').textContent=c('status','Dev Fixed');
-  document.getElementById('sn-done').textContent=c('status','Done');
-  document.getElementById('sn-crit').textContent=c('priority','Critical');
-  document.getElementById('sn-high').textContent=c('priority','High');
+  const sb=(id,val)=>countUp(document.getElementById(id),val,1400);
+  sb('sn-all',   S.bugs.length);
+  sb('sn-open',  c('status','Open'));
+  sb('sn-prog',  c('status','In Progress'));
+  sb('sn-review',c('status','In Review'));
+  sb('sn-bugged',c('status','Bugged'));
+  sb('sn-qa',    c('status','QA Pass'));
+  sb('sn-devfix',c('status','Dev Fixed'));
+  sb('sn-done',  c('status','Done'));
+  sb('sn-crit',  c('priority','Critical'));
+  sb('sn-high',  c('priority','High'));
   if(S.user){
-    document.getElementById('sn-mine').textContent=S.bugs.filter(b=>(b.assignees||[]).some(a=>a.email===S.user.email)).length;
-    document.getElementById('sn-byMe').textContent=S.bugs.filter(b=>b.reporter_email===S.user.email).length;
+    sb('sn-mine',  S.bugs.filter(b=>(b.assignees||[]).some(a=>a.email===S.user.email)).length);
+    sb('sn-byMe',  S.bugs.filter(b=>b.reporter_email===S.user.email).length);
   }
 }
 
@@ -3303,20 +3304,22 @@ function renderPersonalStats() {
   const myToday   = todayBugs.filter(b=>(b.assignees||[]).some(a=>a.email===S.user.email)).length;
   const myReported = S.bugs.filter(b=>b.reporter_email===S.user.email).length;
 
+  const psData = [
+    ['#a78bfa', myOpen,     'Assigned Open',      'ps-open'],
+    ['#ef4444', myCrit,     'Critical Assigned',   'ps-crit'],
+    ['#10b981', myFixed,    'Fixed/Passed',        'ps-fixed'],
+    ['#06b6d4', myReported, 'Bugs Reported',       'ps-reported'],
+    ['#f59e0b', myToday,    'Active Today',        'ps-today'],
+  ];
   el.innerHTML = `
     <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:10px;padding:0 2px">YOUR ACTIVITY</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      ${[
-        ['#a78bfa', myOpen,     'Assigned Open'],
-        ['#ef4444', myCrit,     'Critical Assigned'],
-        ['#10b981', myFixed,    'Fixed/Passed'],
-        ['#06b6d4', myReported, 'Bugs Reported'],
-        ['#f59e0b', myToday,    'Active Today'],
-      ].map(([c,v,l])=>`<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:12px;padding:12px 16px;flex:1;min-width:110px;text-align:center;border-top:2px solid ${c}">
-        <div style="font-size:22px;font-weight:800;color:${c};font-family:var(--disp)">${v}</div>
+      ${psData.map(([c,v,l,id])=>`<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:12px;padding:12px 16px;flex:1;min-width:110px;text-align:center;border-top:2px solid ${c}">
+        <div id="${id}" style="font-size:22px;font-weight:800;color:${c};font-family:var(--disp)">0</div>
         <div style="font-size:9px;color:var(--dim);font-family:var(--mono);margin-top:3px;letter-spacing:.5px">${l}</div>
       </div>`).join('')}
     </div>`;
+  psData.forEach(([,v,,id]) => countUp(document.getElementById(id), v, 1400));
 }
 
 function countUp(el, target, duration) {
