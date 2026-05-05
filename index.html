@@ -201,25 +201,10 @@ body.clicking #cur-bat{transform:translate(-50%,-50%) rotate(10deg)}
 .tb-divider{width:1px;height:22px;background:var(--bd);margin:0 6px;flex-shrink:0}
 .tb-tabs{display:flex;flex:1;overflow:hidden;gap:0;min-width:0;}
 .tb-tabs::-webkit-scrollbar{display:none}
-/* Progressive tab hiding — laptop/iPad range */
-@media(max-width:1400px){
-  .tb-tab{padding:0 10px;font-size:12px}
-}
-@media(max-width:1280px){
-  #tt-home{display:none!important}
-  #tt-clickup{display:none!important}
-  .tb-tab{padding:0 9px;font-size:12px}
-  .pip-lbl{display:none}
-}
-@media(max-width:1150px){
-  #tt-dashboard{display:none!important}
-  .tb-tab{padding:0 8px;font-size:11px}
-}
-@media(max-width:1060px){
-  #tt-features{display:none!important}
-  #tt-builds{display:none!important}
-}
-/* hide-small utility kept for other uses */
+@media(max-width:1400px){.tb-tab{padding:0 10px;font-size:12px}}
+@media(max-width:1280px){#tt-home{display:none!important}#tt-clickup{display:none!important}.tb-tab{padding:0 9px;font-size:12px}.pip-lbl{display:none}}
+@media(max-width:1150px){#tt-dashboard{display:none!important}.tb-tab{padding:0 8px;font-size:11px}}
+@media(max-width:1060px){#tt-features{display:none!important}#tt-builds{display:none!important}}
 @media(max-width:1200px){.hide-small{display:none!important}}
 .tb-tab{display:flex;align-items:center;gap:5px;height:54px;padding:0 14px;font-family:var(--body);font-size:13px;font-weight:600;letter-spacing:.3px;color:var(--mute);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;text-transform:uppercase;}
 .tb-tab:hover{color:var(--ghost)}
@@ -227,12 +212,7 @@ body.clicking #cur-bat{transform:translate(-50%,-50%) rotate(10deg)}
 .tb-badge{background:var(--g5);color:#fff;font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:20px;min-width:16px;text-align:center;box-shadow:0 0 8px rgba(239,68,68,.5);}
 .tb-end{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
 @media(max-width:1280px){.tb-end{gap:5px}}
-@media(max-width:1150px){
-  .tb-end{gap:4px}
-  #exportDropWrap{display:none!important}
-  #shortcutsBtn{display:none!important}
-  #templateBtn{display:none!important}
-}
+@media(max-width:1150px){.tb-end{gap:4px}#exportDropWrap{display:none!important}#shortcutsBtn{display:none!important}#templateBtn{display:none!important}}
 .pip-wrap{display:flex;align-items:center;gap:5px}
 .pip{width:6px;height:6px;border-radius:50%;background:var(--mute)}
 .pip.ok{background:var(--g4);animation:blink 3s ease-in-out infinite;box-shadow:0 0 8px var(--g4)}
@@ -977,17 +957,8 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
 
 /* &#9472;&#9472; FEATURE TOUR / FTUE with Natasha &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472; */
 .tour-overlay{position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.88);backdrop-filter:blur(2px);cursor:pointer;pointer-events:all}
-.tour-spotlight{
-  position:fixed;z-index:100001;border-radius:10px;pointer-events:none;
-  transition:top .4s cubic-bezier(.4,0,.2,1),left .4s cubic-bezier(.4,0,.2,1),width .4s cubic-bezier(.4,0,.2,1),height .4s cubic-bezier(.4,0,.2,1);
-  outline:3px solid var(--g1);
-  box-shadow:0 0 0 9999px rgba(0,0,0,.88), 0 0 0 6px rgba(124,58,237,.35), 0 0 32px 6px rgba(124,58,237,.8);
-  animation:spotPulse 2s ease-in-out infinite;
-}
-@keyframes spotPulse{
-  0%,100%{outline-color:var(--g1);box-shadow:0 0 0 9999px rgba(0,0,0,.88),0 0 0 6px rgba(124,58,237,.35),0 0 32px 6px rgba(124,58,237,.8)}
-  50%{outline-color:var(--g2);box-shadow:0 0 0 9999px rgba(0,0,0,.88),0 0 0 8px rgba(6,182,212,.45),0 0 50px 10px rgba(6,182,212,.7)}
-}
+.tour-spotlight{position:fixed;z-index:100001;border-radius:10px;pointer-events:none;outline:3px solid var(--g1);box-shadow:0 0 0 9999px rgba(0,0,0,.88),0 0 0 6px rgba(124,58,237,.35),0 0 32px 6px rgba(124,58,237,.8);transition:top .4s cubic-bezier(.4,0,.2,1),left .4s cubic-bezier(.4,0,.2,1),width .4s cubic-bezier(.4,0,.2,1),height .4s cubic-bezier(.4,0,.2,1);animation:spotPulse 2s ease-in-out infinite;}
+@keyframes spotPulse{0%,100%{outline-color:var(--g1);box-shadow:0 0 0 9999px rgba(0,0,0,.88),0 0 0 6px rgba(124,58,237,.35),0 0 32px 6px rgba(124,58,237,.8)}50%{outline-color:var(--g2);box-shadow:0 0 0 9999px rgba(0,0,0,.88),0 0 0 8px rgba(6,182,212,.45),0 0 50px 10px rgba(6,182,212,.7)}}
 .tour-card{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100002;width:min(460px,92vw);max-height:88vh;overflow-y:auto;animation:tourIn .35s cubic-bezier(.2,.8,.2,1);background:transparent;border:none;box-shadow:none;padding:0}
 @keyframes tourIn{from{opacity:0;transform:translate(-50%,-50%) scale(.93)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 .tour-natasha-wrap{display:flex;align-items:flex-end;gap:12px;margin-bottom:6px}
@@ -1033,7 +1004,12 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
   <div class="load-title">BugPulse</div>
   <div class="load-bar-wrap"><div class="load-bar" id="loadBar"></div></div>
   <div class="load-sub" id="loadSub">INITIALISING</div>
+  <div id="loadStuckMsg" style="display:none;margin-top:18px;text-align:center">
+    <div style="font-family:var(--mono);font-size:11px;color:var(--mute);margin-bottom:10px">Taking longer than expected…</div>
+    <button onclick="showLogin()" style="background:var(--g1);border:none;color:#fff;font-family:var(--mono);font-size:11px;font-weight:700;padding:8px 20px;border-radius:8px;cursor:pointer;letter-spacing:1px">GO TO LOGIN →</button>
+  </div>
 </div>
+<script>setTimeout(function(){var ls=document.getElementById('loadScreen');var sm=document.getElementById('loadStuckMsg');if(ls&&ls.style.display!=='none'&&!ls.classList.contains('fade')&&sm)sm.style.display='block';},6000);</script>
 
 <div id="loginScreen">
   <video class="login-bg-video" autoplay muted loop playsinline>
@@ -1260,6 +1236,7 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
             <div class="mf-wrap" id="mfw-priority"><button class="mf-btn fi" onclick="toggleMF('priority')">Priority <span id="mfbadge-priority" class="mf-badge" style="display:none"></span>&#9662;</button><div class="mf-drop" id="mfd-priority"></div></div>
             <div class="mf-wrap" id="mfw-assignee"><button class="mf-btn fi" onclick="toggleMF('assignee')">Assignee <span id="mfbadge-assignee" class="mf-badge" style="display:none"></span>&#9662;</button><div class="mf-drop" id="mfd-assignee"></div></div>
             <div class="mf-wrap" id="mfw-feature"><button class="mf-btn fi" onclick="toggleMF('feature')">Feature <span id="mfbadge-feature" class="mf-badge" style="display:none"></span>&#9662;</button><div class="mf-drop" id="mfd-feature"></div></div>
+            <div class="mf-wrap" id="mfw-sub_feature"><button class="mf-btn fi" onclick="toggleMF('sub_feature')">Sub-Feature <span id="mfbadge-sub_feature" class="mf-badge" style="display:none"></span>&#9662;</button><div class="mf-drop" id="mfd-sub_feature"></div></div>
             <div class="mf-wrap" id="mfw-sprint"><button class="mf-btn fi" onclick="toggleMF('sprint')">Sprint <span id="mfbadge-sprint" class="mf-badge" style="display:none"></span>&#9662;</button><div class="mf-drop" id="mfd-sprint"></div></div>
             <div class="mf-wrap" id="mfw-type"><button class="mf-btn fi" onclick="toggleMF('type')">Type <span id="mfbadge-type" class="mf-badge" style="display:none"></span>&#9662;</button><div class="mf-drop" id="mfd-type"></div></div>
             <div class="mf-wrap" id="mfw-reporter"><button class="mf-btn fi" onclick="toggleMF('reporter')">Reporter <span id="mfbadge-reporter" class="mf-badge" style="display:none"></span>&#9662;</button><div class="mf-drop" id="mfd-reporter"></div></div>
@@ -1928,7 +1905,7 @@ function sendDesktopNotification(title, body, bugId) {
 }
 
 const saveSession=()=>{try{if(S.user)localStorage.setItem(SK,JSON.stringify({user:S.user,ts:Date.now()}));}catch(e){}};
-const loadSession=()=>{try{const r=JSON.parse(localStorage.getItem(SK)||'null');if(!r||!r.user||Date.now()-r.ts>7*24*3600*1000){localStorage.removeItem(SK);return null;}return r;}catch{return null;}};
+const loadSession=()=>{try{const r=JSON.parse(localStorage.getItem(SK)||'null');if(!r||!r.user||Date.now()-r.ts>8*24*3600*1000){localStorage.removeItem(SK);return null;}return r;}catch{return null;}};
 const clearSession=()=>localStorage.removeItem(SK);
 
 // &#9472;&#9472; BUG SYNC &#8212; polls every 5 min, only when tab is visible &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
@@ -2680,14 +2657,15 @@ function populateDropdowns(){
 // MULTI-SELECT FILTERS
 // &#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;
 const MF_STATE = {
-  status:   new Set(),
-  priority: new Set(),
-  assignee: new Set(),
-  feature:  new Set(),
-  sprint:   new Set(),
-  type:     new Set(),
-  reporter: new Set(),
-  pod:      new Set(),
+  status:      new Set(),
+  priority:    new Set(),
+  assignee:    new Set(),
+  feature:     new Set(),
+  sub_feature: new Set(),
+  sprint:      new Set(),
+  type:        new Set(),
+  reporter:    new Set(),
+  pod:         new Set(),
 };
 
 const MF_CONFIG = {
@@ -2697,7 +2675,8 @@ const MF_CONFIG = {
     const all = [...new Set(S.bugs.flatMap(b=>(b.assignees||[]).map(a=>a.name)).filter(Boolean))].sort();
     return ['__unassigned__', ...all];
   }},
-  feature:  { label:'Feature',  field:'feature',    opts:() => [...new Set(S.bugs.map(b=>b.feature).filter(Boolean))].sort() },
+  feature:     { label:'Feature',     field:'feature',     opts:() => [...new Set(S.bugs.map(b=>b.feature).filter(Boolean))].sort() },
+  sub_feature: { label:'Sub-Feature', field:'sub_feature', opts:() => [...new Set(S.bugs.map(b=>b.sub_feature).filter(Boolean))].sort() },
   sprint:   { label:'Sprint',   field:'sprint',     opts:() => S.sprints.map(s=>s.name) },
   type:     { label:'Type',     field:'issue_type', opts:() => ['Happy Flow','Edge Case','Regression','UI/Visual','Performance','Crash','Data Issue','Integration','Security'] },
   reporter: { label:'Reporter', field:'reporter',   opts:() => [...new Set(S.bugs.map(b=>b.reporter).filter(Boolean))].sort() },
@@ -3031,6 +3010,9 @@ function applyF(){
     }
     if(ms.feature.size) {
       if(!ms.feature.has(b.feature||'')) return false;
+    }
+    if(ms.sub_feature.size) {
+      if(!ms.sub_feature.has(b.sub_feature||'')) return false;
     }
     if(ms.sprint.size) {
       if(!ms.sprint.has(b.sprint||'')) return false;
@@ -5981,51 +5963,60 @@ document.addEventListener('keydown', e => {
 });
 
 // &#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;
-// INIT  &#8592; CHANGED: await fetchConfig() first
-// &#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;
+// INIT
+// ══════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
-  // Must check OAuth fragment FIRST before anything else wipes the hash
   if (checkOAuthFragment()) return;
-
   loadTheme();
-  setLoad(20, 'CHECKING SESSION');
+  setLoad(10, 'STARTING UP…');
   document.addEventListener('click', e => { if(!e.target.closest('.user-pill-wrap')) closeProfileMenu(); });
 
-  // &#9472;&#9472; CHANGED: fetch config (safe &#8212; never throws, falls back to hardcoded ID) &#9472;&#9472;
-  await fetchConfig();
+  // Hard safety net — if init takes >12s for any reason, force login
+  const _initGuard = setTimeout(() => { console.warn('[init] Hard timeout — forcing login'); showLogin(); }, 12000);
 
-  const sess = loadSession();
-  if (sess?.user) {
-    S.user = sess.user;
-    setLoad(40, 'RESTORING SESSION');
-    const _authController = new AbortController();
-    const _authTimeout = setTimeout(() => _authController.abort(), 5000);
-    fetch(WORKER + '/auth/verify', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ id_token: sess.user.idToken }),
-      signal:  _authController.signal,
-    })
-    .then(r => { clearTimeout(_authTimeout); return r.json(); })
-    .then(d => {
-      if (d.ok) {
-        S.user = { ...d, idToken: sess.user.idToken };
-        saveSession();
-        setLoad(70, 'LOADING BUGS');
-        onLogin();
-      } else {
-        clearSession();
-        showLogin();
-      }
-    })
-    .catch(() => {
-      // Network error &#8212; try with cached session
+  try {
+    setLoad(20, 'LOADING CONFIG…');
+    await fetchConfig();
+
+    const sess = loadSession();
+    if (sess?.user) {
       S.user = sess.user;
-      setLoad(70, 'LOADING BUGS');
-      onLogin();
-    });
-  } else {
-    setTimeout(showLogin, 700);
+      setLoad(40, 'RESTORING SESSION…');
+      let sessionOk = false;
+      try {
+        const _ac = new AbortController();
+        const _at = setTimeout(() => _ac.abort(), 5000);
+        const r = await fetch(WORKER + '/auth/verify', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({id_token: sess.user.idToken}), signal: _ac.signal,
+        });
+        clearTimeout(_at);
+        const d = await r.json();
+        if (d.ok) {
+          S.user = {...d, idToken: sess.user.idToken};
+          saveSession();
+          sessionOk = true;
+        } else {
+          const age = Date.now() - (sess.ts||0);
+          if (age < 8*24*3600*1000) { sessionOk = true; } // still within 8-day window
+          else clearSession();
+        }
+      } catch(e) {
+        // Network error — proceed with cached session
+        console.warn('[init] Auth verify failed, using cache:', e.message);
+        S.user = sess.user; sessionOk = true;
+      }
+      clearTimeout(_initGuard);
+      if (sessionOk) { setLoad(70,'LOADING BUGS…'); onLogin(); }
+      else showLogin();
+    } else {
+      clearTimeout(_initGuard);
+      setTimeout(showLogin, 400);
+    }
+  } catch(e) {
+    console.error('[init] Unexpected error:', e);
+    clearTimeout(_initGuard);
+    showLogin();
   }
 });
 
