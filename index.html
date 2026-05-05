@@ -956,11 +956,15 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
 .mf-act-btn:hover{background:rgba(124,58,237,.15);border-color:var(--g1);color:var(--g1)}
 
 /* &#9472;&#9472; FEATURE TOUR / FTUE with Natasha &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472; */
-.tour-overlay{position:fixed;inset:0;z-index:99000;background:rgba(0,0,0,.82);backdrop-filter:blur(2px);cursor:pointer;pointer-events:all;transition:clip-path .35s ease}
-.tour-spotlight-ring{position:fixed;z-index:99002;border-radius:10px;pointer-events:none;outline:2.5px solid var(--g1);box-shadow:0 0 0 4px rgba(124,58,237,.25),0 0 28px 6px rgba(124,58,237,.7);animation:spotPulse 2s ease-in-out infinite;transition:top .35s ease,left .35s ease,width .35s ease,height .35s ease}
+.tour-overlay{position:fixed;inset:0;z-index:99000;background:rgba(0,0,0,.82);backdrop-filter:blur(2px);pointer-events:all;transition:clip-path .35s ease}
+/* Glow ring — purely decorative, no pointer events */
+.tour-spotlight-ring{position:fixed;z-index:99002;border-radius:10px;pointer-events:none;outline:2.5px solid var(--g1);box-shadow:0 0 0 4px rgba(124,58,237,.25),0 0 28px 6px rgba(124,58,237,.7);animation:spotPulse 2s ease-in-out infinite}
 @keyframes spotPulse{0%,100%{outline-color:var(--g1);box-shadow:0 0 0 4px rgba(124,58,237,.25),0 0 28px 6px rgba(124,58,237,.7)}50%{outline-color:var(--g2);box-shadow:0 0 0 6px rgba(6,182,212,.35),0 0 44px 10px rgba(6,182,212,.65)}}
-.tour-el-raised{position:relative;z-index:99001!important;pointer-events:all!important}
-.tour-card{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99003;width:min(460px,92vw);max-height:88vh;overflow-y:auto;animation:tourIn .35s cubic-bezier(.2,.8,.2,1);background:transparent;border:none;box-shadow:none;padding:0}
+/* Raised element — visually above overlay but pointer-events BLOCKED by interceptor */
+.tour-el-raised{position:relative;z-index:99001!important;pointer-events:none!important}
+/* Transparent interceptor sits on top of element — blocks clicks, advances tour on tap */
+.tour-tap-interceptor{position:fixed;z-index:99003;cursor:pointer;background:transparent}
+.tour-card{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99004;width:min(460px,92vw);max-height:88vh;overflow-y:auto;animation:tourIn .35s cubic-bezier(.2,.8,.2,1);background:transparent;border:none;box-shadow:none;padding:0}
 @keyframes tourIn{from{opacity:0;transform:translate(-50%,-50%) scale(.93)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 .tour-natasha-wrap{display:flex;align-items:flex-end;gap:12px;margin-bottom:6px}
 .tour-natasha-img{width:120px;height:145px;object-fit:contain;object-position:bottom;filter:drop-shadow(0 0 20px rgba(124,58,237,.6));flex-shrink:0}
@@ -1005,7 +1009,12 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
   <div class="load-title">BugPulse</div>
   <div class="load-bar-wrap"><div class="load-bar" id="loadBar"></div></div>
   <div class="load-sub" id="loadSub">INITIALISING</div>
+  <div id="loadStuckMsg" style="display:none;margin-top:18px;text-align:center">
+    <div style="font-family:var(--mono);font-size:11px;color:var(--mute);margin-bottom:10px">Taking longer than expected…</div>
+    <button onclick="showLogin()" style="background:var(--g1);border:none;color:#fff;font-family:var(--mono);font-size:11px;font-weight:700;padding:8px 20px;border-radius:8px;cursor:pointer;letter-spacing:1px">GO TO LOGIN →</button>
+  </div>
 </div>
+<script>setTimeout(function(){var ls=document.getElementById('loadScreen');var sm=document.getElementById('loadStuckMsg');if(ls&&ls.style.display!=='none'&&!ls.classList.contains('fade')&&sm)sm.style.display='block';},6000);</script>
 
 <div id="loginScreen">
   <video class="login-bg-video" autoplay muted loop playsinline>
@@ -9867,12 +9876,50 @@ function showTourStep() {
   _showTourCard();
 }
 
+function _applySpotlight(el, step, overlay) {
+  const pad = step.spotPad || 8;
+  const r   = el.getBoundingClientRect();
+  const x1=r.left-pad, y1=r.top-pad, x2=r.right+pad, y2=r.bottom+pad;
+  const W=window.innerWidth, H=window.innerHeight;
+
+  // Punch a hole in the overlay using clip-path so element shows through at full brightness
+  overlay.style.clipPath =
+    `polygon(0 0,${W}px 0,${W}px ${H}px,0 ${H}px,0 0,` +
+    `${x1}px ${y1}px,${x1}px ${y2}px,${x2}px ${y2}px,${x2}px ${y1}px,${x1}px ${y1}px)`;
+
+  // Glow ring
+  const ring = document.getElementById('tourSpotlight') || document.createElement('div');
+  ring.className = 'tour-spotlight-ring';
+  ring.id = 'tourSpotlight';
+  const cs = window.getComputedStyle(el);
+  ring.style.borderRadius = cs.borderRadius || '10px';
+  ring.style.top    = (y1 + window.scrollY) + 'px';
+  ring.style.left   = x1 + 'px';
+  ring.style.width  = (x2-x1) + 'px';
+  ring.style.height = (y2-y1) + 'px';
+  if(!ring.parentNode) document.body.appendChild(ring);
+
+  // Transparent interceptor — sits above the element, blocks clicks, advances tour on tap
+  const prev = document.getElementById('tourInterceptor');
+  if(prev) prev.parentNode?.removeChild(prev);
+  const intercept = document.createElement('div');
+  intercept.className = 'tour-tap-interceptor';
+  intercept.id = 'tourInterceptor';
+  intercept.title = 'Tap to continue tour';
+  intercept.style.top    = y1 + 'px';
+  intercept.style.left   = x1 + 'px';
+  intercept.style.width  = (x2-x1) + 'px';
+  intercept.style.height = (y2-y1) + 'px';
+  intercept.addEventListener('click', (e) => { e.stopPropagation(); advanceTour(); });
+  document.body.appendChild(intercept);
+}
+
 function _showTourCard() {
   closeTourUI();
   if (_tourStep >= TOUR_STEPS.length) { endTour(); return; }
   const step = TOUR_STEPS[_tourStep];
 
-  // Overlay — uses clip-path to cut a transparent hole over the target
+  // Overlay — uses clip-path hole so highlighted element shows through at full brightness
   const overlay = document.createElement('div');
   overlay.className = 'tour-overlay';
   overlay.id = 'tourOverlay';
@@ -9881,45 +9928,13 @@ function _showTourCard() {
   });
   document.body.appendChild(overlay);
 
-  // Spotlight ring + clip-path cutout + raise real element
   if (step.target) {
     const el = document.querySelector(step.target);
     if (el) {
       el.scrollIntoView({behavior:'smooth', block:'nearest'});
-
-      // Raise the real element above the overlay so it's truly visible & clickable
+      // Raise element visually (pointer-events blocked — interceptor handles taps)
       el.classList.add('tour-el-raised');
-      overlay._raisedEl = el;
-
-      setTimeout(() => {
-        const pad = step.spotPad || 8;
-        const r = el.getBoundingClientRect();
-        const x1 = r.left   - pad;
-        const y1 = r.top    - pad;
-        const x2 = r.right  + pad;
-        const y2 = r.bottom + pad;
-        const W  = window.innerWidth;
-        const H  = window.innerHeight;
-
-        // clip-path polygon: full screen with rectangular hole punched out
-        // Winds clockwise outside, counter-clockwise inside hole = creates cutout
-        overlay.style.clipPath =
-          `polygon(0 0, ${W}px 0, ${W}px ${H}px, 0 ${H}px, 0 0,` +
-          ` ${x1}px ${y1}px, ${x1}px ${y2}px, ${x2}px ${y2}px, ${x2}px ${y1}px, ${x1}px ${y1}px)`;
-
-        // Spotlight glow ring on top
-        const ring = document.createElement('div');
-        ring.className = 'tour-spotlight-ring';
-        ring.id = 'tourSpotlight';
-        const cs = window.getComputedStyle(el);
-        ring.style.borderRadius = cs.borderRadius || '10px';
-        ring.style.top    = (y1 + window.scrollY) + 'px';
-        ring.style.left   = x1 + 'px';
-        ring.style.width  = (x2 - x1) + 'px';
-        ring.style.height = (y2 - y1) + 'px';
-        document.body.appendChild(ring);
-
-      }, 320);
+      setTimeout(() => _applySpotlight(el, step, overlay), 320);
     }
   }
 
@@ -10010,9 +10025,9 @@ function endTour() {
 }
 
 function closeTourUI() {
-  // Remove raised class from any highlighted element
+  // Remove raised class and interceptor so elements go back to normal
   document.querySelectorAll('.tour-el-raised').forEach(el => el.classList.remove('tour-el-raised'));
-  ['tourOverlay','tourSpotlight','tourCard'].forEach(id => {
+  ['tourOverlay','tourSpotlight','tourCard','tourInterceptor'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.parentNode?.removeChild(el);
   });
@@ -10023,21 +10038,14 @@ document.addEventListener('keydown', e => {
   if(e.key === 'Escape' && _tourActive) endTour();
 });
 
-// Recalculate spotlight clip-path on resize
+// Recalculate spotlight on resize
 window.addEventListener('resize', () => {
   if(!_tourActive) return;
   const overlay = document.getElementById('tourOverlay');
-  const ring = document.getElementById('tourSpotlight');
-  const step = TOUR_STEPS[_tourStep];
+  const step    = TOUR_STEPS[_tourStep];
   if(!overlay || !step?.target) return;
   const el = document.querySelector(step.target);
-  if(!el) return;
-  const pad = step.spotPad || 8;
-  const r = el.getBoundingClientRect();
-  const x1=r.left-pad, y1=r.top-pad, x2=r.right+pad, y2=r.bottom+pad;
-  const W=window.innerWidth, H=window.innerHeight;
-  overlay.style.clipPath=`polygon(0 0,${W}px 0,${W}px ${H}px,0 ${H}px,0 0,${x1}px ${y1}px,${x1}px ${y2}px,${x2}px ${y2}px,${x2}px ${y1}px,${x1}px ${y1}px)`;
-  if(ring){ring.style.top=(y1+window.scrollY)+'px';ring.style.left=x1+'px';ring.style.width=(x2-x1)+'px';ring.style.height=(y2-y1)+'px';}
+  if(el) _applySpotlight(el, step, overlay);
 });
 
 // Safety: if tour overlay exists but _tourActive is false, remove it
