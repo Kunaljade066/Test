@@ -199,15 +199,40 @@ body.clicking #cur-bat{transform:translate(-50%,-50%) rotate(10deg)}
 .tb-logo-wrap img{width:28px;height:28px;object-fit:contain}
 .tb-name{font-family:var(--disp);font-size:14px;font-weight:800;letter-spacing:2px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;transition:text-shadow .2s;white-space:nowrap;}
 .tb-divider{width:1px;height:22px;background:var(--bd);margin:0 6px;flex-shrink:0}
-.tb-tabs{display:flex;flex:1;overflow-x:auto;gap:0;scrollbar-width:none;}
+.tb-tabs{display:flex;flex:1;overflow:hidden;gap:0;min-width:0;}
 .tb-tabs::-webkit-scrollbar{display:none}
-@media(max-width:1200px){[data-small-hide]{display:none!important}.hide-small{display:none!important}}
-.tb-tabs::-webkit-scrollbar{display:none}
+/* Progressive tab hiding — laptop/iPad range */
+@media(max-width:1400px){
+  .tb-tab{padding:0 10px;font-size:12px}
+}
+@media(max-width:1280px){
+  #tt-home{display:none!important}
+  #tt-clickup{display:none!important}
+  .tb-tab{padding:0 9px;font-size:12px}
+  .pip-lbl{display:none}
+}
+@media(max-width:1150px){
+  #tt-dashboard{display:none!important}
+  .tb-tab{padding:0 8px;font-size:11px}
+}
+@media(max-width:1060px){
+  #tt-features{display:none!important}
+  #tt-builds{display:none!important}
+}
+/* hide-small utility kept for other uses */
+@media(max-width:1200px){.hide-small{display:none!important}}
 .tb-tab{display:flex;align-items:center;gap:5px;height:54px;padding:0 14px;font-family:var(--body);font-size:13px;font-weight:600;letter-spacing:.3px;color:var(--mute);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;text-transform:uppercase;}
 .tb-tab:hover{color:var(--ghost)}
 .tb-tab.on{color:var(--text);border-bottom-color:var(--g1);text-shadow:0 0 8px rgba(124,58,237,.4)}
 .tb-badge{background:var(--g5);color:#fff;font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:20px;min-width:16px;text-align:center;box-shadow:0 0 8px rgba(239,68,68,.5);}
 .tb-end{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+@media(max-width:1280px){.tb-end{gap:5px}}
+@media(max-width:1150px){
+  .tb-end{gap:4px}
+  #exportDropWrap{display:none!important}
+  #shortcutsBtn{display:none!important}
+  #templateBtn{display:none!important}
+}
 .pip-wrap{display:flex;align-items:center;gap:5px}
 .pip{width:6px;height:6px;border-radius:50%;background:var(--mute)}
 .pip.ok{background:var(--g4);animation:blink 3s ease-in-out infinite;box-shadow:0 0 8px var(--g4)}
@@ -467,7 +492,7 @@ select.fi2 option{background:var(--bg2)}
 .dup-t{flex:1;color:var(--mist);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dup-pct{font-family:var(--mono);font-size:10px;color:#fbbf24;font-weight:700;flex-shrink:0}
 
-.toast-wrap{position:fixed;bottom:22px;right:22px;z-index:9999;display:flex;flex-direction:column;gap:8px;cursor:auto}
+.toast-wrap{position:fixed;bottom:22px;right:22px;z-index:100003;display:flex;flex-direction:column;gap:8px;cursor:auto}
 .toast{background:var(--bg2);border:1px solid var(--bd2);border-radius:10px;padding:11px 16px;font-size:13px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .28s cubic-bezier(.34,1.56,.64,1);box-shadow:var(--sh2);max-width:340px;display:flex;align-items:center;gap:9px;cursor:auto}
 .toast.show{transform:translateX(0)}
 .toast.ok{border-left:3px solid var(--g4);box-shadow:var(--sh2),0 0 12px rgba(16,185,129,.15)}
@@ -951,9 +976,19 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
 .mf-act-btn:hover{background:rgba(124,58,237,.15);border-color:var(--g1);color:var(--g1)}
 
 /* &#9472;&#9472; FEATURE TOUR / FTUE with Natasha &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472; */
-.tour-overlay{position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.75);backdrop-filter:blur(3px);cursor:pointer}
-.tour-spotlight{position:fixed;z-index:99999;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.75),0 0 0 3px var(--g1),0 0 24px var(--g1);pointer-events:none;transition:all .4s cubic-bezier(.4,0,.2,1)}
-.tour-card{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100000;width:min(460px,92vw);max-height:88vh;overflow-y:auto;animation:tourIn .35s cubic-bezier(.2,.8,.2,1);background:transparent;border:none;box-shadow:none;padding:0}
+.tour-overlay{position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.88);backdrop-filter:blur(2px);cursor:pointer;pointer-events:all}
+.tour-spotlight{
+  position:fixed;z-index:100001;border-radius:10px;pointer-events:none;
+  transition:top .4s cubic-bezier(.4,0,.2,1),left .4s cubic-bezier(.4,0,.2,1),width .4s cubic-bezier(.4,0,.2,1),height .4s cubic-bezier(.4,0,.2,1);
+  outline:3px solid var(--g1);
+  box-shadow:0 0 0 9999px rgba(0,0,0,.88), 0 0 0 6px rgba(124,58,237,.35), 0 0 32px 6px rgba(124,58,237,.8);
+  animation:spotPulse 2s ease-in-out infinite;
+}
+@keyframes spotPulse{
+  0%,100%{outline-color:var(--g1);box-shadow:0 0 0 9999px rgba(0,0,0,.88),0 0 0 6px rgba(124,58,237,.35),0 0 32px 6px rgba(124,58,237,.8)}
+  50%{outline-color:var(--g2);box-shadow:0 0 0 9999px rgba(0,0,0,.88),0 0 0 8px rgba(6,182,212,.45),0 0 50px 10px rgba(6,182,212,.7)}
+}
+.tour-card{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100002;width:min(460px,92vw);max-height:88vh;overflow-y:auto;animation:tourIn .35s cubic-bezier(.2,.8,.2,1);background:transparent;border:none;box-shadow:none;padding:0}
 @keyframes tourIn{from{opacity:0;transform:translate(-50%,-50%) scale(.93)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 .tour-natasha-wrap{display:flex;align-items:flex-end;gap:12px;margin-bottom:6px}
 .tour-natasha-img{width:120px;height:145px;object-fit:contain;object-position:bottom;filter:drop-shadow(0 0 20px rgba(124,58,237,.6));flex-shrink:0}
@@ -998,21 +1033,7 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
   <div class="load-title">BugPulse</div>
   <div class="load-bar-wrap"><div class="load-bar" id="loadBar"></div></div>
   <div class="load-sub" id="loadSub">INITIALISING</div>
-  <div id="loadStuckMsg" style="display:none;margin-top:18px;text-align:center">
-    <div style="font-family:var(--mono);font-size:11px;color:var(--mute);margin-bottom:10px">Taking longer than expected…</div>
-    <button onclick="showLogin()" style="background:var(--g1);border:none;color:#fff;font-family:var(--mono);font-size:11px;font-weight:700;padding:8px 20px;border-radius:8px;cursor:pointer;letter-spacing:1px">GO TO LOGIN →</button>
-  </div>
 </div>
-<script>
-// Show "stuck" message after 6s if still on load screen
-setTimeout(function(){
-  var ls = document.getElementById('loadScreen');
-  var sm = document.getElementById('loadStuckMsg');
-  if(ls && ls.style.display !== 'none' && !ls.classList.contains('fade') && sm) {
-    sm.style.display = 'block';
-  }
-}, 6000);
-</script>
 
 <div id="loginScreen">
   <video class="login-bg-video" autoplay muted loop playsinline>
@@ -1123,9 +1144,9 @@ setTimeout(function(){
       </div>
       <div style="position:relative;display:inline-block" id="exportDropWrap"><button class="btn btn-g btn-sm" onclick="toggleExportDrop()" title="Export CSV">&#128229; &#9662;</button><div id="exportDrop" style="display:none;position:absolute;right:0;top:30px;background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:4px;z-index:999;min-width:150px;box-shadow:0 8px 24px rgba(0,0,0,.4)"><div class="jk-mi" onclick="exportCSV('filtered');toggleExportDrop()">&#128203; Export filtered (XLSX)</div><div class="jk-mi" onclick="exportCSV('all');toggleExportDrop()">&#128230; Export all bugs (XLSX)</div><div class="jk-mi" onclick="exportCSV('selection');toggleExportDrop()">&#9989; Export selected (XLSX)</div></div></div>
       <button class="btn btn-g btn-sm" onclick="refreshAll()">&#8635;</button>
-      <button class="btn btn-g btn-sm" onclick="document.getElementById('shortcutsModal').classList.add('on')" title="Keyboard shortcuts (?)">&#9000;</button>
+      <button id="shortcutsBtn" class="btn btn-g btn-sm" onclick="document.getElementById('shortcutsModal').classList.add('on')" title="Keyboard shortcuts (?)">&#9000;</button>
       <button class="btn btn-v btn-sm" onclick="openNew()">&#65291; BUG</button>
-              <button class="btn btn-g btn-sm" onclick="openTemplateSelector()">&#128203;</button>
+      <button id="templateBtn" class="btn btn-g btn-sm" onclick="openTemplateSelector()">&#128203;</button>
       <div class="user-pill-wrap">
         <div class="user-pill" onclick="toggleProfileMenu(event)" title="Profile & settings">
           <div class="uav" id="uav" style="background:var(--g1)">?</div>
@@ -1536,7 +1557,7 @@ const APP_URL   = window.location.origin + window.location.pathname;
 async function fetchConfig() {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2000); // 2s max — never block init
+    const timeout = setTimeout(() => controller.abort(), 3000); // 3s max — never block init
     const res = await fetch(WORKER + '/config', { signal: controller.signal });
     clearTimeout(timeout);
     if (!res.ok) return;
@@ -5960,82 +5981,51 @@ document.addEventListener('keydown', e => {
 });
 
 // &#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;
-// INIT  ← CHANGED: await fetchConfig() first
-// ══════════════════════════════════════════════════════════
+// INIT  &#8592; CHANGED: await fetchConfig() first
+// &#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;
 window.addEventListener('DOMContentLoaded', async () => {
   // Must check OAuth fragment FIRST before anything else wipes the hash
   if (checkOAuthFragment()) return;
 
   loadTheme();
-  setLoad(10, 'STARTING UP…');
+  setLoad(20, 'CHECKING SESSION');
   document.addEventListener('click', e => { if(!e.target.closest('.user-pill-wrap')) closeProfileMenu(); });
 
-  // Hard safety net — if init takes >12s for any reason, go straight to login
-  const _initGuard = setTimeout(() => {
-    console.warn('[init] Hard timeout reached — forcing login screen');
-    showLogin();
-  }, 12000);
+  // &#9472;&#9472; CHANGED: fetch config (safe &#8212; never throws, falls back to hardcoded ID) &#9472;&#9472;
+  await fetchConfig();
 
-  try {
-    // ── CHANGED: fetch config (safe — never throws, falls back to hardcoded ID) ──
-    setLoad(20, 'LOADING CONFIG…');
-    await fetchConfig();
-
-    const sess = loadSession();
-    if (sess?.user) {
-      S.user = sess.user;
-      setLoad(40, 'RESTORING SESSION…');
-
-      let sessionOk = false;
-      try {
-        const _authController = new AbortController();
-        const _authTimeout = setTimeout(() => _authController.abort(), 5000);
-        const r = await fetch(WORKER + '/auth/verify', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ id_token: sess.user.idToken }),
-          signal:  _authController.signal,
-        });
-        clearTimeout(_authTimeout);
-        const d = await r.json();
-        if (d.ok) {
-          S.user = { ...d, idToken: sess.user.idToken };
-          saveSession();
-          sessionOk = true;
-        } else {
-          // Token rejected by server — but session still within 8-day window?
-          const age = Date.now() - (sess.ts || 0);
-          if (age < 8 * 24 * 3600 * 1000) {
-            // Use cached user and proceed — token will refresh in background
-            console.warn('[init] Token rejected but session fresh — proceeding with cache');
-            sessionOk = true;
-          } else {
-            clearSession();
-          }
-        }
-      } catch (fetchErr) {
-        // Network error or timeout — use cached session, continue offline
-        console.warn('[init] Auth verify failed (network?) — using cached session:', fetchErr.message);
-        S.user = sess.user;
-        sessionOk = true;
-      }
-
-      if (sessionOk) {
-        clearTimeout(_initGuard);
-        setLoad(70, 'LOADING BUGS…');
+  const sess = loadSession();
+  if (sess?.user) {
+    S.user = sess.user;
+    setLoad(40, 'RESTORING SESSION');
+    const _authController = new AbortController();
+    const _authTimeout = setTimeout(() => _authController.abort(), 5000);
+    fetch(WORKER + '/auth/verify', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ id_token: sess.user.idToken }),
+      signal:  _authController.signal,
+    })
+    .then(r => { clearTimeout(_authTimeout); return r.json(); })
+    .then(d => {
+      if (d.ok) {
+        S.user = { ...d, idToken: sess.user.idToken };
+        saveSession();
+        setLoad(70, 'LOADING BUGS');
         onLogin();
       } else {
-        clearTimeout(_initGuard);
+        clearSession();
         showLogin();
       }
-    } else {
-      clearTimeout(_initGuard);
-      setTimeout(showLogin, 400);
-    }
-  } catch(unexpectedErr) {
-    console.error('[init] Unexpected error:', unexpectedErr);
-    clearTimeout(_initGuard);
-    showLogin();
+    })
+    .catch(() => {
+      // Network error &#8212; try with cached session
+      S.user = sess.user;
+      setLoad(70, 'LOADING BUGS');
+      onLogin();
+    });
+  } else {
+    setTimeout(showLogin, 700);
   }
 });
 
