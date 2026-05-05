@@ -956,10 +956,11 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
 .mf-act-btn:hover{background:rgba(124,58,237,.15);border-color:var(--g1);color:var(--g1)}
 
 /* &#9472;&#9472; FEATURE TOUR / FTUE with Natasha &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472; */
-.tour-overlay{position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.88);backdrop-filter:blur(2px);cursor:pointer;pointer-events:all}
-.tour-spotlight{position:fixed;z-index:100001;border-radius:10px;pointer-events:none;outline:3px solid var(--g1);box-shadow:0 0 0 9999px rgba(0,0,0,.88),0 0 0 6px rgba(124,58,237,.35),0 0 32px 6px rgba(124,58,237,.8);transition:top .4s cubic-bezier(.4,0,.2,1),left .4s cubic-bezier(.4,0,.2,1),width .4s cubic-bezier(.4,0,.2,1),height .4s cubic-bezier(.4,0,.2,1);animation:spotPulse 2s ease-in-out infinite;}
-@keyframes spotPulse{0%,100%{outline-color:var(--g1);box-shadow:0 0 0 9999px rgba(0,0,0,.88),0 0 0 6px rgba(124,58,237,.35),0 0 32px 6px rgba(124,58,237,.8)}50%{outline-color:var(--g2);box-shadow:0 0 0 9999px rgba(0,0,0,.88),0 0 0 8px rgba(6,182,212,.45),0 0 50px 10px rgba(6,182,212,.7)}}
-.tour-card{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100002;width:min(460px,92vw);max-height:88vh;overflow-y:auto;animation:tourIn .35s cubic-bezier(.2,.8,.2,1);background:transparent;border:none;box-shadow:none;padding:0}
+.tour-overlay{position:fixed;inset:0;z-index:99000;background:rgba(0,0,0,.82);backdrop-filter:blur(2px);cursor:pointer;pointer-events:all;transition:clip-path .35s ease}
+.tour-spotlight-ring{position:fixed;z-index:99002;border-radius:10px;pointer-events:none;outline:2.5px solid var(--g1);box-shadow:0 0 0 4px rgba(124,58,237,.25),0 0 28px 6px rgba(124,58,237,.7);animation:spotPulse 2s ease-in-out infinite;transition:top .35s ease,left .35s ease,width .35s ease,height .35s ease}
+@keyframes spotPulse{0%,100%{outline-color:var(--g1);box-shadow:0 0 0 4px rgba(124,58,237,.25),0 0 28px 6px rgba(124,58,237,.7)}50%{outline-color:var(--g2);box-shadow:0 0 0 6px rgba(6,182,212,.35),0 0 44px 10px rgba(6,182,212,.65)}}
+.tour-el-raised{position:relative;z-index:99001!important;pointer-events:all!important}
+.tour-card{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99003;width:min(460px,92vw);max-height:88vh;overflow-y:auto;animation:tourIn .35s cubic-bezier(.2,.8,.2,1);background:transparent;border:none;box-shadow:none;padding:0}
 @keyframes tourIn{from{opacity:0;transform:translate(-50%,-50%) scale(.93)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 .tour-natasha-wrap{display:flex;align-items:flex-end;gap:12px;margin-bottom:6px}
 .tour-natasha-img{width:120px;height:145px;object-fit:contain;object-position:bottom;filter:drop-shadow(0 0 20px rgba(124,58,237,.6));flex-shrink:0}
@@ -1004,12 +1005,7 @@ textarea.fi2, input.fi2 { color: var(--text) !important; }
   <div class="load-title">BugPulse</div>
   <div class="load-bar-wrap"><div class="load-bar" id="loadBar"></div></div>
   <div class="load-sub" id="loadSub">INITIALISING</div>
-  <div id="loadStuckMsg" style="display:none;margin-top:18px;text-align:center">
-    <div style="font-family:var(--mono);font-size:11px;color:var(--mute);margin-bottom:10px">Taking longer than expected…</div>
-    <button onclick="showLogin()" style="background:var(--g1);border:none;color:#fff;font-family:var(--mono);font-size:11px;font-weight:700;padding:8px 20px;border-radius:8px;cursor:pointer;letter-spacing:1px">GO TO LOGIN →</button>
-  </div>
 </div>
-<script>setTimeout(function(){var ls=document.getElementById('loadScreen');var sm=document.getElementById('loadStuckMsg');if(ls&&ls.style.display!=='none'&&!ls.classList.contains('fade')&&sm)sm.style.display='block';},6000);</script>
 
 <div id="loginScreen">
   <video class="login-bg-video" autoplay muted loop playsinline>
@@ -5963,60 +5959,51 @@ document.addEventListener('keydown', e => {
 });
 
 // &#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;
-// INIT
-// ══════════════════════════════════════════════════════════
+// INIT  &#8592; CHANGED: await fetchConfig() first
+// &#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;
 window.addEventListener('DOMContentLoaded', async () => {
+  // Must check OAuth fragment FIRST before anything else wipes the hash
   if (checkOAuthFragment()) return;
+
   loadTheme();
-  setLoad(10, 'STARTING UP…');
+  setLoad(20, 'CHECKING SESSION');
   document.addEventListener('click', e => { if(!e.target.closest('.user-pill-wrap')) closeProfileMenu(); });
 
-  // Hard safety net — if init takes >12s for any reason, force login
-  const _initGuard = setTimeout(() => { console.warn('[init] Hard timeout — forcing login'); showLogin(); }, 12000);
+  // &#9472;&#9472; CHANGED: fetch config (safe &#8212; never throws, falls back to hardcoded ID) &#9472;&#9472;
+  await fetchConfig();
 
-  try {
-    setLoad(20, 'LOADING CONFIG…');
-    await fetchConfig();
-
-    const sess = loadSession();
-    if (sess?.user) {
-      S.user = sess.user;
-      setLoad(40, 'RESTORING SESSION…');
-      let sessionOk = false;
-      try {
-        const _ac = new AbortController();
-        const _at = setTimeout(() => _ac.abort(), 5000);
-        const r = await fetch(WORKER + '/auth/verify', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({id_token: sess.user.idToken}), signal: _ac.signal,
-        });
-        clearTimeout(_at);
-        const d = await r.json();
-        if (d.ok) {
-          S.user = {...d, idToken: sess.user.idToken};
-          saveSession();
-          sessionOk = true;
-        } else {
-          const age = Date.now() - (sess.ts||0);
-          if (age < 8*24*3600*1000) { sessionOk = true; } // still within 8-day window
-          else clearSession();
-        }
-      } catch(e) {
-        // Network error — proceed with cached session
-        console.warn('[init] Auth verify failed, using cache:', e.message);
-        S.user = sess.user; sessionOk = true;
+  const sess = loadSession();
+  if (sess?.user) {
+    S.user = sess.user;
+    setLoad(40, 'RESTORING SESSION');
+    const _authController = new AbortController();
+    const _authTimeout = setTimeout(() => _authController.abort(), 5000);
+    fetch(WORKER + '/auth/verify', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ id_token: sess.user.idToken }),
+      signal:  _authController.signal,
+    })
+    .then(r => { clearTimeout(_authTimeout); return r.json(); })
+    .then(d => {
+      if (d.ok) {
+        S.user = { ...d, idToken: sess.user.idToken };
+        saveSession();
+        setLoad(70, 'LOADING BUGS');
+        onLogin();
+      } else {
+        clearSession();
+        showLogin();
       }
-      clearTimeout(_initGuard);
-      if (sessionOk) { setLoad(70,'LOADING BUGS…'); onLogin(); }
-      else showLogin();
-    } else {
-      clearTimeout(_initGuard);
-      setTimeout(showLogin, 400);
-    }
-  } catch(e) {
-    console.error('[init] Unexpected error:', e);
-    clearTimeout(_initGuard);
-    showLogin();
+    })
+    .catch(() => {
+      // Network error &#8212; try with cached session
+      S.user = sess.user;
+      setLoad(70, 'LOADING BUGS');
+      onLogin();
+    });
+  } else {
+    setTimeout(showLogin, 700);
   }
 });
 
@@ -9885,36 +9872,54 @@ function _showTourCard() {
   if (_tourStep >= TOUR_STEPS.length) { endTour(); return; }
   const step = TOUR_STEPS[_tourStep];
 
-  // Overlay
+  // Overlay — uses clip-path to cut a transparent hole over the target
   const overlay = document.createElement('div');
   overlay.className = 'tour-overlay';
   overlay.id = 'tourOverlay';
   overlay.addEventListener('click', function(e) {
-    // Click on overlay (not card) advances tour
     if(e.target === overlay) advanceTour();
   });
   document.body.appendChild(overlay);
 
-  // Spotlight + scroll target into view
+  // Spotlight ring + clip-path cutout + raise real element
   if (step.target) {
     const el = document.querySelector(step.target);
     if (el) {
-      el.scrollIntoView({behavior:'smooth', block:'center'});
-      setTimeout(() => {
-        const r = el.getBoundingClientRect();
-        const spot = document.createElement('div');
-        spot.className = 'tour-spotlight';
-        spot.id = 'tourSpotlight';
-        const pad = step.spotPad || 5;
-        const cs = window.getComputedStyle(el);
-        spot.style.borderRadius = cs.borderRadius || '12px';
-        spot.style.top    = (r.top   - pad + window.scrollY) + 'px';
-        spot.style.left   = (r.left  - pad + window.scrollX) + 'px';
-        spot.style.width  = (r.width  + pad*2) + 'px';
-        spot.style.height = (r.height + pad*2) + 'px';
-        document.body.appendChild(spot);
+      el.scrollIntoView({behavior:'smooth', block:'nearest'});
 
-      }, 300);
+      // Raise the real element above the overlay so it's truly visible & clickable
+      el.classList.add('tour-el-raised');
+      overlay._raisedEl = el;
+
+      setTimeout(() => {
+        const pad = step.spotPad || 8;
+        const r = el.getBoundingClientRect();
+        const x1 = r.left   - pad;
+        const y1 = r.top    - pad;
+        const x2 = r.right  + pad;
+        const y2 = r.bottom + pad;
+        const W  = window.innerWidth;
+        const H  = window.innerHeight;
+
+        // clip-path polygon: full screen with rectangular hole punched out
+        // Winds clockwise outside, counter-clockwise inside hole = creates cutout
+        overlay.style.clipPath =
+          `polygon(0 0, ${W}px 0, ${W}px ${H}px, 0 ${H}px, 0 0,` +
+          ` ${x1}px ${y1}px, ${x1}px ${y2}px, ${x2}px ${y2}px, ${x2}px ${y1}px, ${x1}px ${y1}px)`;
+
+        // Spotlight glow ring on top
+        const ring = document.createElement('div');
+        ring.className = 'tour-spotlight-ring';
+        ring.id = 'tourSpotlight';
+        const cs = window.getComputedStyle(el);
+        ring.style.borderRadius = cs.borderRadius || '10px';
+        ring.style.top    = (y1 + window.scrollY) + 'px';
+        ring.style.left   = x1 + 'px';
+        ring.style.width  = (x2 - x1) + 'px';
+        ring.style.height = (y2 - y1) + 'px';
+        document.body.appendChild(ring);
+
+      }, 320);
     }
   }
 
@@ -10005,6 +10010,8 @@ function endTour() {
 }
 
 function closeTourUI() {
+  // Remove raised class from any highlighted element
+  document.querySelectorAll('.tour-el-raised').forEach(el => el.classList.remove('tour-el-raised'));
   ['tourOverlay','tourSpotlight','tourCard'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.parentNode?.removeChild(el);
@@ -10014,6 +10021,23 @@ function closeTourUI() {
 // Close tour on Escape key
 document.addEventListener('keydown', e => {
   if(e.key === 'Escape' && _tourActive) endTour();
+});
+
+// Recalculate spotlight clip-path on resize
+window.addEventListener('resize', () => {
+  if(!_tourActive) return;
+  const overlay = document.getElementById('tourOverlay');
+  const ring = document.getElementById('tourSpotlight');
+  const step = TOUR_STEPS[_tourStep];
+  if(!overlay || !step?.target) return;
+  const el = document.querySelector(step.target);
+  if(!el) return;
+  const pad = step.spotPad || 8;
+  const r = el.getBoundingClientRect();
+  const x1=r.left-pad, y1=r.top-pad, x2=r.right+pad, y2=r.bottom+pad;
+  const W=window.innerWidth, H=window.innerHeight;
+  overlay.style.clipPath=`polygon(0 0,${W}px 0,${W}px ${H}px,0 ${H}px,0 0,${x1}px ${y1}px,${x1}px ${y2}px,${x2}px ${y2}px,${x2}px ${y1}px,${x1}px ${y1}px)`;
+  if(ring){ring.style.top=(y1+window.scrollY)+'px';ring.style.left=x1+'px';ring.style.width=(x2-x1)+'px';ring.style.height=(y2-y1)+'px';}
 });
 
 // Safety: if tour overlay exists but _tourActive is false, remove it
