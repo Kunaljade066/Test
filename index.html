@@ -1909,7 +1909,7 @@ function sendDesktopNotification(title, body, bugId) {
   if(bugId) n.onclick = () => { window.focus(); openDetail(bugId); n.close(); };
 }
 
-const saveSession=()=>{try{if(S.user)localStorage.setItem(SK,JSON.stringify({user:S.user,ts:Date.now()}));}catch(e){}};
+const saveSession=()=>{try{if(S.user)localStorage.setItem(SK,JSON.stringify({user:S.user,ts:Date.now(),tokenTs:Date.now()}));}catch(e){}};
 const loadSession=()=>{try{const r=JSON.parse(localStorage.getItem(SK)||'null');if(!r||!r.user||Date.now()-r.ts>8*24*3600*1000){localStorage.removeItem(SK);return null;}return r;}catch{return null;}};
 const clearSession=()=>localStorage.removeItem(SK);
 
@@ -2104,19 +2104,27 @@ function scheduleTokenRefresh() {
   _refreshTimer = setInterval(() => {
     if (!S.user?.idToken) return;
     doTokenRefresh().then(ok => {
-      if(!ok) console.log('[token] Will retry refresh next cycle');
+      if(ok) {
+        // Update tokenTs so ensureFreshToken knows when we last succeeded
+        try { const s=JSON.parse(localStorage.getItem(SK)||'null'); if(s){s.tokenTs=Date.now();localStorage.setItem(SK,JSON.stringify(s));} } catch(e){}
+        console.log('[token] ✅ Background refresh OK');
+      } else {
+        console.log('[token] Silent refresh not available — session remains valid for 8 days');
+      }
     }).catch(() => {});
-  }, 55 * 60 * 1000); // refresh at 55 min, tokens last 60 min
+  }, 55 * 60 * 1000); // attempt refresh at 55 min; failure is safe within 8-day session
 }
 
 async function ensureFreshToken() {
   if (!S.user?.idToken) return;
   const sess = loadSession();
   if (!sess) return;
-  const age = Date.now() - (sess.ts || 0);
-  // If token is >50 min old, proactively refresh before the API call
-  if (age > 50 * 60 * 1000) {
-    await doTokenRefresh();
+  // Use tokenTs if available, otherwise fall back to session ts
+  const tokenAge = Date.now() - (sess.tokenTs || sess.ts || 0);
+  // Only attempt silent refresh if token is >50 min old
+  // If silent refresh fails, we keep the existing token — don't force logout
+  if (tokenAge > 50 * 60 * 1000) {
+    await doTokenRefresh(); // fire-and-forget; failure is safe
   }
 }
 
@@ -2518,25 +2526,32 @@ async function api(path,method='GET',body=null){
   const r=await fetch(WORKER+path,{method,headers:{'Content-Type':'application/json','X-Google-Token':S.user.idToken},body:body?JSON.stringify(body):undefined});
   const d=await r.json();
   if(r.status===401){
-    // Token expired &#8212; get a fresh one from Google, then retry the call once
+    // Token expired — try silent refresh first, but NEVER force logout within 8 days
+    const sess = loadSession();
+    const sessAge = Date.now() - (sess?.ts || 0);
+    const within8Days = sess && sessAge < 8 * 24 * 3600 * 1000;
     toast('🔄 Refreshing session…','info');
     try {
       const refreshed = await doTokenRefresh();
       if(!refreshed) {
-        // Silent refresh failed &#8212; check if session is still within 7 day window
-        const sess = loadSession();
-        const age = Date.now() - (sess?.ts || 0);
-        if(sess && age < 7 * 24 * 3600 * 1000) {
-          // Session still valid &#8212; keep using existing token, it may still work
-          console.warn('[api] Silent refresh failed but session <8h, continuing...');
+        if(within8Days) {
+          // Silent refresh unavailable (FedCM/browser restriction) but session is valid
+          // Retry with existing token — worker may still accept it or we keep going
+          console.warn('[api] Silent refresh unavailable, retrying with existing token (session valid)');
           const r2=await fetch(WORKER+path,{method,headers:{'Content-Type':'application/json','X-Google-Token':S.user.idToken},body:body?JSON.stringify(body):undefined});
           const d2=await r2.json();
+          if(r2.status===401){
+            // Worker still rejects — session data is stale but don't log out yet, just warn
+            console.warn('[api] 401 persists but session within 8 days — skipping forced logout');
+            toast('Session issue — try refreshing the page if data looks stale','warn');
+            return d2;
+          }
           if(!r2.ok)throw new Error(d2.error||'HTTP '+r2.status);
           return d2;
         }
-        // Session older than 7 days &#8212; actually expire
-        toast('Session expired (7 days) — please sign in again','err');
-        setTimeout(()=>{ clearSession(); location.reload(); }, 2500);
+        // Session truly expired (>8 days)
+        toast('Session expired — please sign in again','err');
+        setTimeout(()=>{ clearSession(); location.reload(); }, 3000);
         throw new Error('Session expired');
       }
       // Retry original call with new token
@@ -9385,23 +9400,8 @@ async function sendBugNotification(bug, customMsg) {
   // GChat webhook &#8212; pod-specific or global
   if(cfg.notif_new_bug !== false) {
     const assigneeNames = assignees.map(a=>a.name).join(', ') || 'Unassigned';
-    const hasImage = isImageUrl && isImageUrl(bug.attachment);
-    const imgUrl = hasImage ? (isDriveUrl && isDriveUrl(bug.attachment) ? getDriveThumbnailUrl(bug.attachment) : bug.attachment) : null;
-    if(hasImage && imgUrl) {
-      const card = { cardsV2: [{ cardId: bug.id, card: {
-        header: { title: '🐛 ' + (bug.id||'') + ' — ' + (bug.priority||'Medium'), subtitle: (bug.title||'').slice(0,80) },
-        sections: [{ widgets: [
-          { textParagraph: { text: '<b>Status:</b> '+(bug.status||'Open')+' | <b>Pod:</b> '+(bug.pod||'—')+' | <b>Build:</b> '+(bug.build||'—') } },
-          { textParagraph: { text: '<b>Assignee:</b> '+assigneeNames } },
-          { image: { imageUrl: imgUrl, onClick: { openLink: { url: bug.attachment } } } },
-          { buttonList: { buttons: [{ text: 'View Bug', onClick: { openLink: { url: bugUrl } } }] } }
-        ]}]
-      }}]};
-      await sendGChatCard(card, bug.pod||'');
-    } else {
-      const gchatText = '\ud83d\udc1b *New Bug Filed \u2014 '+(bug.id||'')+'*\n*'+(bug.title||'')+'*\nPriority: '+(bug.priority||'Medium')+' | Status: '+(bug.status||'Open')+'\nPod: '+(bug.pod||'\u2014')+' | Build: '+(bug.build||'\u2014')+' | Assignee: '+assigneeNames+'\n\ud83d\udd17 View: '+bugUrl;
-      await sendGChatWebhook(gchatText, bug.pod||'');
-    }
+    const gchatText = '🐛 New Bug Filed — '+(bug.id||'')+' — '+(bug.priority||'Medium')+'\n'+(bug.title||'')+'\n\nStatus: '+(bug.status||'Open')+' | Pod: '+(bug.pod||'—')+' | Build: '+(bug.build||'—')+' | Assignee: '+assigneeNames+'\n🔗 View: '+bugUrl;
+    await sendGChatWebhook(gchatText, bug.pod||'');
   }
 
   // Slack
